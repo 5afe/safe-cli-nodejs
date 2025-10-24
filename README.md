@@ -70,13 +70,23 @@ safe wallet remove            # Remove a wallet
 ### Safe Account Operations
 
 ```bash
-safe account create           # Create new Safe account
-safe account deploy [safeId]  # Deploy predicted Safe
-safe account open             # Open existing Safe
-safe account list             # List all Safes (with IDs)
-safe account use [safeId]     # Switch active Safe
-safe account info [safeId]    # Show Safe details
+safe account create              # Create new Safe account
+safe account deploy [account]    # Deploy predicted Safe (EIP-3770 format)
+safe account open                # Open existing Safe
+safe account list                # List all Safes (active Safe marked with ●)
+safe account use [account]       # Switch active Safe (EIP-3770 format)
+safe account info [account]      # Show Safe details (EIP-3770 format)
 ```
+
+**EIP-3770 Address Format:**
+Safe addresses use the [EIP-3770](https://eips.ethereum.org/EIPS/eip-3770) standard format: `shortName:address`
+
+Examples:
+- `eth:0x742d35Cc6634C0532925a3b844Bc454e4438f44e` (Ethereum)
+- `sep:0x1405b9b5A42D07bD1D625B1DCcd5EF29Ee5a3f15` (Sepolia)
+- `matic:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` (Polygon)
+
+This makes it clear which chain a Safe belongs to. You can omit the `[account]` parameter to select interactively.
 
 ### Transaction Management
 
@@ -128,6 +138,7 @@ The configuration format:
     "1": {
       "chainId": "1",
       "name": "Ethereum",
+      "shortName": "eth",
       "rpcUrl": "https://eth.llamarpc.com",
       "currency": "ETH",
       "explorer": "https://etherscan.io"
@@ -135,6 +146,8 @@ The configuration format:
   }
 }
 ```
+
+The `shortName` field is used for [EIP-3770](https://eips.ethereum.org/EIPS/eip-3770) address formatting.
 
 ## Security
 
