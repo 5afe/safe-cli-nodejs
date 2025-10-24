@@ -21,6 +21,51 @@ export class SafeAccountStorage {
         safes: {},
       },
     })
+
+    // Migrate old UUID-based keys to chainId:address format
+    this.migrateOldKeys()
+  }
+
+  /**
+   * Migrate old UUID-based keys to new chainId:address format
+   * This handles Safes created before the EIP-3770 refactoring
+   */
+  private migrateOldKeys(): void {
+    const safes = this.store.get('safes', {})
+    const safesToMigrate: Array<[string, SafeAccount]> = []
+
+    // Find Safes that need migration (UUID keys instead of chainId:address)
+    for (const [key, safe] of Object.entries(safes)) {
+      // Old keys are UUIDs (32 hex chars), new keys are "chainId:address" format
+      const isOldKey = /^[a-f0-9]{32}$/.test(key)
+      if (isOldKey) {
+        safesToMigrate.push([key, safe as SafeAccount])
+      }
+    }
+
+    // Migrate each Safe to the new key format
+    if (safesToMigrate.length > 0) {
+      for (const [oldKey, safe] of safesToMigrate) {
+        const newKey = getSafeKey(safe.chainId, safe.address)
+
+        // Copy to new key
+        this.store.set(`safes.${newKey}`, safe)
+
+        // Remove old key
+        this.store.delete(`safes.${oldKey}`)
+      }
+
+      // Update activeSafe if it was using an old key
+      const activeSafe = this.store.get('activeSafe')
+      if (activeSafe && /^[a-f0-9]{32}$/.test(activeSafe)) {
+        // Find the migrated Safe and update activeSafe to new key
+        const migratedSafe = safesToMigrate.find(([oldKey]) => oldKey === activeSafe)
+        if (migratedSafe) {
+          const newKey = getSafeKey(migratedSafe[1].chainId, migratedSafe[1].address)
+          this.store.set('activeSafe', newKey)
+        }
+      }
+    }
   }
 
   // Create a new Safe record
