@@ -24,6 +24,41 @@ export async function listSafes() {
 
   const chains = configStore.getAllChains()
 
+  // Fetch live data for all deployed Safes in parallel
+  const spinner = p.spinner()
+  const deployedSafes = safes.filter((s) => s.deployed)
+
+  if (deployedSafes.length > 0) {
+    spinner.start(`Fetching data for ${deployedSafes.length} deployed Safe(s)...`)
+  }
+
+  const safeDataMap = new Map<string, { owners: Address[]; threshold: number } | null>()
+
+  await Promise.all(
+    deployedSafes.map(async (safe) => {
+      const chain = configStore.getChain(safe.chainId)
+      if (!chain) {
+        safeDataMap.set(safe.address, null)
+        return
+      }
+
+      try {
+        const txService = new TransactionService(chain)
+        const [owners, threshold] = await Promise.all([
+          txService.getOwners(safe.address as Address),
+          txService.getThreshold(safe.address as Address),
+        ])
+        safeDataMap.set(safe.address, { owners, threshold })
+      } catch (error) {
+        safeDataMap.set(safe.address, null)
+      }
+    })
+  )
+
+  if (deployedSafes.length > 0) {
+    spinner.stop('Data loaded')
+  }
+
   console.log('')
   for (const safe of safes) {
     const chain = configStore.getChain(safe.chainId)
@@ -34,16 +69,12 @@ export async function listSafes() {
     console.log(`  ${pc.dim('Address:')} ${pc.cyan(eip3770)}`)
     console.log(`  ${pc.dim('Chain:')}   ${chain?.name || safe.chainId}`)
 
-    // Fetch live data for deployed Safes
-    if (safe.deployed && chain) {
-      try {
-        const txService = new TransactionService(chain)
-        const [owners, threshold] = await Promise.all([
-          txService.getOwners(safe.address as Address),
-          txService.getThreshold(safe.address as Address),
-        ])
-        console.log(`  ${pc.dim('Owners:')}  ${threshold} / ${owners.length}`)
-      } catch (error) {
+    // Display live data for deployed Safes
+    if (safe.deployed) {
+      const data = safeDataMap.get(safe.address)
+      if (data) {
+        console.log(`  ${pc.dim('Owners:')}  ${data.threshold} / ${data.owners.length}`)
+      } else {
         console.log(`  ${pc.dim('Owners:')}  ${pc.red('Error fetching')}`)
       }
     } else if (safe.predictedConfig) {
