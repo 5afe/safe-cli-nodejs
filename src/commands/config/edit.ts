@@ -159,13 +159,13 @@ export async function editChains() {
 
     // Remove deleted chains
     for (const chainId of removed) {
-      configStore.removeChain(chainId)
+      configStore.deleteChain(chainId)
     }
 
     // Add/update chains
     for (const [chainId, chain] of Object.entries(newChains)) {
       const c = chain as any
-      configStore.addChain({
+      configStore.setChain(chainId, {
         chainId: c.chainId,
         name: c.name,
         shortName: c.shortName,
