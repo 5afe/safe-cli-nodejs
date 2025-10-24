@@ -1,0 +1,52 @@
+import * as p from '@clack/prompts'
+import pc from 'picocolors'
+import { getWalletStorage } from '../../storage/wallet-store.js'
+import { shortenAddress } from '../../utils/ethereum.js'
+import { logError } from '../../ui/messages.js'
+
+export async function useWallet() {
+  p.intro(pc.bgCyan(pc.black(' Switch Wallet ')))
+
+  const walletStorage = getWalletStorage()
+  const wallets = walletStorage.getAllWallets()
+
+  if (wallets.length === 0) {
+    logError('No wallets found')
+    p.cancel('Use "safe wallet import" to import a wallet first')
+    return
+  }
+
+  const currentActive = walletStorage.getActiveWallet()
+
+  const walletId = await p.select({
+    message: 'Select wallet to use:',
+    options: wallets.map((wallet) => ({
+      value: wallet.id,
+      label: `${wallet.name} (${shortenAddress(wallet.address)})${
+        currentActive?.id === wallet.id ? ' [current]' : ''
+      }`,
+    })),
+  })
+
+  if (p.isCancel(walletId)) {
+    p.cancel('Operation cancelled')
+    return
+  }
+
+  try {
+    walletStorage.setActiveWallet(walletId as string)
+    const wallet = walletStorage.getWallet(walletId as string)!
+
+    console.log('')
+    console.log(pc.green('✓ Active wallet changed'))
+    console.log('')
+    console.log(`  ${pc.dim('Name:')}    ${pc.bold(wallet.name)}`)
+    console.log(`  ${pc.dim('Address:')} ${wallet.address}`)
+    console.log('')
+
+    p.outro(pc.green(`Now using wallet: ${wallet.name}`))
+  } catch (error) {
+    logError(error instanceof Error ? error.message : 'Unknown error')
+    process.exit(1)
+  }
+}
