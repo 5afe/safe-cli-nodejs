@@ -1,4 +1,4 @@
-import SafeSDK, { predictSafeAddress, SafeAccountConfig } from '@safe-global/protocol-kit'
+import SafeSDK, { predictSafeAddress, SafeAccountConfig, SafeProvider } from '@safe-global/protocol-kit'
 import { createPublicClient, createWalletClient, http, type Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { ChainConfig } from '../types/config.js'
@@ -49,15 +49,21 @@ export class SafeService {
 
       const safeVersion = '1.4.1'
 
+      // Create a SafeProvider instance
+      const safeProvider = await SafeProvider.init({
+        provider: this.chain.rpcUrl,
+        safeVersion,
+      })
+
       // Predict the Safe address
       const predictedAddress = await predictSafeAddress({
+        safeProvider,
+        chainId: BigInt(this.chain.chainId),
         safeAccountConfig,
         safeDeploymentConfig: {
           safeVersion,
           saltNonce: config.saltNonce,
         },
-        provider: this.chain.rpcUrl,
-        chainId: BigInt(this.chain.chainId),
       })
 
       return {
