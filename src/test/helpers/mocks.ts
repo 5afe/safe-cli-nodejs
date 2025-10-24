@@ -118,6 +118,13 @@ export function mockPrompts() {
       start: vi.fn(),
       stop: vi.fn(),
     }),
+    log: {
+      error: vi.fn(),
+      warning: vi.fn(),
+      info: vi.fn(),
+      success: vi.fn(),
+      message: vi.fn(),
+    },
   }
 }
 

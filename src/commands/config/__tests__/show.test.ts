@@ -24,6 +24,27 @@ describe('showConfig', () => {
 
   it('should display configuration with chains', async () => {
     const mockConfigStore = {
+      getConfig: vi.fn().mockReturnValue({
+        chains: {
+          '1': {
+            chainId: '1',
+            name: 'Ethereum',
+            rpcUrl: 'https://eth.llamarpc.com',
+            currency: 'ETH',
+            explorer: 'https://etherscan.io',
+          },
+          '11155111': {
+            chainId: '11155111',
+            name: 'Sepolia',
+            rpcUrl: 'https://rpc.sepolia.org',
+            currency: 'ETH',
+          },
+        },
+        preferences: {
+          autoUpdate: true,
+        },
+        defaults: {},
+      }),
       getAllChains: vi.fn().mockReturnValue({
         '1': {
           chainId: '1',
@@ -42,6 +63,7 @@ describe('showConfig', () => {
       getPreferences: vi.fn().mockReturnValue({
         autoUpdate: true,
       }),
+      getConfigPath: vi.fn().mockReturnValue('/mock/config/path'),
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
@@ -53,15 +75,23 @@ describe('showConfig', () => {
     const logs = consoleMock.getLogs()
     expect(logs.some((log) => log.includes('Ethereum'))).toBe(true)
     expect(logs.some((log) => log.includes('Sepolia'))).toBe(true)
-    expect(logs.some((log) => log.includes('Auto-update'))).toBe(true)
+    expect(logs.some((log) => log.includes('Auto-Update'))).toBe(true)
   })
 
   it('should handle empty configuration', async () => {
     const mockConfigStore = {
+      getConfig: vi.fn().mockReturnValue({
+        chains: {},
+        preferences: {
+          autoUpdate: true,
+        },
+        defaults: {},
+      }),
       getAllChains: vi.fn().mockReturnValue({}),
       getPreferences: vi.fn().mockReturnValue({
         autoUpdate: true,
       }),
+      getConfigPath: vi.fn().mockReturnValue('/mock/config/path'),
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)

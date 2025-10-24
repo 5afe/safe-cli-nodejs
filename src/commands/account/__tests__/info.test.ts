@@ -27,6 +27,10 @@ describe('showSafeInfo', () => {
       stop: vi.fn(),
       message: vi.fn(),
     } as any)
+    ;(p as any).log = {
+      error: vi.fn(),
+      warning: vi.fn(),
+    }
   })
 
   afterEach(() => {
@@ -134,8 +138,7 @@ describe('showSafeInfo', () => {
 
     await showSafeInfo('non-existent-id')
 
-    const logs = consoleMock.getLogs()
-    expect(logs.some((log) => log.includes('not found'))).toBe(true)
+    expect((p as any).log.error).toHaveBeenCalledWith(expect.stringContaining('not found'))
     expect(p.cancel).toHaveBeenCalled()
   })
 
