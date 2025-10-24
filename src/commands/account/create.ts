@@ -174,9 +174,6 @@ export async function createSafe() {
       name: name as string,
       address: predictedAddress,
       chainId: chain.chainId,
-      version: safeVersion,
-      owners: safeAccountConfig.owners,
-      threshold: safeAccountConfig.threshold,
       deployed: false,
       predictedConfig: {
         owners: safeAccountConfig.owners,

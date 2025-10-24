@@ -86,8 +86,32 @@ export async function addOwner(account?: string) {
       return
     }
 
+    // Get chain
+    const chain = configStore.getChain(safe.chainId)
+    if (!chain) {
+      p.log.error(`Chain ${safe.chainId} not found in configuration`)
+      p.outro('Failed')
+      return
+    }
+
+    // Fetch live Safe data
+    const txService = new TransactionService(chain)
+    let currentOwners: Address[]
+    let currentThreshold: number
+
+    try {
+      ;[currentOwners, currentThreshold] = await Promise.all([
+        txService.getOwners(safe.address as Address),
+        txService.getThreshold(safe.address as Address),
+      ])
+    } catch (error) {
+      p.log.error(`Failed to fetch Safe data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      p.outro('Failed')
+      return
+    }
+
     // Check if wallet is an owner
-    if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
+    if (!currentOwners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
       return
@@ -100,7 +124,7 @@ export async function addOwner(account?: string) {
       validate: (value) => {
         if (!value) return 'Address is required'
         if (!isAddress(value)) return 'Invalid Ethereum address'
-        if (safe.owners.some((o) => o.toLowerCase() === value.toLowerCase())) {
+        if (currentOwners.some((o) => o.toLowerCase() === value.toLowerCase())) {
           return 'Address is already an owner'
         }
         return undefined
@@ -114,15 +138,15 @@ export async function addOwner(account?: string) {
 
     // Ask about threshold
     const newThreshold = await p.text({
-      message: `New threshold (current: ${safe.threshold}, max: ${safe.owners.length + 1}):`,
-      placeholder: `${safe.threshold}`,
-      initialValue: `${safe.threshold}`,
+      message: `New threshold (current: ${currentThreshold}, max: ${currentOwners.length + 1}):`,
+      placeholder: `${currentThreshold}`,
+      initialValue: `${currentThreshold}`,
       validate: (value) => {
         if (!value) return 'Threshold is required'
         const num = parseInt(value, 10)
         if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
-        if (num > safe.owners.length + 1) {
-          return `Threshold cannot exceed ${safe.owners.length + 1} owners`
+        if (num > currentOwners.length + 1) {
+          return `Threshold cannot exceed ${currentOwners.length + 1} owners`
         }
         return undefined
       },
@@ -140,9 +164,9 @@ export async function addOwner(account?: string) {
     console.log(pc.bold('Add Owner Summary:'))
     console.log(`  ${pc.dim('Safe:')}          ${safe.name}`)
     console.log(`  ${pc.dim('New Owner:')}     ${newOwner}`)
-    console.log(`  ${pc.dim('Current Owners:')} ${safe.owners.length}`)
-    console.log(`  ${pc.dim('New Owners:')}    ${safe.owners.length + 1}`)
-    console.log(`  ${pc.dim('Old Threshold:')} ${safe.threshold}`)
+    console.log(`  ${pc.dim('Current Owners:')} ${currentOwners.length}`)
+    console.log(`  ${pc.dim('New Owners:')}    ${currentOwners.length + 1}`)
+    console.log(`  ${pc.dim('Old Threshold:')} ${currentThreshold}`)
     console.log(`  ${pc.dim('New Threshold:')} ${thresholdNum}`)
     console.log('')
 
@@ -156,19 +180,8 @@ export async function addOwner(account?: string) {
       return
     }
 
-    // Get chain
-    const chain = configStore.getChain(safe.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${safe.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
-
     const spinner = p.spinner()
     spinner.start('Creating add owner transaction...')
-
-    // Create the add owner transaction using Safe SDK
-    const txService = new TransactionService(chain)
 
     // The addOwnerWithThreshold method encodes the transaction data
     const safeTransaction = await txService.createAddOwnerTransaction(
@@ -197,7 +210,7 @@ export async function addOwner(account?: string) {
     console.log(`  ${pc.dim('Safe:')}         ${eip3770}`)
     console.log('')
     console.log(pc.bold('Next steps:'))
-    console.log(`  1. Get ${safe.threshold} signature(s): ${pc.cyan(`safe tx sign ${safeTransaction.safeTxHash}`)}`)
+    console.log(`  1. Get ${currentThreshold} signature(s): ${pc.cyan(`safe tx sign ${safeTransaction.safeTxHash}`)}`)
     console.log(`  2. Execute the transaction: ${pc.cyan(`safe tx execute ${safeTransaction.safeTxHash}`)}`)
     console.log('')
 

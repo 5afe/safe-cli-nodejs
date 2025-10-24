@@ -76,7 +76,6 @@ export async function showSafeInfo(account?: string) {
   console.log('')
   console.log(`  ${pc.dim('Address:')} ${pc.cyan(eip3770)}`)
   console.log(`  ${pc.dim('Chain:')}   ${chain.name} (${chain.chainId})`)
-  console.log(`  ${pc.dim('Version:')} ${safe.version}`)
   console.log(`  ${pc.dim('Status:')}  ${safe.deployed ? pc.green('Deployed') : pc.yellow('Not deployed')}`)
   console.log('')
 
@@ -91,26 +90,36 @@ export async function showSafeInfo(account?: string) {
       spinner.stop('Data loaded')
 
       console.log(pc.bold('On-chain Data:'))
+      console.log(`  ${pc.dim('Version:')} ${safeInfo.version}`)
       console.log(`  ${pc.dim('Nonce:')}   ${safeInfo.nonce.toString()}`)
       if (safeInfo.balance !== undefined) {
         const eth = Number(safeInfo.balance) / 1e18
         console.log(`  ${pc.dim('Balance:')} ${eth.toFixed(4)} ${chain.currency}`)
       }
       console.log('')
+
+      console.log(pc.bold('Owners:'))
+      safeInfo.owners.forEach((owner, i) => {
+        console.log(`  ${pc.dim(`${i + 1}.`)} ${owner}`)
+      })
+      console.log('')
+      console.log(`  ${pc.dim('Threshold:')} ${safeInfo.threshold} / ${safeInfo.owners.length}`)
+      console.log('')
     } catch (error) {
       spinner.stop('Failed to load on-chain data')
       console.log(pc.yellow('⚠ Could not fetch on-chain data'))
       console.log('')
     }
+  } else if (safe.predictedConfig) {
+    // Show predicted config for undeployed Safes
+    console.log(pc.bold('Predicted Configuration:'))
+    safe.predictedConfig.owners.forEach((owner, i) => {
+      console.log(`  ${pc.dim(`${i + 1}.`)} ${owner}`)
+    })
+    console.log('')
+    console.log(`  ${pc.dim('Threshold:')} ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`)
+    console.log('')
   }
-
-  console.log(pc.bold('Owners:'))
-  safe.owners.forEach((owner, i) => {
-    console.log(`  ${pc.dim(`${i + 1}.`)} ${owner}`)
-  })
-  console.log('')
-  console.log(`  ${pc.dim('Threshold:')} ${safe.threshold} / ${safe.owners.length}`)
-  console.log('')
 
   if (chain.explorer) {
     console.log(pc.dim(`Explorer: ${chain.explorer}/address/${safe.address}`))

@@ -104,9 +104,6 @@ export async function openSafe() {
       name: name as string,
       address: safeAddress,
       chainId: chain.chainId,
-      version: safeInfo.version,
-      owners: safeInfo.owners,
-      threshold: safeInfo.threshold,
       deployed: true,
     })
 

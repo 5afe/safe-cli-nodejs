@@ -1,7 +1,9 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
+import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
+import { TransactionService } from '../../services/transaction-service.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 
 export async function listSafes() {
@@ -26,12 +28,29 @@ export async function listSafes() {
   for (const safe of safes) {
     const chain = configStore.getChain(safe.chainId)
     const status = safe.deployed ? pc.green('deployed') : pc.yellow('not deployed')
-    const eip3770 = formatSafeAddress(safe.address as any, safe.chainId, chains)
+    const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
 
     console.log(pc.bold(safe.name))
     console.log(`  ${pc.dim('Address:')} ${pc.cyan(eip3770)}`)
     console.log(`  ${pc.dim('Chain:')}   ${chain?.name || safe.chainId}`)
-    console.log(`  ${pc.dim('Owners:')}  ${safe.threshold} / ${safe.owners.length}`)
+
+    // Fetch live data for deployed Safes
+    if (safe.deployed && chain) {
+      try {
+        const txService = new TransactionService(chain)
+        const [owners, threshold] = await Promise.all([
+          txService.getOwners(safe.address as Address),
+          txService.getThreshold(safe.address as Address),
+        ])
+        console.log(`  ${pc.dim('Owners:')}  ${threshold} / ${owners.length}`)
+      } catch (error) {
+        console.log(`  ${pc.dim('Owners:')}  ${pc.red('Error fetching')}`)
+      }
+    } else if (safe.predictedConfig) {
+      // Show predicted config for undeployed Safes
+      console.log(`  ${pc.dim('Owners:')}  ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`)
+    }
+
     console.log(`  ${pc.dim('Status:')}  ${status}`)
     console.log('')
   }
