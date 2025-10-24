@@ -3,6 +3,7 @@ import pc from 'picocolors'
 import { initConfig } from './commands/config/init.js'
 import { showConfig } from './commands/config/show.js'
 import { addChain, listChains, removeChain } from './commands/config/chains.js'
+import { editChains } from './commands/config/edit.js'
 import { importWallet } from './commands/wallet/import.js'
 import { listWallets } from './commands/wallet/list.js'
 import { useWallet } from './commands/wallet/use.js'
@@ -12,6 +13,10 @@ import { deploySafe } from './commands/account/deploy.js'
 import { openSafe } from './commands/account/open.js'
 import { listSafes } from './commands/account/list.js'
 import { showSafeInfo } from './commands/account/info.js'
+import { createTransaction } from './commands/tx/create.js'
+import { signTransaction } from './commands/tx/sign.js'
+import { executeTransaction } from './commands/tx/execute.js'
+import { listTransactions } from './commands/tx/list.js'
 import { handleError } from './utils/errors.js'
 
 const program = new Command()
@@ -81,6 +86,17 @@ chains
   .action(async () => {
     try {
       await removeChain()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+chains
+  .command('edit')
+  .description('Edit chain configurations in text editor')
+  .action(async () => {
+    try {
+      await editChains()
     } catch (error) {
       handleError(error)
     }
@@ -197,6 +213,56 @@ account
     }
   })
 
+// Transaction commands
+const tx = program
+  .command('tx')
+  .description('Manage Safe transactions')
+
+tx
+  .command('create')
+  .description('Create a new transaction')
+  .action(async () => {
+    try {
+      await createTransaction()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('sign [txId]')
+  .description('Sign a pending transaction')
+  .action(async (txId?: string) => {
+    try {
+      await signTransaction(txId)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('execute [txId]')
+  .alias('exec')
+  .description('Execute a signed transaction')
+  .action(async (txId?: string) => {
+    try {
+      await executeTransaction(txId)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('list')
+  .description('List transactions')
+  .action(async () => {
+    try {
+      await listTransactions()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
 // Show welcome message if no command provided
 if (process.argv.length === 2) {
   console.log('')
@@ -208,6 +274,7 @@ if (process.argv.length === 2) {
   console.log(`  ${pc.cyan('safe config init')}     Initialize configuration`)
   console.log(`  ${pc.cyan('safe wallet import')}   Import a wallet`)
   console.log(`  ${pc.cyan('safe account create')}  Create a Safe`)
+  console.log(`  ${pc.cyan('safe tx create')}       Create a transaction`)
   console.log(`  ${pc.cyan('safe --help')}          Show all commands`)
   console.log('')
   console.log(pc.dim('For more information, visit: https://github.com/safe-global/safe-cli'))

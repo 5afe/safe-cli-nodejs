@@ -55,6 +55,7 @@ safe config show              # Display current configuration
 safe config chains list       # List configured chains
 safe config chains add        # Add a custom chain
 safe config chains remove     # Remove a chain
+safe config chains edit       # Edit chains in text editor (power users)
 ```
 
 ### Wallet Management
@@ -76,13 +77,13 @@ safe account list             # List all Safes
 safe account info             # Show Safe details
 ```
 
-### Transaction Management (Coming in Phase 3+)
+### Transaction Management
 
 ```bash
 safe tx create                # Create transaction
-safe tx sign <id>             # Sign transaction
-safe tx execute <id>          # Execute transaction
-safe tx list                  # List pending transactions
+safe tx sign [txId]           # Sign transaction
+safe tx execute [txId]        # Execute transaction
+safe tx list                  # List all transactions
 ```
 
 ## Configuration
@@ -103,6 +104,36 @@ Configuration files are stored in:
 - Gnosis Chain (100)
 
 You can add custom chains using `safe config chains add`.
+
+### Editing Chains in Text Editor
+
+For power users, you can edit all chain configurations at once in your preferred text editor:
+
+```bash
+safe config chains edit
+```
+
+This command:
+- Opens your chains configuration in `$EDITOR` (vim, nano, VS Code, etc.)
+- Validates JSON structure on save
+- Shows a diff of changes before applying
+- Supports adding, modifying, and removing multiple chains at once
+
+The configuration format:
+
+```json
+{
+  "chains": {
+    "1": {
+      "chainId": "1",
+      "name": "Ethereum",
+      "rpcUrl": "https://eth.llamarpc.com",
+      "currency": "ETH",
+      "explorer": "https://etherscan.io"
+    }
+  }
+}
+```
 
 ## Security
 
@@ -169,10 +200,11 @@ src/
 - [x] Safe deployment
 - [x] Account management
 
-### 📅 Phase 3: Transaction Core
-- [ ] Transaction creation
-- [ ] Transaction signing
-- [ ] Transaction execution
+### ✅ Phase 3: Transaction Core (Complete)
+- [x] Transaction creation
+- [x] Transaction signing
+- [x] Transaction execution
+- [x] Multi-sig workflow support
 
 ### 📅 Phase 4+: Advanced Features
 - [ ] Batch transactions
