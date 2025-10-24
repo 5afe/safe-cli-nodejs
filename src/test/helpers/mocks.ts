@@ -92,12 +92,14 @@ export function createMockSafeStorage(): any {
     createSafe: vi.fn(),
     getAllSafes: vi.fn().mockReturnValue([]),
     getSafe: vi.fn(),
-    getSafeByAddress: vi.fn(),
-    getActiveSafe: vi.fn().mockReturnValue(null),
+    getSafesByChain: vi.fn().mockReturnValue([]),
+    getActiveSafe: vi.fn().mockReturnValue(undefined),
     setActiveSafe: vi.fn(),
+    clearActiveSafe: vi.fn(),
     updateSafe: vi.fn(),
-    deleteSafe: vi.fn(),
+    removeSafe: vi.fn(),
     safeExists: vi.fn().mockReturnValue(false),
+    getStorePath: vi.fn().mockReturnValue('/mock/safe/path'),
   }
 }
 

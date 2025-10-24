@@ -95,6 +95,35 @@ export class SafeAccountStorage {
     return this.getSafe(chainId, address) !== undefined
   }
 
+  // Get active Safe
+  getActiveSafe(): SafeAccount | undefined {
+    const activeSafeKey = this.store.get('activeSafe')
+    if (!activeSafeKey) return undefined
+
+    // Parse the key to get chainId and address
+    const [chainId, address] = activeSafeKey.split(':')
+    return this.getSafe(chainId, address)
+  }
+
+  // Set active Safe
+  setActiveSafe(chainId: string, address: string): void {
+    const key = getSafeKey(chainId, address)
+
+    // Verify the Safe exists
+    if (!this.safeExists(chainId, address)) {
+      throw new SafeCLIError(
+        `Cannot set active Safe: ${address} on chain ${chainId} not found`
+      )
+    }
+
+    this.store.set('activeSafe', key)
+  }
+
+  // Clear active Safe
+  clearActiveSafe(): void {
+    this.store.delete('activeSafe')
+  }
+
   // Get storage path (useful for debugging)
   getStorePath(): string {
     return this.store.path

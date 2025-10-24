@@ -21,6 +21,8 @@ export const SafeAccountSchema = z.object({
 export const SafeStoreSchema = z.object({
   // Keyed by "chainId:address" for uniqueness
   safes: z.record(z.string(), SafeAccountSchema).default({}),
+  // Active Safe key (chainId:address format)
+  activeSafe: z.string().optional(),
 })
 
 export type SafeAccountConfig = z.infer<typeof SafeAccountConfigSchema>
