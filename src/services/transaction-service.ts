@@ -101,7 +101,7 @@ export class TransactionService {
         safeAddress,
       })
 
-      // Recreate the transaction from metadata
+      // Recreate the transaction from metadata with the original nonce
       const safeTransaction = await protocolKit.createTransaction({
         transactions: [
           {
@@ -111,6 +111,10 @@ export class TransactionService {
             operation: metadata.operation,
           },
         ],
+        // Use the original nonce to ensure we sign the same transaction
+        options: {
+          nonce: metadata.nonce,
+        },
       })
 
       // Sign the transaction
@@ -151,7 +155,7 @@ export class TransactionService {
         safeAddress,
       })
 
-      // Recreate the transaction from metadata
+      // Recreate the transaction from metadata with the original nonce
       const safeTransaction = await protocolKit.createTransaction({
         transactions: [
           {
@@ -161,6 +165,10 @@ export class TransactionService {
             operation: metadata.operation,
           },
         ],
+        // Use the original nonce to ensure we execute the same transaction
+        options: {
+          nonce: metadata.nonce,
+        },
       })
 
       // Add all signatures to the transaction
