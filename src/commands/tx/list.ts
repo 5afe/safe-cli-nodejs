@@ -1,4 +1,5 @@
 import * as p from '@clack/prompts'
+import pc from 'picocolors'
 import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -59,22 +60,22 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
       }[tx.status]
 
       console.log(`${statusBadge}`)
-      console.log(`  Safe TX Hash: ${tx.safeTxHash}`)
-      console.log(`  Safe: ${safeName} (${eip3770})`)
-      console.log(`  Chain: ${chain?.name || tx.chainId}`)
-      console.log(`  To: ${tx.metadata.to}`)
-      console.log(`  Value: ${tx.metadata.value} wei`)
-      console.log(`  Operation: ${tx.metadata.operation === 0 ? 'Call' : 'DelegateCall'}`)
-      console.log(`  Signatures: ${tx.signatures.length}${safe ? `/${safe.threshold}` : ''}`)
-      console.log(`  Created: ${new Date(tx.createdAt).toLocaleString()}`)
-      console.log(`  Created by: ${tx.createdBy}`)
+      console.log(`  ${pc.bold('Safe TX Hash:')} ${tx.safeTxHash}`)
+      console.log(`  ${pc.bold('Safe:')} ${safeName} (${eip3770})`)
+      console.log(`  ${pc.bold('Chain:')} ${chain?.name || tx.chainId}`)
+      console.log(`  ${pc.bold('To:')} ${tx.metadata.to}`)
+      console.log(`  ${pc.bold('Value:')} ${tx.metadata.value} wei`)
+      console.log(`  ${pc.bold('Operation:')} ${tx.metadata.operation === 0 ? 'Call' : 'DelegateCall'}`)
+      console.log(`  ${pc.bold('Signatures:')} ${tx.signatures.length}${safe ? `/${safe.threshold}` : ''}`)
+      console.log(`  ${pc.bold('Created:')} ${new Date(tx.createdAt).toLocaleString()}`)
+      console.log(`  ${pc.bold('Created by:')} ${tx.createdBy}`)
 
       if (tx.executedAt) {
-        console.log(`  Executed: ${new Date(tx.executedAt).toLocaleString()}`)
+        console.log(`  ${pc.bold('Executed:')} ${new Date(tx.executedAt).toLocaleString()}`)
       }
 
       if (tx.txHash) {
-        console.log(`  TX Hash: ${tx.txHash}`)
+        console.log(`  ${pc.bold('TX Hash:')} ${tx.txHash}`)
       }
 
       console.log('')
@@ -88,11 +89,11 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
       rejected: transactions.filter((tx) => tx.status === 'rejected').length,
     }
 
-    console.log('Summary:')
-    console.log(`  Pending: ${summary.pending}`)
-    console.log(`  Signed: ${summary.signed}`)
-    console.log(`  Executed: ${summary.executed}`)
-    console.log(`  Rejected: ${summary.rejected}`)
+    console.log(pc.bold('Summary:'))
+    console.log(`  ${pc.bold('Pending:')} ${summary.pending}`)
+    console.log(`  ${pc.bold('Signed:')} ${summary.signed}`)
+    console.log(`  ${pc.bold('Executed:')} ${summary.executed}`)
+    console.log(`  ${pc.bold('Rejected:')} ${summary.rejected}`)
 
     p.outro('Done')
   } catch (error) {

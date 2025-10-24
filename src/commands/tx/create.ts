@@ -340,9 +340,17 @@ export async function createTransaction() {
 
     createSpinner.stop('Transaction created')
 
-    p.outro(
-      `Transaction created with Safe TX Hash: ${createdTx.safeTxHash}\n\nUse 'safe tx sign ${createdTx.safeTxHash}' to sign this transaction.`
-    )
+    console.log('')
+    console.log(pc.green('✓ Transaction created successfully!'))
+    console.log('')
+    console.log(`  ${pc.dim('Safe TX Hash:')} ${createdTx.safeTxHash}`)
+    console.log('')
+    console.log(pc.bold('To sign this transaction, run:'))
+    console.log('')
+    console.log(`  ${pc.cyan(`safe tx sign ${createdTx.safeTxHash}`)}`)
+    console.log('')
+
+    p.outro('Transaction ready')
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

@@ -11,6 +11,9 @@ Modern, interactive CLI for Safe Smart Account management. Built on top of the [
 - 📦 Safe account creation, deployment, and management
 - 📝 Transaction creation, signing, and execution
 - 🔄 Multi-sig coordination workflows
+- 🤖 Smart contract interaction with automatic ABI fetching
+- 🔌 Proxy contract support (EIP-1967)
+- 👥 Owner management (add/remove owners, change threshold)
 
 ## Installation
 
@@ -93,7 +96,7 @@ This makes it clear which chain a Safe belongs to. Commands will interactively p
 ### Transaction Management
 
 ```bash
-safe tx create                 # Create transaction
+safe tx create                 # Create transaction (interactive contract builder for contracts)
 safe tx sign [safeTxHash]      # Sign transaction (use Safe TX Hash)
 safe tx execute [safeTxHash]   # Execute transaction (use Safe TX Hash)
 safe tx list                   # List all transactions
@@ -101,6 +104,44 @@ safe tx status [safeTxHash]    # Show transaction status and signature progress
 safe tx export [safeTxHash]    # Export transaction as JSON for sharing
 safe tx export [safeTxHash] -o file  # Export to file
 safe tx import [json]          # Import transaction from JSON string or file
+```
+
+**Transaction Builder - Smart Contract Interactions:**
+
+When creating a transaction to a contract address, the CLI automatically:
+1. Detects if the address is a contract
+2. Fetches the contract ABI from Etherscan or Sourcify
+3. Detects and handles EIP-1967 proxy contracts (merges proxy + implementation ABIs)
+4. Offers an interactive function selector with all writable functions
+5. Prompts for each parameter with type validation
+6. Automatically encodes the function call
+
+Example flow:
+```bash
+$ safe tx create
+
+# Enter contract address
+To address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+
+✓ Contract detected
+✓ Proxy detected! Implementation: 0x43506849...
+✓ Contract ABI found!
+✓ Implementation ABI found!
+✓ Found 15 writable function(s)
+
+# Interactive builder
+? Use transaction builder to interact with contract? Yes
+? Select function to call:
+  ❯ transfer(address _to, uint256 _value)
+    approve(address _spender, uint256 _value)
+    transferFrom(address _from, address _to, uint256 _value)
+    ...
+
+# Parameter input with validation
+? _to (address): 0x742d35Cc...
+? _value (uint256): 1000000  # 1 USDC
+
+✓ Transaction created successfully!
 ```
 
 **Multi-sig Coordination Workflow:**
@@ -258,7 +299,15 @@ src/
 - [x] Signature tracking and progress
 - [x] Share transactions via JSON for multi-sig
 
-### 📅 Phase 6+: Advanced Features
+### ✅ Phase 6: Smart Contract Interactions (Complete)
+- [x] Automatic contract detection
+- [x] ABI fetching from Etherscan and Sourcify
+- [x] EIP-1967 proxy contract support
+- [x] Interactive transaction builder
+- [x] Function selector with parameter validation
+- [x] Automatic function encoding
+
+### 📅 Phase 7+: Advanced Features
 - [ ] Batch transactions
 - [ ] Transaction templates
 - [ ] Module & guard management

@@ -145,6 +145,9 @@ export async function importTransaction(input?: string) {
 
       if (safe && updatedTx.signatures.length >= safe.threshold) {
         console.log(pc.green('✓ Transaction ready to execute!'))
+        console.log('')
+        console.log(pc.bold('To execute this transaction, run:'))
+        console.log('')
         console.log(`  ${pc.cyan(`safe tx execute ${importData.safeTxHash}`)}`)
         console.log('')
       }
@@ -190,13 +193,19 @@ export async function importTransaction(input?: string) {
 
       if (safe && importData.signatures.length >= safe.threshold) {
         console.log(pc.green('✓ Transaction ready to execute!'))
+        console.log('')
+        console.log(pc.bold('To execute this transaction, run:'))
+        console.log('')
         console.log(`  ${pc.cyan(`safe tx execute ${importData.safeTxHash}`)}`)
+        console.log('')
       } else {
         console.log(pc.bold('Next steps:'))
+        console.log('')
         console.log(`  ${pc.cyan(`safe tx status ${importData.safeTxHash}`)} (check status)`)
+        console.log('')
         console.log(`  ${pc.cyan(`safe tx sign ${importData.safeTxHash}`)} (add your signature)`)
+        console.log('')
       }
-      console.log('')
 
       p.outro('Import complete')
     }

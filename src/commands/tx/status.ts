@@ -115,11 +115,15 @@ export async function showTransactionStatus(safeTxHash?: string) {
 
     // Show next steps
     console.log(pc.bold('Next steps:'))
+    console.log('')
     if (isReadyToExecute) {
       console.log(`  ${pc.cyan(`safe tx execute ${tx.safeTxHash}`)}`)
+      console.log('')
     } else {
       console.log(`  ${pc.cyan(`safe tx sign ${tx.safeTxHash}`)} (if you're an owner)`)
+      console.log('')
       console.log(`  ${pc.cyan(`safe tx export ${tx.safeTxHash}`)} (share with other owners)`)
+      console.log('')
     }
     console.log('')
 

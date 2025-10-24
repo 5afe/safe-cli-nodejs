@@ -173,13 +173,23 @@ export async function signTransaction(safeTxHash?: string) {
     const updatedTx = transactionStore.getTransaction(selectedSafeTxHash)!
     const threshold = safe.threshold
 
-    p.outro(
-      `Signature added (${updatedTx.signatures.length}/${threshold} required).\n\n${
-        updatedTx.signatures.length >= threshold
-          ? `Transaction is ready to execute!\nUse 'safe tx execute ${selectedSafeTxHash}' to execute.`
-          : `Need ${threshold - updatedTx.signatures.length} more signature(s).`
-      }`
-    )
+    console.log('')
+    console.log(pc.green(`✓ Signature added (${updatedTx.signatures.length}/${threshold} required)`))
+    console.log('')
+
+    if (updatedTx.signatures.length >= threshold) {
+      console.log(pc.bold('Transaction is ready to execute!'))
+      console.log('')
+      console.log(pc.bold('To execute this transaction, run:'))
+      console.log('')
+      console.log(`  ${pc.cyan(`safe tx execute ${selectedSafeTxHash}`)}`)
+      console.log('')
+      p.outro('Ready to execute')
+    } else {
+      console.log(pc.yellow(`Need ${threshold - updatedTx.signatures.length} more signature(s)`))
+      console.log('')
+      p.outro('Signature added')
+    }
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)
