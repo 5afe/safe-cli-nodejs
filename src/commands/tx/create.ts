@@ -6,6 +6,7 @@ import { getTransactionStore } from '../../storage/transaction-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
+import { formatSafeAddress } from '../../utils/eip3770.js'
 
 export async function createTransaction() {
   p.intro('Create Safe Transaction')
@@ -31,22 +32,35 @@ export async function createTransaction() {
       return
     }
 
-    // Select Safe
-    const safeAddress = (await p.select({
-      message: 'Select Safe to create transaction for',
-      options: safes.map((safe) => ({
-        value: safe.address,
-        label: `${safe.name} (${safe.address})`,
-        hint: `Chain: ${safe.chainId}`,
-      })),
-    })) as Address
+    const chains = configStore.getAllChains()
+    const activeSafe = safeStorage.getActiveSafe()
 
-    if (p.isCancel(safeAddress)) {
+    // Select Safe
+    const safeKey = (await p.select({
+      message: 'Select Safe to create transaction for',
+      options: safes.map((safe) => {
+        const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
+        const chain = configStore.getChain(safe.chainId)
+        const isActive =
+          activeSafe &&
+          activeSafe.chainId === safe.chainId &&
+          activeSafe.address.toLowerCase() === safe.address.toLowerCase()
+
+        return {
+          value: `${safe.chainId}:${safe.address}`,
+          label: `${safe.name} (${eip3770})${isActive ? ' ●' : ''}`,
+          hint: chain?.name || safe.chainId,
+        }
+      }),
+    })) as string
+
+    if (p.isCancel(safeKey)) {
       p.cancel('Operation cancelled')
       return
     }
 
-    const safe = safes.find((s) => s.address === safeAddress)
+    const [chainId, address] = safeKey.split(':')
+    const safe = safeStorage.getSafe(chainId, address as Address)
     if (!safe) {
       p.log.error('Safe not found')
       p.outro('Failed')
@@ -142,7 +156,7 @@ export async function createTransaction() {
     }
 
     const txService = new TransactionService(chain)
-    const createdTx = await txService.createTransaction(safeAddress, {
+    const createdTx = await txService.createTransaction(safe.address as Address, {
       to,
       value,
       data,
@@ -151,7 +165,7 @@ export async function createTransaction() {
 
     // Store transaction
     const storedTx = transactionStore.createTransaction(
-      safeAddress,
+      safe.address as Address,
       safe.chainId,
       createdTx.metadata,
       activeWallet.address as Address
