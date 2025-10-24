@@ -51,16 +51,16 @@ describe('exportTransaction', () => {
           refundReceiver: '0x0000000000000000000000000000000000000000',
           nonce: 5,
         },
-        signatures: [
-          { signer: '0xowner1', signature: '0xsig1', signedAt: new Date() },
-        ],
+        signatures: [{ signer: '0xowner1', signature: '0xsig1', signedAt: new Date() }],
         createdBy: '0xowner1',
         createdAt: new Date().toISOString(),
       }),
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await exportTransaction('0xabc123')
 
@@ -99,7 +99,9 @@ describe('exportTransaction', () => {
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(fs.writeFileSync).mockImplementation(() => {})
 
     await exportTransaction('0xabc123', '/tmp/tx.json')
@@ -121,7 +123,9 @@ describe('exportTransaction', () => {
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await expect(exportTransaction('0xnonexistent')).rejects.toThrow('Transaction not found')
   })
@@ -167,7 +171,9 @@ describe('exportTransaction', () => {
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(p.select).mockResolvedValue('0xabc123')
 
     await exportTransaction()
@@ -186,7 +192,9 @@ describe('exportTransaction', () => {
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await exportTransaction()
 

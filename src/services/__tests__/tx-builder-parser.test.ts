@@ -79,7 +79,9 @@ describe('TxBuilderParser', () => {
     it('should throw for missing required fields', () => {
       const invalidData = { ...validTxBuilderData }
       delete (invalidData as any).version
-      expect(() => TxBuilderParser.validate(invalidData)).toThrow('Invalid Transaction Builder format')
+      expect(() => TxBuilderParser.validate(invalidData)).toThrow(
+        'Invalid Transaction Builder format'
+      )
     })
 
     it('should throw for missing Safe address', () => {
@@ -272,7 +274,9 @@ describe('TxBuilderParser', () => {
         contractInputsValues: {}, // Missing spender value
       }
 
-      expect(() => TxBuilderParser.parseTransaction(tx as any)).toThrow('Missing value for parameter')
+      expect(() => TxBuilderParser.parseTransaction(tx as any)).toThrow(
+        'Missing value for parameter'
+      )
     })
   })
 })

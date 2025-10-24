@@ -3,7 +3,8 @@ import type { ChainConfig } from '../types/config.js'
 import { SafeCLIError } from '../utils/errors.js'
 
 // EIP-1967 storage slots
-const EIP1967_IMPLEMENTATION_SLOT = '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
+const EIP1967_IMPLEMENTATION_SLOT =
+  '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
 const EIP1967_BEACON_SLOT = '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
 
 /**
@@ -107,13 +108,15 @@ export class ContractService {
         try {
           const implData = await client.readContract({
             address: beaconAddress,
-            abi: [{
-              type: 'function',
-              name: 'implementation',
-              inputs: [],
-              outputs: [{ type: 'address' }],
-              stateMutability: 'view',
-            }],
+            abi: [
+              {
+                type: 'function',
+                name: 'implementation',
+                inputs: [],
+                outputs: [{ type: 'address' }],
+                stateMutability: 'view',
+              },
+            ],
             functionName: 'implementation',
           })
 

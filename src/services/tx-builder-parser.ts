@@ -87,7 +87,9 @@ export class TxBuilderParser {
     for (let i = 0; i < data.transactions.length; i++) {
       const tx = data.transactions[i]
       if (!tx.to) {
-        throw new SafeCLIError(`Invalid Transaction Builder format: transaction ${i} missing 'to' address`)
+        throw new SafeCLIError(
+          `Invalid Transaction Builder format: transaction ${i} missing 'to' address`
+        )
       }
 
       // Must have either data or contractMethod

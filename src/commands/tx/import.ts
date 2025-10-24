@@ -11,6 +11,12 @@ import { TxBuilderParser } from '../../services/tx-builder-parser.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { validateAndChecksumAddress } from '../../utils/validation.js'
 import type { TransactionMetadata, TransactionSignature } from '../../types/transaction.js'
+import { renderScreen } from '../../ui/render.js'
+import {
+  TransactionImportBuilderSuccessScreen,
+  TransactionImportSuccessScreen,
+} from '../../ui/screens/index.js'
+import { formatSafeAddress } from '../../utils/eip3770.js'
 
 interface ImportData {
   safeTxHash: string
@@ -46,23 +52,10 @@ async function importTransactionBuilderFormat(data: any) {
         parsed.createdBy = validateAndChecksumAddress(parsed.createdBy)
       }
     } catch (error) {
-      throw new SafeCLIError(`Invalid address in transaction data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new SafeCLIError(
+        `Invalid address in transaction data: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
-
-    console.log('')
-    console.log(pc.bold('Transaction Builder Import'))
-    console.log('')
-
-    if (parsed.meta.name) {
-      console.log(`  ${pc.dim('Batch Name:')} ${parsed.meta.name}`)
-    }
-    if (parsed.meta.description) {
-      console.log(`  ${pc.dim('Description:')} ${parsed.meta.description}`)
-    }
-    console.log(`  ${pc.dim('Chain ID:')}    ${parsed.chainId}`)
-    console.log(`  ${pc.dim('Safe:')}        ${parsed.safeAddress}`)
-    console.log(`  ${pc.dim('Transactions:')} ${parsed.transactions.length}`)
-    console.log('')
 
     // Check if Safe exists locally
     const safe = safeStorage.getSafe(parsed.chainId, parsed.safeAddress)
@@ -104,10 +97,14 @@ async function importTransactionBuilderFormat(data: any) {
     if (parsed.transactions.length > 1) {
       console.log(pc.yellow('⚠ Multiple transactions detected (batch transaction)'))
       console.log('')
-      console.log(pc.dim('Transaction Builder batches need to be converted to a MultiSend transaction.'))
-      console.log(pc.dim('This feature is not yet implemented. Each transaction will be imported separately.'))
+      console.log(
+        pc.dim('Transaction Builder batches need to be converted to a MultiSend transaction.')
+      )
+      console.log(
+        pc.dim('This feature is not yet implemented. Each transaction will be imported separately.')
+      )
       console.log('')
-      
+
       const confirm = await p.confirm({
         message: 'Import transactions separately?',
         initialValue: true,
@@ -125,21 +122,9 @@ async function importTransactionBuilderFormat(data: any) {
 
     for (let i = 0; i < parsed.transactions.length; i++) {
       const tx = parsed.transactions[i]
-      
-      console.log('')
-      console.log(pc.bold(`Transaction ${i + 1}/${parsed.transactions.length}`))
-      console.log(`  ${pc.dim('To:')}    ${tx.to}`)
-      console.log(`  ${pc.dim('Value:')} ${tx.value} wei`)
-      console.log(`  ${pc.dim('Data:')}  ${tx.data.slice(0, 20)}...`)
-      console.log('')
 
       // Get current nonce for this Safe
       const currentNonce = await txService.getNonce(parsed.safeAddress)
-
-      console.log(pc.yellow(`⚠ Transaction needs configuration:`))
-      console.log(`  • Nonce (current Safe nonce: ${currentNonce})`)
-      console.log(`  • Gas parameters`)
-      console.log('')
 
       // Prompt for nonce
       const nonceInput = (await p.text({
@@ -150,7 +135,8 @@ async function importTransactionBuilderFormat(data: any) {
           if (!value) return 'Nonce is required'
           const num = parseInt(value, 10)
           if (isNaN(num) || num < 0) return 'Nonce must be a non-negative number'
-          if (num < currentNonce) return `Nonce cannot be lower than current Safe nonce (${currentNonce})`
+          if (num < currentNonce)
+            return `Nonce cannot be lower than current Safe nonce (${currentNonce})`
           return undefined
         },
       })) as string
@@ -185,32 +171,21 @@ async function importTransactionBuilderFormat(data: any) {
       )
 
       spinner.stop('Transaction created')
-      
-      console.log('')
-      console.log(pc.green(`✓ Transaction ${i + 1} imported`))
-      console.log(`  ${pc.dim('Safe TX Hash:')} ${createdTx.safeTxHash}`)
 
       importedTransactions.push(createdTx.safeTxHash)
     }
 
-    console.log('')
-    console.log(pc.green(`✓ Successfully imported ${importedTransactions.length} transaction(s)`))
-    console.log('')
-    console.log(pc.bold('Next steps:'))
-    console.log('')
-    
-    if (importedTransactions.length === 1) {
-      console.log(`  ${pc.cyan(`safe tx sign ${importedTransactions[0]}`)} (sign the transaction)`)
-      console.log('')
-      console.log(`  ${pc.cyan(`safe tx status ${importedTransactions[0]}`)} (check status)`)
-    } else {
-      console.log(`  ${pc.cyan(`safe tx list`)} (view all transactions)`)
-      console.log('')
-      console.log(`  ${pc.cyan(`safe tx sign <safeTxHash>`)} (sign each transaction)`)
-    }
-    console.log('')
+    // Get chains for EIP-3770 formatting
+    const chains = configStore.getAllChains()
+    const eip3770 = formatSafeAddress(parsed.safeAddress, parsed.chainId, chains)
 
-    p.outro('Import complete')
+    await renderScreen(TransactionImportBuilderSuccessScreen, {
+      safeEip3770: eip3770,
+      chainId: parsed.chainId,
+      batchName: parsed.meta.name,
+      batchDescription: parsed.meta.description,
+      importedTxHashes: importedTransactions,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)
@@ -220,7 +195,6 @@ async function importTransactionBuilderFormat(data: any) {
     p.outro('Failed')
   }
 }
-
 
 export async function importTransaction(input?: string) {
   p.intro(pc.bgCyan(pc.black(' Import Transaction ')))
@@ -269,7 +243,7 @@ export async function importTransaction(input?: string) {
     if (TxBuilderParser.isTxBuilderFormat(parsedData)) {
       console.log('')
       console.log(pc.cyan('ℹ Transaction Builder format detected'))
-      
+
       await importTransactionBuilderFormat(parsedData)
       return
     }
@@ -278,7 +252,12 @@ export async function importTransaction(input?: string) {
     const importData: ImportData = parsedData as ImportData
 
     // Validate CLI format structure
-    if (!importData.safeTxHash || !importData.chainId || !importData.safeAddress || !importData.metadata) {
+    if (
+      !importData.safeTxHash ||
+      !importData.chainId ||
+      !importData.safeAddress ||
+      !importData.metadata
+    ) {
       throw new SafeCLIError('Invalid transaction data: missing required fields')
     }
 
@@ -290,7 +269,9 @@ export async function importTransaction(input?: string) {
         importData.metadata.gasToken = validateAndChecksumAddress(importData.metadata.gasToken)
       }
       if (importData.metadata.refundReceiver) {
-        importData.metadata.refundReceiver = validateAndChecksumAddress(importData.metadata.refundReceiver)
+        importData.metadata.refundReceiver = validateAndChecksumAddress(
+          importData.metadata.refundReceiver
+        )
       }
       if (importData.createdBy) {
         importData.createdBy = validateAndChecksumAddress(importData.createdBy)
@@ -300,15 +281,21 @@ export async function importTransaction(input?: string) {
         sig.signer = validateAndChecksumAddress(sig.signer)
       }
     } catch (error) {
-      throw new SafeCLIError(`Invalid address in transaction data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new SafeCLIError(
+        `Invalid address in transaction data: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
 
     // Check if Safe exists locally
     const safe = safeStorage.getSafe(importData.chainId, importData.safeAddress)
     if (!safe) {
-      p.log.warning(`Safe ${importData.safeAddress} on chain ${importData.chainId} not found locally`)
+      p.log.warning(
+        `Safe ${importData.safeAddress} on chain ${importData.chainId} not found locally`
+      )
       console.log('')
-      console.log(pc.dim('You can still import this transaction, but you may need to open this Safe first:'))
+      console.log(
+        pc.dim('You can still import this transaction, but you may need to open this Safe first:')
+      )
       console.log(`  ${pc.cyan(`safe account open`)}`)
       console.log('')
 
@@ -327,9 +314,7 @@ export async function importTransaction(input?: string) {
     const existingTx = transactionStore.getTransaction(importData.safeTxHash)
 
     if (existingTx) {
-      console.log('')
-      console.log(pc.yellow('⚠ Transaction already exists locally'))
-      console.log('')
+      p.log.warning('Transaction already exists locally')
 
       // Merge signatures
       const newSignatures = importData.signatures.filter(
@@ -344,12 +329,6 @@ export async function importTransaction(input?: string) {
         p.outro('Already up to date')
         return
       }
-
-      console.log(pc.bold(`Found ${newSignatures.length} new signature(s) to import:`))
-      for (const sig of newSignatures) {
-        console.log(`  ${pc.dim('•')} ${sig.signer}`)
-      }
-      console.log('')
 
       const confirm = await p.confirm({
         message: 'Import new signatures?',
@@ -367,34 +346,21 @@ export async function importTransaction(input?: string) {
       }
 
       const updatedTx = transactionStore.getTransaction(importData.safeTxHash)!
+      const readyToExecute =
+        safe && safe.threshold !== undefined && updatedTx.signatures.length >= safe.threshold
 
-      console.log('')
-      console.log(pc.green(`✓ Imported ${newSignatures.length} new signature(s)`))
-      console.log('')
-      console.log(pc.bold('Updated status:'))
-      console.log(`  ${pc.dim('Signatures:')} ${updatedTx.signatures.length}${safe ? ` / ${safe.threshold}` : ''}`)
-      console.log('')
-
-      if (safe && safe.threshold !== undefined && updatedTx.signatures.length >= safe.threshold) {
-        console.log(pc.green('✓ Transaction ready to execute!'))
-        console.log('')
-        console.log(pc.bold('To execute this transaction, run:'))
-        console.log('')
-        console.log(`  ${pc.cyan(`safe tx execute ${importData.safeTxHash}`)}`)
-        console.log('')
-      }
-
-      p.outro('Import complete')
+      await renderScreen(TransactionImportSuccessScreen, {
+        safeTxHash: importData.safeTxHash,
+        safe: importData.safe || importData.safeAddress,
+        to: importData.metadata.to,
+        mode: 'merged',
+        signatureCount: updatedTx.signatures.length,
+        threshold: safe?.threshold,
+        newSigners: newSignatures.map((sig) => sig.signer as Address),
+        readyToExecute: !!readyToExecute,
+      })
     } else {
       // Create new transaction
-      console.log('')
-      console.log(pc.bold('Importing transaction:'))
-      console.log(`  ${pc.dim('Safe TX Hash:')} ${importData.safeTxHash}`)
-      console.log(`  ${pc.dim('Safe:')}         ${importData.safe || importData.safeAddress}`)
-      console.log(`  ${pc.dim('To:')}           ${importData.metadata.to}`)
-      console.log(`  ${pc.dim('Signatures:')}   ${importData.signatures.length}`)
-      console.log('')
-
       const confirm = await p.confirm({
         message: 'Import this transaction?',
         initialValue: true,
@@ -419,27 +385,18 @@ export async function importTransaction(input?: string) {
         transactionStore.addSignature(importData.safeTxHash, sig)
       }
 
-      console.log('')
-      console.log(pc.green('✓ Transaction imported successfully'))
-      console.log('')
+      const readyToExecute =
+        safe && safe.threshold !== undefined && importData.signatures.length >= safe.threshold
 
-      if (safe && safe.threshold !== undefined && importData.signatures.length >= safe.threshold) {
-        console.log(pc.green('✓ Transaction ready to execute!'))
-        console.log('')
-        console.log(pc.bold('To execute this transaction, run:'))
-        console.log('')
-        console.log(`  ${pc.cyan(`safe tx execute ${importData.safeTxHash}`)}`)
-        console.log('')
-      } else {
-        console.log(pc.bold('Next steps:'))
-        console.log('')
-        console.log(`  ${pc.cyan(`safe tx status ${importData.safeTxHash}`)} (check status)`)
-        console.log('')
-        console.log(`  ${pc.cyan(`safe tx sign ${importData.safeTxHash}`)} (add your signature)`)
-        console.log('')
-      }
-
-      p.outro('Import complete')
+      await renderScreen(TransactionImportSuccessScreen, {
+        safeTxHash: importData.safeTxHash,
+        safe: importData.safe || importData.safeAddress,
+        to: importData.metadata.to,
+        mode: 'new',
+        signatureCount: importData.signatures.length,
+        threshold: safe?.threshold,
+        readyToExecute: !!readyToExecute,
+      })
     }
   } catch (error) {
     if (error instanceof SafeCLIError) {

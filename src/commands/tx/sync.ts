@@ -9,6 +9,8 @@ import { SafeTransactionServiceAPI } from '../../services/api-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 import type { TransactionMetadata } from '../../types/transaction.js'
+import { renderScreen } from '../../ui/render.js'
+import { TransactionSyncSuccessScreen } from '../../ui/screens/index.js'
 
 export async function syncTransactions(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Sync Transactions with Safe API ')))
@@ -105,12 +107,8 @@ export async function syncTransactions(account?: string) {
     const apiService = new SafeTransactionServiceAPI(chain, apiKey)
 
     // Step 1: Pull remote transactions
-    console.log('')
-    console.log(pc.bold('Step 1: Pulling transactions from Safe API...'))
-    console.log('')
-
     const spinner = p.spinner()
-    spinner.start('Fetching remote transactions...')
+    spinner.start('Pulling transactions from Safe API...')
 
     let pullImported = 0
     let pullUpdated = 0
@@ -155,7 +153,6 @@ export async function syncTransactions(account?: string) {
             })
           }
 
-          console.log(`  ${pc.green('↓')} Pulled ${safeTxHash.slice(0, 10)}...`)
           pullImported++
         } else {
           const localSigners = new Set(localTx.signatures.map((sig) => sig.signer.toLowerCase()))
@@ -172,14 +169,9 @@ export async function syncTransactions(account?: string) {
               })
             }
 
-            console.log(`  ${pc.cyan('↓')} Updated ${safeTxHash.slice(0, 10)}... (+${newSignatures.length} sigs)`)
             pullUpdated++
           }
         }
-      }
-
-      if (pullImported === 0 && pullUpdated === 0) {
-        console.log(`  ${pc.dim('No new transactions to pull')}`)
       }
     } catch (error) {
       spinner.stop('Pull failed')
@@ -187,11 +179,7 @@ export async function syncTransactions(account?: string) {
     }
 
     // Step 2: Push local transactions
-    console.log('')
-    console.log(pc.bold('Step 2: Pushing local transactions to Safe API...'))
-    console.log('')
-
-    spinner.start('Finding local transactions to push...')
+    spinner.start('Pushing local transactions to Safe API...')
 
     let pushProposed = 0
     let pushUpdated = 0
@@ -215,7 +203,6 @@ export async function syncTransactions(account?: string) {
         )
 
         if (!walletSignature) {
-          console.log(`  ${pc.dim('−')} Skipped ${localTx.safeTxHash.slice(0, 10)}... (not signed by active wallet)`)
           continue
         }
 
@@ -237,10 +224,7 @@ export async function syncTransactions(account?: string) {
             for (const sig of newSignatures) {
               await apiService.confirmTransaction(localTx.safeTxHash, sig.signature)
             }
-            console.log(`  ${pc.cyan('↑')} Pushed ${localTx.safeTxHash.slice(0, 10)}... (+${newSignatures.length} sigs)`)
             pushUpdated++
-          } else {
-            console.log(`  ${pc.dim('−')} Skipped ${localTx.safeTxHash.slice(0, 10)}... (already synced)`)
           }
         } else {
           // Propose transaction
@@ -261,27 +245,26 @@ export async function syncTransactions(account?: string) {
             await apiService.confirmTransaction(localTx.safeTxHash, sig.signature)
           }
 
-          console.log(`  ${pc.green('↑')} Proposed ${localTx.safeTxHash.slice(0, 10)}...`)
           pushProposed++
         }
-      }
-
-      if (pushProposed === 0 && pushUpdated === 0) {
-        console.log(`  ${pc.dim('No new transactions to push')}`)
       }
     } catch (error) {
       spinner.stop('Push failed')
       throw error
     }
 
-    // Summary
-    console.log('')
-    console.log(pc.bold('Sync Summary:'))
-    console.log(`  ${pc.green(`↓ Pulled: ${pullImported} new, ${pullUpdated} updated`)}`)
-    console.log(`  ${pc.green(`↑ Pushed: ${pushProposed} new, ${pushUpdated} updated`)}`)
-    console.log('')
+    // Get EIP-3770 address for display
+    const eip3770 = formatSafeAddress(address, chainId, chains)
 
-    p.outro(pc.green('Sync complete'))
+    spinner.stop('Sync complete')
+
+    await renderScreen(TransactionSyncSuccessScreen, {
+      safeEip3770: eip3770,
+      pullImported,
+      pullUpdated,
+      pushProposed,
+      pushUpdated,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

@@ -8,6 +8,8 @@ import { getTransactionStore } from '../../storage/transaction-store.js'
 import { SafeTransactionServiceAPI } from '../../services/api-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
+import { renderScreen } from '../../ui/render.js'
+import { TransactionPushSuccessScreen } from '../../ui/screens/index.js'
 
 export async function pushTransaction(safeTxHash?: string) {
   p.intro(pc.bgCyan(pc.black(' Push Transaction to Safe API ')))
@@ -113,38 +115,28 @@ export async function pushTransaction(safeTxHash?: string) {
       // Check if transaction already exists on the service
       const existingTx = await apiService.getTransaction(selectedSafeTxHash)
 
+      const pushedSigners: Address[] = []
+
       if (existingTx) {
         spinner.stop('Transaction already exists on service')
 
         // Add new signatures
         const remoteSignatures = existingTx.confirmations || []
-        const remoteSigners = new Set(
-          remoteSignatures.map((conf: any) => conf.owner.toLowerCase())
-        )
+        const remoteSigners = new Set(remoteSignatures.map((conf: any) => conf.owner.toLowerCase()))
 
         const newSignatures = transaction.signatures.filter(
           (sig) => !remoteSigners.has(sig.signer.toLowerCase())
         )
 
         if (newSignatures.length === 0) {
-          console.log('')
-          console.log(pc.yellow('⚠ No new signatures to push'))
-          console.log('')
           p.outro('Already up to date')
           return
         }
 
-        console.log('')
-        console.log(pc.bold(`Pushing ${newSignatures.length} new signature(s)...`))
-
         for (const sig of newSignatures) {
           await apiService.confirmTransaction(selectedSafeTxHash, sig.signature)
-          console.log(`  ${pc.green('✓')} Added signature from ${sig.signer}`)
+          pushedSigners.push(sig.signer as Address)
         }
-
-        console.log('')
-        console.log(pc.green('✓ Signatures pushed successfully'))
-        console.log('')
       } else {
         // Propose new transaction
         await apiService.proposeTransaction(
@@ -157,33 +149,35 @@ export async function pushTransaction(safeTxHash?: string) {
 
         spinner.stop('Transaction proposed')
 
+        // Track proposer
+        pushedSigners.push(activeWallet.address as Address)
+
         // Add additional signatures if any
         const additionalSignatures = transaction.signatures.filter(
           (sig) => sig.signer.toLowerCase() !== activeWallet.address.toLowerCase()
         )
 
-        if (additionalSignatures.length > 0) {
-          console.log('')
-          console.log(pc.bold(`Adding ${additionalSignatures.length} additional signature(s)...`))
-
-          for (const sig of additionalSignatures) {
-            await apiService.confirmTransaction(selectedSafeTxHash, sig.signature)
-            console.log(`  ${pc.green('✓')} Added signature from ${sig.signer}`)
-          }
+        for (const sig of additionalSignatures) {
+          await apiService.confirmTransaction(selectedSafeTxHash, sig.signature)
+          pushedSigners.push(sig.signer as Address)
         }
-
-        console.log('')
-        console.log(pc.green('✓ Transaction pushed to Safe Transaction Service'))
-        console.log('')
       }
 
       const serviceUrl = `${chain.transactionServiceUrl}/api/v1/safes/${transaction.safeAddress}/multisig-transactions/${selectedSafeTxHash}/`
+      const chains = configStore.getAllChains()
+      const eip3770 = formatSafeAddress(
+        transaction.safeAddress as Address,
+        transaction.chainId,
+        chains
+      )
 
-      console.log(pc.dim('View on Safe Transaction Service:'))
-      console.log(`  ${pc.cyan(serviceUrl)}`)
-      console.log('')
-
-      p.outro(pc.green('Push complete'))
+      await renderScreen(TransactionPushSuccessScreen, {
+        safeTxHash: selectedSafeTxHash,
+        safeEip3770: eip3770,
+        mode: existingTx ? 'updated' : 'proposed',
+        signers: pushedSigners,
+        serviceUrl,
+      })
     } catch (error) {
       spinner.stop('Failed')
       throw error

@@ -5,6 +5,8 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { getConfigStore } from '../../storage/config-store.js'
 import { SafeCLIError } from '../../utils/errors.js'
+import { renderScreen } from '../../ui/render.js'
+import { ChainEditSuccessScreen } from '../../ui/screens/index.js'
 
 export async function editChains() {
   p.intro('Edit Chain Configurations')
@@ -100,11 +102,15 @@ export async function editChains() {
 
       // Validate URLs
       if (!c.rpcUrl.startsWith('http://') && !c.rpcUrl.startsWith('https://')) {
-        throw new SafeCLIError(`Invalid RPC URL for chain ${chainId}: must start with http:// or https://`)
+        throw new SafeCLIError(
+          `Invalid RPC URL for chain ${chainId}: must start with http:// or https://`
+        )
       }
 
       if (c.explorer && !c.explorer.startsWith('http://') && !c.explorer.startsWith('https://')) {
-        throw new SafeCLIError(`Invalid explorer URL for chain ${chainId}: must start with http:// or https://`)
+        throw new SafeCLIError(
+          `Invalid explorer URL for chain ${chainId}: must start with http:// or https://`
+        )
       }
     }
 
@@ -124,24 +130,12 @@ export async function editChains() {
     const added = Array.from(newChainIds).filter((id) => !oldChainIds.has(id))
     const removed = Array.from(oldChainIds).filter((id) => !newChainIds.has(id))
     const modified = Array.from(newChainIds).filter(
-      (id) =>
-        oldChainIds.has(id) &&
-        JSON.stringify(chains[id]) !== JSON.stringify(newChains[id])
+      (id) => oldChainIds.has(id) && JSON.stringify(chains[id]) !== JSON.stringify(newChains[id])
     )
 
-    if (added.length > 0 || removed.length > 0 || modified.length > 0) {
-      console.log('\nChanges detected:')
-      if (added.length > 0) {
-        console.log(`  Added: ${added.map((id) => newChains[id].name).join(', ')}`)
-      }
-      if (removed.length > 0) {
-        console.log(`  Removed: ${removed.map((id) => chains[id].name).join(', ')}`)
-      }
-      if (modified.length > 0) {
-        console.log(`  Modified: ${modified.map((id) => newChains[id].name).join(', ')}`)
-      }
-      console.log('')
-    }
+    const addedNames = added.map((id) => newChains[id].name)
+    const removedNames = removed.map((id) => chains[id].name)
+    const modifiedNames = modified.map((id) => newChains[id].name)
 
     const confirm = await p.confirm({
       message: 'Apply these changes?',
@@ -177,9 +171,14 @@ export async function editChains() {
 
     spinner.stop('Configuration saved')
 
-    p.outro(
-      `Updated ${added.length + modified.length} chain(s)${removed.length > 0 ? `, removed ${removed.length}` : ''}`
-    )
+    await renderScreen(ChainEditSuccessScreen, {
+      added: added.length,
+      modified: modified.length,
+      removed: removed.length,
+      addedNames,
+      modifiedNames,
+      removedNames,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

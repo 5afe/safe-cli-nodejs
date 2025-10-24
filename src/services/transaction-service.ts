@@ -87,10 +87,7 @@ export class TransactionService {
   }
 
   // Sign a transaction
-  async signTransaction(
-    safeAddress: Address,
-    metadata: TransactionMetadata
-  ): Promise<string> {
+  async signTransaction(safeAddress: Address, metadata: TransactionMetadata): Promise<string> {
     if (!this.privateKey) {
       throw new SafeCLIError('Private key required to sign transaction')
     }
@@ -200,7 +197,7 @@ export class TransactionService {
 
       // Wait for transaction confirmation
       const receipt = await client.waitForTransactionReceipt({
-        hash: executeTxResponse.hash as `0x${string}`
+        hash: executeTxResponse.hash as `0x${string}`,
       })
 
       return receipt.transactionHash

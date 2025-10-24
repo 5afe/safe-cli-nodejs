@@ -67,7 +67,9 @@ describe('showTransactionStatus', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await showTransactionStatus('0xabc123')
 
@@ -107,9 +109,7 @@ describe('showTransactionStatus', () => {
           value: '1000',
           nonce: 5,
         },
-        signatures: [
-          { signer: '0xowner1', signature: '0xsig1', signedAt: new Date() },
-        ],
+        signatures: [{ signer: '0xowner1', signature: '0xsig1', signedAt: new Date() }],
         createdAt: new Date().toISOString(),
         createdBy: '0xowner1',
       }),
@@ -117,7 +117,9 @@ describe('showTransactionStatus', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await showTransactionStatus('0xabc123')
 
@@ -141,7 +143,9 @@ describe('showTransactionStatus', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await showTransactionStatus('0xnonexistent')
 
@@ -192,7 +196,9 @@ describe('showTransactionStatus', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(p.select).mockResolvedValue('0xabc123')
 
     await showTransactionStatus()
@@ -216,7 +222,9 @@ describe('showTransactionStatus', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await showTransactionStatus()
 

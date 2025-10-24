@@ -7,6 +7,8 @@ import { SafeService } from '../../services/safe-service.js'
 import { isValidAddress } from '../../utils/validation.js'
 import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
+import { renderScreen } from '../../ui/render.js'
+import { SafeOpenSuccessScreen } from '../../ui/screens/index.js'
 
 export async function openSafe() {
   p.intro(pc.bgCyan(pc.black(' Open Existing Safe ')))
@@ -107,13 +109,9 @@ export async function openSafe() {
       deployed: true,
     })
 
-    console.log('')
-    console.log(pc.green('✓ Safe added to workspace!'))
-    console.log('')
-    console.log(`  ${pc.dim('Name:')} ${pc.bold(safe.name)}`)
-    console.log('')
-
-    p.outro(pc.green('Safe ready to use'))
+    await renderScreen(SafeOpenSuccessScreen, {
+      name: safe.name,
+    })
   } catch (error) {
     spinner.stop('Failed to load Safe')
     logError(error instanceof Error ? error.message : 'Unknown error')

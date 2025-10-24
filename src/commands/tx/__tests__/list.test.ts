@@ -71,7 +71,9 @@ describe('listTransactions', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(p.select).mockResolvedValue('all')
 
     await listTransactions()
@@ -146,7 +148,9 @@ describe('listTransactions', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     // Select Safe 1
     vi.mocked(p.select).mockResolvedValue('1:0x1234567890123456789012345678901234567890')
 
@@ -174,7 +178,9 @@ describe('listTransactions', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await listTransactions()
 
@@ -219,7 +225,9 @@ describe('listTransactions', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     // Pass EIP-3770 format directly
     await listTransactions('eth:0x1234567890123456789012345678901234567890')
@@ -290,7 +298,9 @@ describe('listTransactions', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(p.select).mockResolvedValue('all')
 
     await listTransactions()

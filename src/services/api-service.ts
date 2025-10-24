@@ -54,7 +54,9 @@ export class SafeTransactionServiceAPI {
           baseGas: metadata.baseGas ?? '0',
           gasPrice: metadata.gasPrice ?? '0',
           gasToken: getAddress(metadata.gasToken ?? '0x0000000000000000000000000000000000000000'),
-          refundReceiver: getAddress(metadata.refundReceiver ?? '0x0000000000000000000000000000000000000000'),
+          refundReceiver: getAddress(
+            metadata.refundReceiver ?? '0x0000000000000000000000000000000000000000'
+          ),
           nonce: metadata.nonce,
         },
         safeTxHash,

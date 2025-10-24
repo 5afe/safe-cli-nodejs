@@ -113,7 +113,7 @@ describe('removeWallet', () => {
     vi.mocked(walletStorageModule.getWalletStorage).mockReturnValue(mockWalletStore as any)
     vi.mocked(p.select).mockResolvedValue('wallet-1')
     vi.mocked(p.confirm)
-      .mockResolvedValueOnce(true)  // First confirmation accepted
+      .mockResolvedValueOnce(true) // First confirmation accepted
       .mockResolvedValueOnce(false) // Second confirmation declined
 
     await removeWallet()

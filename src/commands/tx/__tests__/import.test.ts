@@ -34,7 +34,11 @@ describe('importTransaction', () => {
       nonce: 5,
     },
     signatures: [
-      { signer: '0x1111111111111111111111111111111111111111', signature: '0xsig1', signedAt: new Date() },
+      {
+        signer: '0x1111111111111111111111111111111111111111',
+        signature: '0xsig1',
+        signedAt: new Date(),
+      },
     ],
     createdBy: '0x1111111111111111111111111111111111111111',
     createdAt: new Date().toISOString(),
@@ -81,7 +85,9 @@ describe('importTransaction', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(p.confirm).mockResolvedValue(true)
 
     await importTransaction(validTransactionJson)
@@ -121,7 +127,9 @@ describe('importTransaction', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(fs.existsSync).mockReturnValue(true)
     vi.mocked(fs.readFileSync).mockReturnValue(validTransactionJson)
     vi.mocked(p.confirm).mockResolvedValue(true)
@@ -149,7 +157,9 @@ describe('importTransaction', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     await importTransaction('invalid json')
 
@@ -174,7 +184,9 @@ describe('importTransaction', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
 
     const invalidJson = JSON.stringify({
       safeTxHash: '0xabc123',
@@ -214,7 +226,9 @@ describe('importTransaction', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(p.confirm).mockResolvedValue(true)
 
     await importTransaction(validTransactionJson)
@@ -242,7 +256,9 @@ describe('importTransaction', () => {
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
     vi.mocked(safeStoreModule.getSafeStorage).mockReturnValue(mockSafeStore as any)
-    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(mockTransactionStore as any)
+    vi.mocked(transactionStoreModule.getTransactionStore).mockReturnValue(
+      mockTransactionStore as any
+    )
     vi.mocked(p.confirm).mockResolvedValue(true)
 
     await importTransaction(validTransactionJson)

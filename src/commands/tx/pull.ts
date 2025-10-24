@@ -8,6 +8,8 @@ import { SafeTransactionServiceAPI } from '../../services/api-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 import type { TransactionMetadata } from '../../types/transaction.js'
+import { renderScreen } from '../../ui/render.js'
+import { TransactionPullSuccessScreen, type TransactionPullResult } from '../../ui/screens/index.js'
 
 export async function pullTransactions(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Pull Transactions from Safe API ')))
@@ -104,22 +106,16 @@ export async function pullTransactions(account?: string) {
 
       if (remoteTxs.length === 0) {
         spinner.stop('No pending transactions found')
-        console.log('')
-        console.log(pc.dim('No pending transactions on the Safe Transaction Service'))
-        console.log('')
         p.outro('Up to date')
         return
       }
 
       spinner.stop(`Found ${remoteTxs.length} pending transaction(s)`)
 
-      console.log('')
-      console.log(pc.bold('Pending transactions:'))
-      console.log('')
-
       let imported = 0
       let updated = 0
       let skipped = 0
+      const results: TransactionPullResult[] = []
 
       for (const remoteTx of remoteTxs) {
         const safeTxHash = remoteTx.safeTxHash
@@ -160,15 +156,15 @@ export async function pullTransactions(account?: string) {
             })
           }
 
-          console.log(
-            `  ${pc.green('✓')} Imported ${safeTxHash.slice(0, 10)}... (${remoteTx.confirmations?.length || 0} signatures)`
-          )
+          results.push({
+            safeTxHash,
+            status: 'imported',
+            signatureCount: remoteTx.confirmations?.length || 0,
+          })
           imported++
         } else {
           // Merge signatures
-          const localSigners = new Set(
-            localTx.signatures.map((sig) => sig.signer.toLowerCase())
-          )
+          const localSigners = new Set(localTx.signatures.map((sig) => sig.signer.toLowerCase()))
 
           const newSignatures = (remoteTx.confirmations || []).filter(
             (conf: any) => !localSigners.has(conf.owner.toLowerCase())
@@ -183,25 +179,33 @@ export async function pullTransactions(account?: string) {
               })
             }
 
-            console.log(
-              `  ${pc.cyan('↻')} Updated ${safeTxHash.slice(0, 10)}... (+${newSignatures.length} signatures)`
-            )
+            results.push({
+              safeTxHash,
+              status: 'updated',
+              signatureCount: newSignatures.length,
+            })
             updated++
           } else {
-            console.log(`  ${pc.dim('−')} Skipped ${safeTxHash.slice(0, 10)}... (already up to date)`)
+            results.push({
+              safeTxHash,
+              status: 'skipped',
+              signatureCount: 0,
+            })
             skipped++
           }
         }
       }
 
-      console.log('')
-      console.log(pc.bold('Summary:'))
-      console.log(`  ${pc.green(`Imported: ${imported}`)}`)
-      console.log(`  ${pc.cyan(`Updated: ${updated}`)}`)
-      console.log(`  ${pc.dim(`Skipped: ${skipped}`)}`)
-      console.log('')
+      // Get EIP-3770 address for display
+      const eip3770 = formatSafeAddress(address, chainId, chains)
 
-      p.outro(pc.green('Pull complete'))
+      await renderScreen(TransactionPullSuccessScreen, {
+        safeEip3770: eip3770,
+        transactions: results,
+        imported,
+        updated,
+        skipped,
+      })
     } catch (error) {
       spinner.stop('Failed')
       throw error
