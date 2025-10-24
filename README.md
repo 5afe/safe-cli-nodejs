@@ -216,15 +216,6 @@ The CLI can import transaction batches from the Safe Transaction Builder (web ap
 - Missing fields (nonce, gas parameters) will be configured during import
 
 **Note:** Transaction Builder batches with multiple transactions will be imported as separate transactions. Native batch support via MultiSend is planned for a future release.
-safe tx import '{"safeTxHash":"0x..."...}'
-safe tx sign <safeTxHash>
-
-# Check progress
-safe tx status <safeTxHash>  # Shows: "2/3 signatures collected"
-
-# Execute when threshold reached
-safe tx execute <safeTxHash>
-```
 
 ## Configuration
 
