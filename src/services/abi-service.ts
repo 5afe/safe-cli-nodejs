@@ -128,15 +128,24 @@ export class ABIService {
   }
 
   /**
-   * Parse ABI and extract callable functions
+   * Parse ABI and extract callable functions (state-changing)
    */
   extractFunctions(abi: ABI): ABIFunction[] {
     return abi
-      .filter(
-        (item): item is ABIFunction =>
-          item.type === 'function' &&
-          (item.stateMutability === 'nonpayable' || item.stateMutability === 'payable')
-      )
+      .filter((item): item is ABIFunction => {
+        if (item.type !== 'function') return false
+
+        // Include functions that can modify state
+        // Exclude view and pure functions (read-only)
+        const mutability = item.stateMutability
+        if (!mutability) {
+          // Old contracts might not have stateMutability
+          // Include them if not marked as constant/pure/view
+          return !item.constant && item.pure !== true && item.view !== true
+        }
+
+        return mutability === 'nonpayable' || mutability === 'payable'
+      })
       .sort((a, b) => a.name.localeCompare(b.name))
   }
 

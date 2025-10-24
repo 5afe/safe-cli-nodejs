@@ -119,12 +119,56 @@ export async function createTransaction() {
       console.log('')
       console.log(pc.dim('Attempting to fetch contract ABI...'))
 
+      // Check if it's a proxy contract
+      const implementationAddress = await contractService.getImplementationAddress(to)
+      if (implementationAddress) {
+        console.log(pc.cyan(`✓ Proxy detected! Implementation: ${implementationAddress}`))
+      }
+
       const abiService = new ABIService(chain)
       let abi: any = null
 
       try {
         abi = await abiService.fetchABI(to)
-        console.log(pc.green('✓ Contract ABI found!'))
+        console.log(pc.green('✓ Proxy ABI found!'))
+
+        // If proxy, also fetch implementation ABI and merge
+        if (implementationAddress) {
+          try {
+            const implAbi = await abiService.fetchABI(implementationAddress)
+            console.log(pc.green('✓ Implementation ABI found!'))
+
+            // Merge ABIs (implementation functions + proxy functions)
+            // Filter out duplicates by function signature
+            const combinedAbi = [...implAbi]
+            const existingSignatures = new Set(
+              implAbi
+                .filter((item: any) => item.type === 'function')
+                .map((item: any) => `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`)
+            )
+
+            for (const item of abi) {
+              if (item.type === 'function') {
+                const sig = `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`
+                if (!existingSignatures.has(sig)) {
+                  combinedAbi.push(item)
+                }
+              } else {
+                // Include events, errors, etc.
+                combinedAbi.push(item)
+              }
+            }
+
+            abi = combinedAbi
+            console.log(pc.dim(`  Combined: ${abi.length} items total`))
+          } catch (error) {
+            console.log(pc.yellow('⚠ Could not fetch implementation ABI, using proxy ABI only'))
+            console.log(pc.dim(`  Found ${abi.length} items in proxy ABI`))
+          }
+        } else {
+          console.log(pc.green('✓ Contract ABI found!'))
+          console.log(pc.dim(`  Found ${abi.length} items in ABI`))
+        }
       } catch (error) {
         console.log(pc.yellow('⚠ Could not fetch ABI'))
         console.log(pc.dim('  Contract may not be verified. Falling back to manual input.'))
@@ -134,7 +178,10 @@ export async function createTransaction() {
       if (abi) {
         const functions = abiService.extractFunctions(abi)
 
+        console.log('')
         if (functions.length > 0) {
+          console.log(pc.green(`✓ Found ${functions.length} writable function(s)`))
+
           const useBuilder = await p.confirm({
             message: 'Use transaction builder to interact with contract?',
             initialValue: true,
@@ -175,6 +222,10 @@ export async function createTransaction() {
             value = result.value
             data = result.data
           }
+        } else {
+          console.log(pc.yellow('⚠ No writable functions found in ABI'))
+          console.log(pc.dim('  Contract may only have view/pure functions'))
+          console.log(pc.dim('  Falling back to manual input'))
         }
       }
     }
