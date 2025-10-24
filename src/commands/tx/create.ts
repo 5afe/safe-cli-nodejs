@@ -143,24 +143,54 @@ export async function createTransaction() {
       return
     }
 
-    // Create transaction
-    const spinner = p.spinner()
-    spinner.start('Creating transaction')
-
+    // Get current Safe nonce for recommendation
     const chain = configStore.getChain(safe.chainId)
     if (!chain) {
-      spinner.stop('Failed')
       p.log.error(`Chain ${safe.chainId} not found in configuration`)
       p.outro('Failed')
       return
     }
 
     const txService = new TransactionService(chain)
+    let currentNonce: number
+    try {
+      currentNonce = await txService.getNonce(safe.address as Address)
+    } catch (error) {
+      p.log.error(`Failed to get Safe nonce: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      p.outro('Failed')
+      return
+    }
+
+    // Ask for nonce (optional, with recommended value)
+    const nonceInput = (await p.text({
+      message: 'Transaction nonce (leave empty for default)',
+      placeholder: `${currentNonce} (recommended: current nonce)`,
+      validate: (value) => {
+        if (!value) return undefined // Empty is OK (will use default)
+        const num = parseInt(value, 10)
+        if (isNaN(num) || num < 0) return 'Nonce must be a non-negative number'
+        if (num < currentNonce) return `Nonce cannot be lower than current Safe nonce (${currentNonce})`
+        return undefined
+      },
+    })) as string
+
+    if (p.isCancel(nonceInput)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    const nonce = nonceInput ? parseInt(nonceInput, 10) : undefined
+
+    // Create transaction
+    const spinner = p.spinner()
+    spinner.start('Creating transaction')
+
     const createdTx = await txService.createTransaction(safe.address as Address, {
       to,
       value,
       data,
       operation,
+      nonce,
     })
 
     // Store transaction

@@ -58,6 +58,8 @@ export class TransactionService {
             operation: txData.operation,
           },
         ],
+        // If nonce is provided, use it; otherwise SDK will use current Safe nonce
+        options: txData.nonce !== undefined ? { nonce: txData.nonce } : undefined,
       })
 
       const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
@@ -241,6 +243,22 @@ export class TransactionService {
     } catch (error) {
       throw new SafeCLIError(
         `Failed to get Safe owners: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
+
+  // Get Safe nonce
+  async getNonce(safeAddress: Address): Promise<number> {
+    try {
+      const protocolKit = await Safe.init({
+        provider: this.chain.rpcUrl,
+        safeAddress,
+      })
+
+      return await protocolKit.getNonce()
+    } catch (error) {
+      throw new SafeCLIError(
+        `Failed to get Safe nonce: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
   }
