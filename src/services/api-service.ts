@@ -11,7 +11,7 @@ export class SafeTransactionServiceAPI {
   private apiKit: SafeApiKit
   private chain: ChainConfig
 
-  constructor(chain: ChainConfig) {
+  constructor(chain: ChainConfig, apiKey?: string) {
     if (!chain.transactionServiceUrl) {
       throw new SafeCLIError(
         `Transaction Service not available for ${chain.name}. Please configure transactionServiceUrl in chain config.`
@@ -21,6 +21,7 @@ export class SafeTransactionServiceAPI {
     this.chain = chain
     this.apiKit = new SafeApiKit({
       chainId: BigInt(chain.chainId),
+      apiKey,
     })
   }
 

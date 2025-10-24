@@ -107,7 +107,8 @@ export async function pushTransaction(safeTxHash?: string) {
     spinner.start('Pushing transaction to Safe Transaction Service...')
 
     try {
-      const apiService = new SafeTransactionServiceAPI(chain)
+      const apiKey = configStore.getPreferences().safeApiKey
+      const apiService = new SafeTransactionServiceAPI(chain, apiKey)
 
       // Check if transaction already exists on the service
       const existingTx = await apiService.getTransaction(selectedSafeTxHash)

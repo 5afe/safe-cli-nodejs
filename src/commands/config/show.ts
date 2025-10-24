@@ -31,6 +31,15 @@ export async function showConfig() {
   console.log(`  Gas Strategy:   ${config.defaults.gasStrategy}`)
   console.log('')
 
+  console.log(pc.bold('API Configuration:'))
+  if (config.preferences.safeApiKey) {
+    const obfuscated = config.preferences.safeApiKey.slice(0, 8) + '...' + config.preferences.safeApiKey.slice(-4)
+    console.log(`  Safe API Key: ${obfuscated}`)
+  } else {
+    console.log(`  Safe API Key: ${pc.dim('not configured')}`)
+  }
+  console.log('')
+
   console.log(pc.dim(`Config file: ${configStore.getConfigPath()}`))
   console.log('')
 

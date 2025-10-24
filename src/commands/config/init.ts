@@ -74,6 +74,42 @@ export async function initConfig() {
     }
   }
 
+  // Ask about Safe API key
+  console.log('')
+  console.log(pc.dim('Some chains require an API key for the Safe Transaction Service.'))
+  console.log(pc.dim('You can get one from https://dashboard.safe.global/'))
+  console.log('')
+
+  const needsApiKey = await p.confirm({
+    message: 'Do you have a Safe Transaction Service API key?',
+    initialValue: false,
+  })
+
+  if (p.isCancel(needsApiKey)) {
+    p.cancel('Operation cancelled')
+    return
+  }
+
+  if (needsApiKey) {
+    const apiKey = await p.text({
+      message: 'Enter your Safe API key:',
+      placeholder: 'sk_...',
+      validate: (value) => {
+        if (!value || value.trim().length === 0) {
+          return 'API key cannot be empty'
+        }
+      },
+    })
+
+    if (p.isCancel(apiKey)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    configStore.setPreference('safeApiKey', apiKey as string)
+    console.log(pc.green('✓ API key saved'))
+  }
+
   console.log('')
   console.log(pc.green('✓ Configuration initialized successfully!'))
   console.log('')
