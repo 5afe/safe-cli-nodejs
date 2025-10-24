@@ -40,9 +40,7 @@ describe('showConfig', () => {
             currency: 'ETH',
           },
         },
-        preferences: {
-          autoUpdate: true,
-        },
+        preferences: {},
         defaults: {},
       }),
       getAllChains: vi.fn().mockReturnValue({
@@ -60,9 +58,7 @@ describe('showConfig', () => {
           currency: 'ETH',
         },
       }),
-      getPreferences: vi.fn().mockReturnValue({
-        autoUpdate: true,
-      }),
+      getPreferences: vi.fn().mockReturnValue({}),
       getConfigPath: vi.fn().mockReturnValue('/mock/config/path'),
     }
 
@@ -75,22 +71,17 @@ describe('showConfig', () => {
     const logs = consoleMock.getLogs()
     expect(logs.some((log) => log.includes('Ethereum'))).toBe(true)
     expect(logs.some((log) => log.includes('Sepolia'))).toBe(true)
-    expect(logs.some((log) => log.includes('Auto-Update'))).toBe(true)
   })
 
   it('should handle empty configuration', async () => {
     const mockConfigStore = {
       getConfig: vi.fn().mockReturnValue({
         chains: {},
-        preferences: {
-          autoUpdate: true,
-        },
+        preferences: {},
         defaults: {},
       }),
       getAllChains: vi.fn().mockReturnValue({}),
-      getPreferences: vi.fn().mockReturnValue({
-        autoUpdate: true,
-      }),
+      getPreferences: vi.fn().mockReturnValue({}),
       getConfigPath: vi.fn().mockReturnValue('/mock/config/path'),
     }
 

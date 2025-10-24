@@ -31,10 +31,6 @@ export async function showConfig() {
   console.log(`  Gas Strategy:   ${config.defaults.gasStrategy}`)
   console.log('')
 
-  console.log(pc.bold('Preferences:'))
-  console.log(`  Auto-Update: ${config.preferences.autoUpdate ? 'enabled' : 'disabled'}`)
-  console.log('')
-
   console.log(pc.dim(`Config file: ${configStore.getConfigPath()}`))
   console.log('')
 

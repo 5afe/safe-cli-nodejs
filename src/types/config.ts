@@ -27,9 +27,7 @@ export const DefaultsConfigSchema = z.object({
   gasStrategy: z.enum(['fast', 'medium', 'slow']).default('medium'),
 })
 
-export const PreferencesConfigSchema = z.object({
-  autoUpdate: z.boolean().default(true),
-})
+export const PreferencesConfigSchema = z.object({})
 
 export const ConfigSchema = z.object({
   version: z.string().default('0.1.0'),

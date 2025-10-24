@@ -17,9 +17,7 @@ export class ConfigStore {
           signingMethod: 'ETH_SIGN_TYPED_DATA_V4',
           gasStrategy: 'medium',
         },
-        preferences: {
-          autoUpdate: true,
-        },
+        preferences: {},
       },
     })
   }

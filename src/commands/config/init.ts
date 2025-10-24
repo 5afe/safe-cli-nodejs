@@ -74,19 +74,6 @@ export async function initConfig() {
     }
   }
 
-  // Ask about auto-updates
-  const autoUpdate = await p.confirm({
-    message: 'Enable automatic update notifications?',
-    initialValue: true,
-  })
-
-  if (p.isCancel(autoUpdate)) {
-    p.cancel('Operation cancelled')
-    return
-  }
-
-  configStore.setPreference('autoUpdate', autoUpdate as boolean)
-
   console.log('')
   console.log(pc.green('✓ Configuration initialized successfully!'))
   console.log('')
