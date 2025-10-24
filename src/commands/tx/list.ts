@@ -1,15 +1,19 @@
 import * as p from '@clack/prompts'
 import type { Address } from 'viem'
+import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
 import type { TransactionStatus } from '../../types/transaction.js'
+import { formatSafeAddress } from '../../utils/eip3770.js'
 
 export async function listTransactions(safeAddress?: Address, statusFilter?: TransactionStatus) {
   p.intro('Safe Transactions')
 
   try {
+    const configStore = getConfigStore()
     const safeStorage = getSafeStorage()
     const transactionStore = getTransactionStore()
+    const chains = configStore.getAllChains()
 
     let transactions = transactionStore.getAllTransactions()
 
@@ -37,8 +41,10 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
     console.log(`\nFound ${transactions.length} transaction(s):\n`)
 
     for (const tx of transactions) {
-      const safe = safeStorage.getSafeByAddress(tx.safeAddress, tx.chainId)
+      const safe = safeStorage.getSafe(tx.chainId, tx.safeAddress)
       const safeName = safe?.name || 'Unknown'
+      const eip3770 = formatSafeAddress(tx.safeAddress as Address, tx.chainId, chains)
+      const chain = configStore.getChain(tx.chainId)
 
       // Status badge
       const statusBadge = {
@@ -49,8 +55,8 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
       }[tx.status]
 
       console.log(`${statusBadge} ${tx.id}`)
-      console.log(`  Safe: ${safeName} (${tx.safeAddress})`)
-      console.log(`  Chain: ${tx.chainId}`)
+      console.log(`  Safe: ${safeName} (${eip3770})`)
+      console.log(`  Chain: ${chain?.name || tx.chainId}`)
       console.log(`  To: ${tx.metadata.to}`)
       console.log(`  Value: ${tx.metadata.value} wei`)
       console.log(`  Operation: ${tx.metadata.operation === 0 ? 'Call' : 'DelegateCall'}`)
