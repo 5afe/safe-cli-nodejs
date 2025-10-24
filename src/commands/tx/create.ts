@@ -33,7 +33,6 @@ export async function createTransaction() {
     }
 
     const chains = configStore.getAllChains()
-    const activeSafe = safeStorage.getActiveSafe()
 
     // Select Safe
     const safeKey = (await p.select({
@@ -41,14 +40,10 @@ export async function createTransaction() {
       options: safes.map((safe) => {
         const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
         const chain = configStore.getChain(safe.chainId)
-        const isActive =
-          activeSafe &&
-          activeSafe.chainId === safe.chainId &&
-          activeSafe.address.toLowerCase() === safe.address.toLowerCase()
 
         return {
           value: `${safe.chainId}:${safe.address}`,
-          label: `${safe.name} (${eip3770})${isActive ? ' ●' : ''}`,
+          label: `${safe.name} (${eip3770})`,
           hint: chain?.name || safe.chainId,
         }
       }),

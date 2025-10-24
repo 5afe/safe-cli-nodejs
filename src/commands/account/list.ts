@@ -21,22 +21,14 @@ export async function listSafes() {
   }
 
   const chains = configStore.getAllChains()
-  const activeSafe = safeStorage.getActiveSafe()
 
   console.log('')
   for (const safe of safes) {
     const chain = configStore.getChain(safe.chainId)
     const status = safe.deployed ? pc.green('deployed') : pc.yellow('not deployed')
     const eip3770 = formatSafeAddress(safe.address as any, safe.chainId, chains)
-    const isActive =
-      activeSafe &&
-      activeSafe.chainId === safe.chainId &&
-      activeSafe.address.toLowerCase() === safe.address.toLowerCase()
 
-    const namePrefix = isActive ? pc.green('● ') : '  '
-    const activeLabel = isActive ? pc.green(' (active)') : ''
-
-    console.log(`${namePrefix}${pc.bold(safe.name)}${activeLabel}`)
+    console.log(pc.bold(safe.name))
     console.log(`  ${pc.dim('Address:')} ${pc.cyan(eip3770)}`)
     console.log(`  ${pc.dim('Chain:')}   ${chain?.name || safe.chainId}`)
     console.log(`  ${pc.dim('Owners:')}  ${safe.threshold} / ${safe.owners.length}`)

@@ -12,7 +12,6 @@ import { createSafe } from './commands/account/create.js'
 import { deploySafe } from './commands/account/deploy.js'
 import { openSafe } from './commands/account/open.js'
 import { listSafes } from './commands/account/list.js'
-import { useSafe } from './commands/account/use.js'
 import { showSafeInfo } from './commands/account/info.js'
 import { createTransaction } from './commands/tx/create.js'
 import { signTransaction } from './commands/tx/sign.js'
@@ -198,18 +197,6 @@ account
   .action(async () => {
     try {
       await listSafes()
-    } catch (error) {
-      handleError(error)
-    }
-  })
-
-account
-  .command('use [account]')
-  .alias('switch')
-  .description('Set active Safe account (EIP-3770 format: shortName:address)')
-  .action(async (account?: string) => {
-    try {
-      await useSafe(account)
     } catch (error) {
       handleError(error)
     }
