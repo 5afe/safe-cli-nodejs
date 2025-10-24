@@ -70,11 +70,14 @@ safe wallet remove            # Remove a wallet
 ### Safe Account Operations
 
 ```bash
-safe account create              # Create new Safe account
-safe account deploy [account]    # Deploy predicted Safe (EIP-3770 format)
-safe account open                # Open existing Safe
-safe account list                # List all Safe accounts
-safe account info [account]      # Show Safe details (EIP-3770 format)
+safe account create                   # Create new Safe account
+safe account deploy [account]         # Deploy predicted Safe (EIP-3770 format)
+safe account open                     # Open existing Safe
+safe account list                     # List all Safe accounts
+safe account info [account]           # Show Safe details (EIP-3770 format)
+safe account add-owner [account]      # Add a new owner to a Safe
+safe account remove-owner [account]   # Remove an owner from a Safe
+safe account change-threshold [account]  # Change signature threshold
 ```
 
 **EIP-3770 Address Format:**
@@ -90,10 +93,33 @@ This makes it clear which chain a Safe belongs to. Commands will interactively p
 ### Transaction Management
 
 ```bash
-safe tx create                # Create transaction
-safe tx sign [txId]           # Sign transaction
-safe tx execute [txId]        # Execute transaction
-safe tx list                  # List all transactions
+safe tx create                 # Create transaction
+safe tx sign [safeTxHash]      # Sign transaction (use Safe TX Hash)
+safe tx execute [safeTxHash]   # Execute transaction (use Safe TX Hash)
+safe tx list                   # List all transactions
+safe tx status [safeTxHash]    # Show transaction status and signature progress
+safe tx export [safeTxHash]    # Export transaction as JSON for sharing
+safe tx export [safeTxHash] -o file  # Export to file
+safe tx import [json]          # Import transaction from JSON string or file
+```
+
+**Multi-sig Coordination Workflow:**
+
+```bash
+# Owner A: Create and sign transaction
+safe tx create
+safe tx sign <safeTxHash>
+safe tx export <safeTxHash>  # Copy the JSON output
+
+# Owner B: Import and sign
+safe tx import '{"safeTxHash":"0x..."...}'
+safe tx sign <safeTxHash>
+
+# Check progress
+safe tx status <safeTxHash>  # Shows: "2/3 signatures collected"
+
+# Execute when threshold reached
+safe tx execute <safeTxHash>
 ```
 
 ## Configuration
@@ -214,16 +240,29 @@ src/
 - [x] Account management
 
 ### ✅ Phase 3: Transaction Core (Complete)
-- [x] Transaction creation
+- [x] Transaction creation with editable nonce
 - [x] Transaction signing
 - [x] Transaction execution
 - [x] Multi-sig workflow support
+- [x] safeTxHash as transaction identifier
 
-### 📅 Phase 4+: Advanced Features
+### ✅ Phase 4: Owner Management (Complete)
+- [x] Add owners to Safe
+- [x] Remove owners from Safe
+- [x] Change signature threshold
+- [x] Live on-chain data fetching
+
+### ✅ Phase 5: Multi-sig Coordination (Complete)
+- [x] Transaction status display
+- [x] Export/import transactions as JSON
+- [x] Signature tracking and progress
+- [x] Share transactions via JSON for multi-sig
+
+### 📅 Phase 6+: Advanced Features
 - [ ] Batch transactions
 - [ ] Transaction templates
-- [ ] Multi-sig coordination
 - [ ] Module & guard management
+- [ ] Safe Transaction Service integration
 
 ## Contributing
 
