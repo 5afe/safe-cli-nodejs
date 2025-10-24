@@ -1,9 +1,12 @@
-import Safe, { predictSafeAddress, SafeAccountConfig } from '@safe-global/protocol-kit'
+import SafeSDK, { predictSafeAddress, SafeAccountConfig } from '@safe-global/protocol-kit'
 import { createPublicClient, createWalletClient, http, type Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { ChainConfig } from '../types/config.js'
 import { SafeCLIError } from '../utils/errors.js'
 import { normalizePrivateKey } from '../utils/validation.js'
+
+// ESM/CommonJS interop: Access the Safe class from the default export
+const Safe = (SafeSDK as any).default
 
 export interface SafeCreationConfig {
   owners: Address[]
