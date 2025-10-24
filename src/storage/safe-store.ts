@@ -1,5 +1,5 @@
 import Conf from 'conf'
-import { SafeStoreSchema, type SafeAccount, type SafeStore } from '../types/safe.js'
+import type { SafeAccount, SafeStore } from '../types/safe.js'
 import { SafeCLIError } from '../utils/errors.js'
 
 /**

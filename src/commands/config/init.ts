@@ -98,6 +98,7 @@ export async function initConfig() {
         if (!value || value.trim().length === 0) {
           return 'API key cannot be empty'
         }
+        return undefined
       },
     })
 
@@ -134,6 +135,7 @@ export async function initConfig() {
         if (!value || value.trim().length === 0) {
           return 'API key cannot be empty'
         }
+        return undefined
       },
     })
 

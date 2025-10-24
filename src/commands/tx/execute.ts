@@ -88,6 +88,12 @@ export async function executeTransaction(safeTxHash?: string) {
     }
 
     // Check if wallet is an owner
+    if (!safe.owners || !safe.threshold) {
+      p.log.error('Safe owner information not available. Please sync Safe data.')
+      p.outro('Failed')
+      return
+    }
+
     if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')

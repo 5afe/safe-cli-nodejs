@@ -68,6 +68,12 @@ export async function createTransaction() {
     }
 
     // Check if wallet is an owner
+    if (!safe.owners) {
+      p.log.error('Safe owner information not available. Please sync Safe data.')
+      p.outro('Failed')
+      return
+    }
+
     if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
@@ -328,7 +334,7 @@ export async function createTransaction() {
         { value: 1, label: 'DelegateCall', hint: 'Delegate call (advanced)' },
       ],
       initialValue: 0,
-    })) as 0 | 1
+    })) as number as 0 | 1
 
     if (p.isCancel(operation)) {
       p.cancel('Operation cancelled')

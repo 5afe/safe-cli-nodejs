@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import { encodeFunctionData, parseEther, parseUnits, type Address } from 'viem'
+import { encodeFunctionData, parseEther, type Address } from 'viem'
 import type { ABIFunction, ABI } from './abi-service.js'
 import { SafeCLIError } from '../utils/errors.js'
 

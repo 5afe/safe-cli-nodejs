@@ -3,7 +3,7 @@ import pc from 'picocolors'
 import { getConfigStore } from '../../storage/config-store.js'
 import type { ChainConfig } from '../../types/config.js'
 import { isValidChainId, isValidUrl } from '../../utils/validation.js'
-import { logSuccess, logError } from '../../ui/messages.js'
+import { logError } from '../../ui/messages.js'
 
 export async function addChain() {
   p.intro(pc.bgCyan(pc.black(' Add Chain ')))

@@ -1,6 +1,5 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
@@ -63,6 +62,12 @@ export async function showTransactionStatus(safeTxHash?: string) {
 
     const chain = configStore.getChain(tx.chainId)
     const eip3770 = formatSafeAddress(tx.safeAddress, tx.chainId, chains)
+
+    if (!safe.owners || !safe.threshold) {
+      p.log.error('Safe owner information not available. Please sync Safe data.')
+      p.outro('Failed')
+      return
+    }
 
     // Calculate signature status
     const signaturesCollected = tx.signatures.length

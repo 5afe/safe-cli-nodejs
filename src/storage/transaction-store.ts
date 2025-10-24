@@ -4,8 +4,8 @@ import type {
   StoredTransaction,
   TransactionMetadata,
   TransactionSignature,
-  TransactionStatus,
 } from '../types/transaction.js'
+import { TransactionStatus } from '../types/transaction.js'
 import { SafeCLIError } from '../utils/errors.js'
 
 interface TransactionStoreSchema {

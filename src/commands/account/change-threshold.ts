@@ -87,6 +87,12 @@ export async function changeThreshold(account?: string) {
     }
 
     // Check if wallet is an owner
+    if (!safe.owners || !safe.threshold) {
+      p.log.error('Safe owner information not available. Please sync Safe data.')
+      p.outro('Failed')
+      return
+    }
+
     if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
@@ -101,6 +107,7 @@ export async function changeThreshold(account?: string) {
         if (!value) return 'Threshold is required'
         const num = parseInt(value, 10)
         if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
+        if (!safe.owners || !safe.threshold) return 'Safe data not available'
         if (num > safe.owners.length) {
           return `Threshold cannot exceed ${safe.owners.length} (current owners)`
         }
@@ -157,7 +164,7 @@ export async function changeThreshold(account?: string) {
     )
 
     // Store transaction
-    const storedTx = transactionStore.createTransaction(
+    transactionStore.createTransaction(
       safeTransaction.safeTxHash,
       safe.address as Address,
       safe.chainId,

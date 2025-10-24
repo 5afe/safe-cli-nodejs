@@ -1,7 +1,6 @@
 import Conf from 'conf'
-import { ConfigSchema, type Config, type ChainConfig } from '../types/config.js'
+import type { Config, ChainConfig } from '../types/config.js'
 import { DEFAULT_CHAINS } from '../constants/chains.js'
-import { ConfigError } from '../utils/errors.js'
 
 export class ConfigStore {
   private store: Conf<Config>

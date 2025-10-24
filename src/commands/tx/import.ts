@@ -375,7 +375,7 @@ export async function importTransaction(input?: string) {
       console.log(`  ${pc.dim('Signatures:')} ${updatedTx.signatures.length}${safe ? ` / ${safe.threshold}` : ''}`)
       console.log('')
 
-      if (safe && updatedTx.signatures.length >= safe.threshold) {
+      if (safe && safe.threshold !== undefined && updatedTx.signatures.length >= safe.threshold) {
         console.log(pc.green('✓ Transaction ready to execute!'))
         console.log('')
         console.log(pc.bold('To execute this transaction, run:'))
@@ -406,7 +406,7 @@ export async function importTransaction(input?: string) {
       }
 
       // Store transaction
-      const storedTx = transactionStore.createTransaction(
+      transactionStore.createTransaction(
         importData.safeTxHash,
         importData.safeAddress,
         importData.chainId,
@@ -423,7 +423,7 @@ export async function importTransaction(input?: string) {
       console.log(pc.green('✓ Transaction imported successfully'))
       console.log('')
 
-      if (safe && importData.signatures.length >= safe.threshold) {
+      if (safe && safe.threshold !== undefined && importData.signatures.length >= safe.threshold) {
         console.log(pc.green('✓ Transaction ready to execute!'))
         console.log('')
         console.log(pc.bold('To execute this transaction, run:'))

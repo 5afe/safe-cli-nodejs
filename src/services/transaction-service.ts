@@ -1,5 +1,5 @@
 import SafeSDK from '@safe-global/protocol-kit'
-import { createPublicClient, createWalletClient, http, type Address } from 'viem'
+import { createPublicClient, http, type Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { ChainConfig } from '../types/config.js'
 import type { TransactionMetadata } from '../types/transaction.js'
@@ -89,7 +89,6 @@ export class TransactionService {
   // Sign a transaction
   async signTransaction(
     safeAddress: Address,
-    safeTxHash: string,
     metadata: TransactionMetadata
   ): Promise<string> {
     if (!this.privateKey) {
@@ -149,8 +148,6 @@ export class TransactionService {
     }
 
     try {
-      const account = privateKeyToAccount(this.privateKey)
-
       const protocolKit = await Safe.init({
         provider: this.chain.rpcUrl,
         signer: this.privateKey,

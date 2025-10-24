@@ -1,7 +1,7 @@
 import Conf from 'conf'
 import { randomBytes, createCipheriv, createDecipheriv, pbkdf2Sync } from 'crypto'
 import { privateKeyToAccount } from 'viem/accounts'
-import { WalletStoreSchema, type Wallet, type WalletStore } from '../types/wallet.js'
+import type { Wallet, WalletStore } from '../types/wallet.js'
 import { WalletError } from '../utils/errors.js'
 import { isValidPrivateKey, normalizePrivateKey } from '../utils/validation.js'
 import { checksumAddress } from '../utils/ethereum.js'
@@ -26,7 +26,7 @@ class SecureStorage {
 
     const cipher = createCipheriv(this.algorithm, key, iv)
     const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
-    const tag = cipher.getAuthTag()
+    const tag = (cipher as any).getAuthTag()
 
     // Combine salt + iv + tag + encrypted
     const result = Buffer.concat([salt, iv, tag, encrypted])
@@ -46,7 +46,7 @@ class SecureStorage {
 
     const key = this.deriveKey(password, salt)
     const decipher = createDecipheriv(this.algorithm, key, iv)
-    decipher.setAuthTag(tag)
+    ;(decipher as any).setAuthTag(tag)
 
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
     return decrypted.toString('utf8')

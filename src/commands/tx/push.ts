@@ -177,7 +177,6 @@ export async function pushTransaction(safeTxHash?: string) {
         console.log('')
       }
 
-      const eip3770 = formatSafeAddress(transaction.safeAddress as Address, transaction.chainId, configStore.getAllChains())
       const serviceUrl = `${chain.transactionServiceUrl}/api/v1/safes/${transaction.safeAddress}/multisig-transactions/${selectedSafeTxHash}/`
 
       console.log(pc.dim('View on Safe Transaction Service:'))

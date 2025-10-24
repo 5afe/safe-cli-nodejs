@@ -96,7 +96,7 @@ export async function deploySafe(account?: string) {
   console.log(`  ${pc.dim('Name:')}     ${safe.name}`)
   console.log(`  ${pc.dim('Address:')}  ${pc.cyan(eip3770)}`)
   console.log(`  ${pc.dim('Chain:')}    ${chain.name}`)
-  console.log(`  ${pc.dim('Owners:')}   ${safe.threshold} / ${safe.owners.length}`)
+  console.log(`  ${pc.dim('Owners:')}   ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`)
   console.log('')
   console.log(pc.dim(`Deploying with wallet: ${activeWallet.name} (${activeWallet.address})`))
   console.log('')
