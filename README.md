@@ -66,7 +66,7 @@ safe wallet use               # Switch active wallet
 safe wallet remove            # Remove a wallet
 ```
 
-### Safe Account Operations (Coming in Phase 2)
+### Safe Account Operations
 
 ```bash
 safe account create           # Create new Safe account
@@ -158,16 +158,16 @@ src/
 
 ## Roadmap
 
-### ✅ Phase 1: Foundation (Current)
+### ✅ Phase 1: Foundation (Complete)
 - [x] Project setup
 - [x] Configuration management
 - [x] Wallet import/management
 - [x] Secure storage
 
-### 🚧 Phase 2: Safe Account Operations
-- [ ] Safe account creation
-- [ ] Safe deployment
-- [ ] Account management
+### ✅ Phase 2: Safe Account Operations (Complete)
+- [x] Safe account creation
+- [x] Safe deployment
+- [x] Account management
 
 ### 📅 Phase 3: Transaction Core
 - [ ] Transaction creation

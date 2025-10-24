@@ -7,6 +7,11 @@ import { importWallet } from './commands/wallet/import.js'
 import { listWallets } from './commands/wallet/list.js'
 import { useWallet } from './commands/wallet/use.js'
 import { removeWallet } from './commands/wallet/remove.js'
+import { createSafe } from './commands/account/create.js'
+import { deploySafe } from './commands/account/deploy.js'
+import { openSafe } from './commands/account/open.js'
+import { listSafes } from './commands/account/list.js'
+import { showSafeInfo } from './commands/account/info.js'
 import { handleError } from './utils/errors.js'
 
 const program = new Command()
@@ -132,6 +137,66 @@ wallet
     }
   })
 
+// Account commands
+const account = program
+  .command('account')
+  .description('Manage Safe accounts')
+
+account
+  .command('create')
+  .description('Create a new Safe account')
+  .action(async () => {
+    try {
+      await createSafe()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('deploy [safeId]')
+  .description('Deploy a Safe to the blockchain')
+  .action(async (safeId?: string) => {
+    try {
+      await deploySafe(safeId)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('open')
+  .description('Open an existing Safe')
+  .action(async () => {
+    try {
+      await openSafe()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('list')
+  .description('List all Safe accounts')
+  .action(async () => {
+    try {
+      await listSafes()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('info [safeId]')
+  .description('Display Safe information')
+  .action(async (safeId?: string) => {
+    try {
+      await showSafeInfo(safeId)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
 // Show welcome message if no command provided
 if (process.argv.length === 2) {
   console.log('')
@@ -142,6 +207,7 @@ if (process.argv.length === 2) {
   console.log(pc.bold('Getting Started:'))
   console.log(`  ${pc.cyan('safe config init')}     Initialize configuration`)
   console.log(`  ${pc.cyan('safe wallet import')}   Import a wallet`)
+  console.log(`  ${pc.cyan('safe account create')}  Create a Safe`)
   console.log(`  ${pc.cyan('safe --help')}          Show all commands`)
   console.log('')
   console.log(pc.dim('For more information, visit: https://github.com/safe-global/safe-cli'))
