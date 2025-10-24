@@ -427,6 +427,7 @@ src/
 - [ ] Transaction templates
 - [ ] Module & guard management
 - [ ] Recovery and social recovery flows
+- [ ] Hardware wallets support
 
 ## Contributing
 
