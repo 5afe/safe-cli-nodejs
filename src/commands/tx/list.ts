@@ -36,7 +36,11 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
     }
 
     // Sort by creation date (newest first)
-    transactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    transactions.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime()
+      const dateB = new Date(b.createdAt).getTime()
+      return dateB - dateA
+    })
 
     console.log(`\nFound ${transactions.length} transaction(s):\n`)
 
@@ -62,11 +66,11 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
       console.log(`  Value: ${tx.metadata.value} wei`)
       console.log(`  Operation: ${tx.metadata.operation === 0 ? 'Call' : 'DelegateCall'}`)
       console.log(`  Signatures: ${tx.signatures.length}${safe ? `/${safe.threshold}` : ''}`)
-      console.log(`  Created: ${tx.createdAt.toLocaleString()}`)
+      console.log(`  Created: ${new Date(tx.createdAt).toLocaleString()}`)
       console.log(`  Created by: ${tx.createdBy}`)
 
       if (tx.executedAt) {
-        console.log(`  Executed: ${tx.executedAt.toLocaleString()}`)
+        console.log(`  Executed: ${new Date(tx.executedAt).toLocaleString()}`)
       }
 
       if (tx.txHash) {
