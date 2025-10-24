@@ -73,6 +73,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://bsc.drpc.org',
     explorer: 'https://bscscan.com',
     currency: 'BNB',
+    transactionServiceUrl: 'https://safe-transaction-bsc.safe.global',
   },
   '43114': {
     name: 'Avalanche',
@@ -81,6 +82,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
     explorer: 'https://snowtrace.io',
     currency: 'AVAX',
+    transactionServiceUrl: 'https://safe-transaction-avalanche.safe.global',
   },
   '59144': {
     name: 'Linea',
@@ -89,6 +91,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.linea.build',
     explorer: 'https://lineascan.build',
     currency: 'ETH',
+    // transactionServiceUrl: Not yet available for Linea
   },
   '324': {
     name: 'zkSync Era',
@@ -97,6 +100,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://mainnet.era.zksync.io',
     explorer: 'https://explorer.zksync.io',
     currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-zksync.safe.global',
   },
   '1101': {
     name: 'Polygon zkEVM',
@@ -105,6 +109,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://zkevm-rpc.com',
     explorer: 'https://zkevm.polygonscan.com',
     currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-zkevm.safe.global',
   },
   '534352': {
     name: 'Scroll',
@@ -113,6 +118,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.scroll.io',
     explorer: 'https://scrollscan.com',
     currency: 'ETH',
+    // transactionServiceUrl: Not yet available for Scroll
   },
   '42220': {
     name: 'Celo',
@@ -121,6 +127,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.ankr.com/celo',
     explorer: 'https://explorer.celo.org/mainnet',
     currency: 'CELO',
+    transactionServiceUrl: 'https://safe-transaction-celo.safe.global',
   },
   '5000': {
     name: 'Mantle',
@@ -129,6 +136,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.mantle.xyz',
     explorer: 'https://mantlescan.xyz',
     currency: 'MNT',
+    // transactionServiceUrl: Not yet available for Mantle
   },
   '1313161554': {
     name: 'Aurora',
@@ -137,5 +145,6 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://mainnet.aurora.dev',
     explorer: 'https://aurorascan.dev',
     currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-aurora.safe.global',
   },
 }
