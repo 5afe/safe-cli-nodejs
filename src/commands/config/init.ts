@@ -40,19 +40,6 @@ export async function initConfig() {
     }
   }
 
-  // Ask about analytics
-  const analytics = await p.confirm({
-    message: 'Enable anonymous analytics to help improve Safe CLI?',
-    initialValue: false,
-  })
-
-  if (p.isCancel(analytics)) {
-    p.cancel('Operation cancelled')
-    return
-  }
-
-  configStore.setPreference('analytics', analytics as boolean)
-
   // Ask about auto-updates
   const autoUpdate = await p.confirm({
     message: 'Enable automatic update notifications?',
