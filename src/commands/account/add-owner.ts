@@ -8,6 +8,7 @@ import { getTransactionStore } from '../../storage/transaction-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
+import { validateAndChecksumAddress } from '../../utils/validation.js'
 
 export async function addOwner(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
@@ -118,7 +119,7 @@ export async function addOwner(account?: string) {
     }
 
     // Get new owner address
-    const newOwner = (await p.text({
+    const newOwnerInput = await p.text({
       message: 'New owner address:',
       placeholder: '0x...',
       validate: (value) => {
@@ -129,10 +130,20 @@ export async function addOwner(account?: string) {
         }
         return undefined
       },
-    })) as Address
+    })
 
-    if (p.isCancel(newOwner)) {
+    if (p.isCancel(newOwnerInput)) {
       p.cancel('Operation cancelled')
+      return
+    }
+
+    // Checksum the address immediately
+    let newOwner: Address
+    try {
+      newOwner = validateAndChecksumAddress(newOwnerInput as string)
+    } catch (error) {
+      p.log.error(error instanceof Error ? error.message : 'Invalid address')
+      p.outro('Failed')
       return
     }
 
@@ -191,7 +202,7 @@ export async function addOwner(account?: string) {
     )
 
     // Store transaction
-    const storedTx = transactionStore.createTransaction(
+    transactionStore.createTransaction(
       safeTransaction.safeTxHash,
       safe.address as Address,
       safe.chainId,

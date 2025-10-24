@@ -16,6 +16,7 @@ Modern, interactive CLI for Safe Smart Account management. Built on top of the [
 - 🤖 Smart contract interaction with automatic ABI fetching
 - 🔌 Proxy contract support (EIP-1967)
 - 👥 Owner management (add/remove owners, change threshold)
+- 📥 Transaction Builder JSON import with auto-detection
 
 ## Installation
 

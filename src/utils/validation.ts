@@ -1,7 +1,29 @@
-import { isAddress, isHex } from 'viem'
+import { isAddress, isHex, getAddress, type Address } from 'viem'
 
 export function isValidAddress(address: string): boolean {
   return isAddress(address)
+}
+
+/**
+ * Validates and checksums an Ethereum address
+ * @param address - The address to validate and checksum
+ * @returns Checksummed address
+ * @throws Error if address is invalid
+ */
+export function validateAndChecksumAddress(address: string): Address {
+  if (!address) {
+    throw new Error('Address is required')
+  }
+
+  if (!isAddress(address)) {
+    throw new Error('Invalid Ethereum address')
+  }
+
+  try {
+    return getAddress(address)
+  } catch (error) {
+    throw new Error(`Invalid address checksum: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }
 
 export function isValidPrivateKey(privateKey: string): boolean {

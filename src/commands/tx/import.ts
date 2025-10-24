@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { existsSync, readFileSync } from 'fs'
-import { isAddress, type Address } from 'viem'
+import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
@@ -9,6 +9,7 @@ import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { TxBuilderParser } from '../../services/tx-builder-parser.js'
 import { SafeCLIError } from '../../utils/errors.js'
+import { validateAndChecksumAddress } from '../../utils/validation.js'
 import type { TransactionMetadata, TransactionSignature } from '../../types/transaction.js'
 
 interface ImportData {
@@ -34,6 +35,19 @@ async function importTransactionBuilderFormat(data: any) {
   try {
     // Parse Transaction Builder format
     const parsed = TxBuilderParser.parse(data)
+
+    // Checksum addresses immediately
+    try {
+      parsed.safeAddress = validateAndChecksumAddress(parsed.safeAddress)
+      for (const tx of parsed.transactions) {
+        tx.to = validateAndChecksumAddress(tx.to)
+      }
+      if (parsed.createdBy) {
+        parsed.createdBy = validateAndChecksumAddress(parsed.createdBy)
+      }
+    } catch (error) {
+      throw new SafeCLIError(`Invalid address in transaction data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
 
     console.log('')
     console.log(pc.bold('Transaction Builder Import'))
@@ -268,8 +282,25 @@ export async function importTransaction(input?: string) {
       throw new SafeCLIError('Invalid transaction data: missing required fields')
     }
 
-    if (!isAddress(importData.safeAddress)) {
-      throw new SafeCLIError('Invalid Safe address in transaction data')
+    // Checksum addresses immediately
+    try {
+      importData.safeAddress = validateAndChecksumAddress(importData.safeAddress)
+      importData.metadata.to = validateAndChecksumAddress(importData.metadata.to)
+      if (importData.metadata.gasToken) {
+        importData.metadata.gasToken = validateAndChecksumAddress(importData.metadata.gasToken)
+      }
+      if (importData.metadata.refundReceiver) {
+        importData.metadata.refundReceiver = validateAndChecksumAddress(importData.metadata.refundReceiver)
+      }
+      if (importData.createdBy) {
+        importData.createdBy = validateAndChecksumAddress(importData.createdBy)
+      }
+      // Checksum all signature signers
+      for (const sig of importData.signatures) {
+        sig.signer = validateAndChecksumAddress(sig.signer)
+      }
+    } catch (error) {
+      throw new SafeCLIError(`Invalid address in transaction data: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
 
     // Check if Safe exists locally

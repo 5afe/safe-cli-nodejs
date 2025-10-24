@@ -133,10 +133,10 @@ export class ABIService {
     }
 
     const response = await fetch(requestUrl)
-    const data = await response.json()
+    const data = await response.json() as any
 
     if (data.status === '1' && data.result && data.result[0]) {
-      const contractData = data.result[0]
+      const contractData = data.result[0] as any
 
       if (contractData.ABI && contractData.ABI !== 'Contract source code not verified') {
         // Check if this is a proxy contract (Etherscan V2 returns Proxy="1" and Implementation address)
@@ -168,12 +168,12 @@ export class ABIService {
       const response = await fetch(url)
 
       if (response.ok) {
-        const metadata = await response.json()
+        const metadata = await response.json() as any
         if (metadata.output?.abi) {
           // Extract contract name from settings.compilationTarget
           let contractName: string | undefined
           if (metadata.settings?.compilationTarget) {
-            const targets = Object.values(metadata.settings.compilationTarget)
+            const targets = Object.values(metadata.settings.compilationTarget as Record<string, any>)
             if (targets.length > 0) {
               contractName = targets[0] as string
             }
@@ -195,12 +195,12 @@ export class ABIService {
       const response = await fetch(url)
 
       if (response.ok) {
-        const metadata = await response.json()
+        const metadata = await response.json() as any
         if (metadata.output?.abi) {
           // Extract contract name from settings.compilationTarget
           let contractName: string | undefined
           if (metadata.settings?.compilationTarget) {
-            const targets = Object.values(metadata.settings.compilationTarget)
+            const targets = Object.values(metadata.settings.compilationTarget as Record<string, any>)
             if (targets.length > 0) {
               contractName = targets[0] as string
             }

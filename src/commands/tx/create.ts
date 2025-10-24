@@ -11,6 +11,7 @@ import { ABIService } from '../../services/abi-service.js'
 import { TransactionBuilder } from '../../services/transaction-builder.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
+import { validateAndChecksumAddress } from '../../utils/validation.js'
 
 export async function createTransaction() {
   p.intro('Create Safe Transaction')
@@ -74,7 +75,7 @@ export async function createTransaction() {
     }
 
     // Get transaction details
-    const to = (await p.text({
+    const toInput = await p.text({
       message: 'To address',
       placeholder: '0x...',
       validate: (value) => {
@@ -82,10 +83,20 @@ export async function createTransaction() {
         if (!isAddress(value)) return 'Invalid Ethereum address'
         return undefined
       },
-    })) as Address
+    })
 
-    if (p.isCancel(to)) {
+    if (p.isCancel(toInput)) {
       p.cancel('Operation cancelled')
+      return
+    }
+
+    // Checksum the address immediately
+    let to: Address
+    try {
+      to = validateAndChecksumAddress(toInput as string)
+    } catch (error) {
+      p.log.error(error instanceof Error ? error.message : 'Invalid address')
+      p.outro('Failed')
       return
     }
 
@@ -368,7 +379,7 @@ export async function createTransaction() {
     })
 
     // Store transaction with safeTxHash as ID
-    const storedTx = transactionStore.createTransaction(
+    transactionStore.createTransaction(
       createdTx.safeTxHash,
       safe.address as Address,
       safe.chainId,

@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import { isAddress, type Address } from 'viem'
+import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'

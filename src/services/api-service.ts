@@ -1,7 +1,7 @@
 import SafeApiKit from '@safe-global/api-kit'
 import type { Address } from 'viem'
 import type { ChainConfig } from '../types/config.js'
-import type { TransactionMetadata, TransactionSignature } from '../types/transaction.js'
+import type { TransactionMetadata } from '../types/transaction.js'
 import { SafeCLIError } from '../utils/errors.js'
 
 /**
@@ -9,7 +9,6 @@ import { SafeCLIError } from '../utils/errors.js'
  */
 export class SafeTransactionServiceAPI {
   private apiKit: SafeApiKit
-  private chain: ChainConfig
 
   constructor(chain: ChainConfig, apiKey?: string) {
     if (!chain.transactionServiceUrl) {
@@ -18,7 +17,6 @@ export class SafeTransactionServiceAPI {
       )
     }
 
-    this.chain = chain
     this.apiKit = new SafeApiKit({
       chainId: BigInt(chain.chainId),
       apiKey,
@@ -36,22 +34,31 @@ export class SafeTransactionServiceAPI {
     sender: Address
   ): Promise<void> {
     try {
+      // The API expects addresses in checksummed format
+      // Gas params should be strings, not numbers (matching Safe web UI format)
+      const { getAddress } = await import('viem')
+
+      // Validate that required fields are present
+      if (metadata.nonce === undefined) {
+        throw new SafeCLIError('Transaction nonce is required')
+      }
+
       await this.apiKit.proposeTransaction({
-        safeAddress,
+        safeAddress: getAddress(safeAddress),
         safeTransactionData: {
-          to: metadata.to,
+          to: getAddress(metadata.to),
           value: metadata.value,
           data: metadata.data,
-          operation: metadata.operation,
-          safeTxGas: metadata.safeTxGas,
-          baseGas: metadata.baseGas,
-          gasPrice: metadata.gasPrice,
-          gasToken: metadata.gasToken,
-          refundReceiver: metadata.refundReceiver,
+          operation: metadata.operation ?? 0,
+          safeTxGas: metadata.safeTxGas ?? '0',
+          baseGas: metadata.baseGas ?? '0',
+          gasPrice: metadata.gasPrice ?? '0',
+          gasToken: getAddress(metadata.gasToken ?? '0x0000000000000000000000000000000000000000'),
+          refundReceiver: getAddress(metadata.refundReceiver ?? '0x0000000000000000000000000000000000000000'),
           nonce: metadata.nonce,
         },
         safeTxHash,
-        senderAddress: sender,
+        senderAddress: getAddress(sender),
         senderSignature: signature,
       })
     } catch (error) {

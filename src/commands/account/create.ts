@@ -6,7 +6,7 @@ import { getSafeStorage } from '../../storage/safe-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { SafeService } from '../../services/safe-service.js'
 import { isValidAddress } from '../../utils/validation.js'
-import { checksumAddress } from '../../utils/ethereum.js'
+import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 
@@ -161,7 +161,7 @@ export async function createSafe() {
 
   try {
     const safeService = new SafeService(chain)
-    const { predictedAddress, safeAccountConfig, safeVersion } =
+    const { predictedAddress, safeAccountConfig } =
       await safeService.createPredictedSafe({
         owners,
         threshold: thresholdNum,
