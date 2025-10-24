@@ -91,7 +91,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.linea.build',
     explorer: 'https://lineascan.build',
     currency: 'ETH',
-    // transactionServiceUrl: Not yet available for Linea
+    transactionServiceUrl: 'https://safe-transaction-linea.safe.global',
   },
   '324': {
     name: 'zkSync Era',
@@ -105,7 +105,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '1101': {
     name: 'Polygon zkEVM',
     chainId: '1101',
-    shortName: 'polygon-zkevm',
+    shortName: 'zkevm',
     rpcUrl: 'https://zkevm-rpc.com',
     explorer: 'https://zkevm.polygonscan.com',
     currency: 'ETH',
@@ -118,7 +118,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.scroll.io',
     explorer: 'https://scrollscan.com',
     currency: 'ETH',
-    // transactionServiceUrl: Not yet available for Scroll
+    transactionServiceUrl: 'https://safe-transaction-scroll.safe.global',
   },
   '42220': {
     name: 'Celo',
@@ -136,7 +136,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.mantle.xyz',
     explorer: 'https://mantlescan.xyz',
     currency: 'MNT',
-    // transactionServiceUrl: Not yet available for Mantle
+    transactionServiceUrl: 'https://safe-transaction-mantle.safe.global',
   },
   '1313161554': {
     name: 'Aurora',
@@ -146,5 +146,32 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     explorer: 'https://aurorascan.dev',
     currency: 'ETH',
     transactionServiceUrl: 'https://safe-transaction-aurora.safe.global',
+  },
+  '480': {
+    name: 'World Chain',
+    chainId: '480',
+    shortName: 'wc',
+    rpcUrl: 'https://worldchain-mainnet.g.alchemy.com/public',
+    explorer: 'https://worldchain-mainnet.explorer.alchemy.com',
+    currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-worldchain.safe.global',
+  },
+  '146': {
+    name: 'Sonic',
+    chainId: '146',
+    shortName: 'sonic',
+    rpcUrl: 'https://rpc.soniclabs.com',
+    explorer: 'https://sonicscan.org',
+    currency: 'S',
+    transactionServiceUrl: 'https://safe-transaction-sonic.safe.global',
+  },
+  '130': {
+    name: 'Unichain',
+    chainId: '130',
+    shortName: 'unichain',
+    rpcUrl: 'https://mainnet.unichain.org',
+    explorer: 'https://uniscan.xyz',
+    currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-unichain.safe.global',
   },
 }
