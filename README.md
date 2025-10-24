@@ -99,7 +99,7 @@ This makes it clear which chain a Safe belongs to. Commands will interactively p
 safe tx create                 # Create transaction (interactive contract builder for contracts)
 safe tx sign [safeTxHash]      # Sign transaction (use Safe TX Hash)
 safe tx execute [safeTxHash]   # Execute transaction (use Safe TX Hash)
-safe tx list                   # List all transactions
+safe tx list [account]         # List transactions (interactively filter by Safe or show all)
 safe tx status [safeTxHash]    # Show transaction status and signature progress
 safe tx export [safeTxHash]    # Export transaction as JSON for sharing
 safe tx export [safeTxHash] -o file  # Export to file

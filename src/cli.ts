@@ -295,11 +295,11 @@ tx
   })
 
 tx
-  .command('list')
-  .description('List transactions')
-  .action(async () => {
+  .command('list [account]')
+  .description('List transactions (optionally filtered by Safe in EIP-3770 format)')
+  .action(async (account?: string) => {
     try {
-      await listTransactions()
+      await listTransactions(account)
     } catch (error) {
       handleError(error)
     }

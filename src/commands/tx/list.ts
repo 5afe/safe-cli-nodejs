@@ -7,7 +7,7 @@ import { getTransactionStore } from '../../storage/transaction-store.js'
 import type { TransactionStatus } from '../../types/transaction.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 
-export async function listTransactions(safeAddress?: Address, statusFilter?: TransactionStatus) {
+export async function listTransactions(account?: string, statusFilter?: TransactionStatus) {
   p.intro('Safe Transactions')
 
   try {
@@ -18,10 +18,83 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
 
     let transactions = transactionStore.getAllTransactions()
 
-    // Filter by Safe address if provided
-    if (safeAddress) {
+    if (transactions.length === 0) {
+      p.log.warning('No transactions found')
+      p.outro('No transactions')
+      return
+    }
+
+    // Determine which Safe to filter by
+    let filterSafeAddress: string | null = null
+    let filterChainId: string | null = null
+
+    if (account) {
+      // Parse EIP-3770 format if provided
+      if (account.includes(':')) {
+        const parsed = account.split(':')
+        const shortName = parsed[0]
+        const address = parsed[1]
+
+        // Find chain by shortName
+        const chain = Object.values(chains).find(c => c.shortName === shortName)
+        if (chain) {
+          filterChainId = chain.chainId
+          filterSafeAddress = address
+        }
+      } else {
+        filterSafeAddress = account
+      }
+    } else {
+      // Interactive mode: ask user to select a Safe or show all
+      const safes = safeStorage.getAllSafes()
+
+      if (safes.length === 0) {
+        p.log.warning('No Safes found. Showing all transactions.')
+      } else {
+        const options = [
+          {
+            value: 'all',
+            label: 'Show all transactions',
+            hint: 'All Safes',
+          },
+          ...safes.map((safe) => {
+            const chain = configStore.getChain(safe.chainId)
+            const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
+            const txCount = transactions.filter(
+              tx => tx.chainId === safe.chainId && tx.safeAddress.toLowerCase() === safe.address.toLowerCase()
+            ).length
+
+            return {
+              value: `${safe.chainId}:${safe.address}`,
+              label: `${safe.name} (${eip3770})`,
+              hint: `${chain?.name || safe.chainId} | ${txCount} tx`,
+            }
+          }),
+        ]
+
+        const selected = await p.select({
+          message: 'Select Safe to view transactions:',
+          options,
+        })
+
+        if (p.isCancel(selected)) {
+          p.cancel('Operation cancelled')
+          return
+        }
+
+        if (selected !== 'all') {
+          const [chainId, address] = (selected as string).split(':')
+          filterChainId = chainId
+          filterSafeAddress = address
+        }
+      }
+    }
+
+    // Filter by Safe address if specified
+    if (filterSafeAddress) {
       transactions = transactions.filter(
-        (tx) => tx.safeAddress.toLowerCase() === safeAddress.toLowerCase()
+        (tx) => tx.safeAddress.toLowerCase() === filterSafeAddress!.toLowerCase() &&
+                (!filterChainId || tx.chainId === filterChainId)
       )
     }
 
