@@ -27,7 +27,7 @@ export interface TransactionSignature {
 }
 
 export interface StoredTransaction {
-  id: string
+  safeTxHash: string // This is the transaction ID (no separate id field)
   safeAddress: Address
   chainId: string
   status: TransactionStatus
@@ -36,8 +36,7 @@ export interface StoredTransaction {
   createdBy: Address
   createdAt: Date
   executedAt?: Date
-  txHash?: string
-  safeTxHash?: string
+  txHash?: string // On-chain transaction hash after execution
 }
 
 export interface CreateTransactionInput {

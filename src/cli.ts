@@ -243,23 +243,23 @@ tx
   })
 
 tx
-  .command('sign [txId]')
-  .description('Sign a pending transaction')
-  .action(async (txId?: string) => {
+  .command('sign [safeTxHash]')
+  .description('Sign a pending transaction (use Safe TX Hash)')
+  .action(async (safeTxHash?: string) => {
     try {
-      await signTransaction(txId)
+      await signTransaction(safeTxHash)
     } catch (error) {
       handleError(error)
     }
   })
 
 tx
-  .command('execute [txId]')
+  .command('execute [safeTxHash]')
   .alias('exec')
-  .description('Execute a signed transaction')
-  .action(async (txId?: string) => {
+  .description('Execute a signed transaction (use Safe TX Hash)')
+  .action(async (safeTxHash?: string) => {
     try {
-      await executeTransaction(txId)
+      await executeTransaction(safeTxHash)
     } catch (error) {
       handleError(error)
     }

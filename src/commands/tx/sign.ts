@@ -8,7 +8,7 @@ import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 
-export async function signTransaction(txId?: string) {
+export async function signTransaction(safeTxHash?: string) {
   p.intro('Sign Safe Transaction')
 
   try {
@@ -25,9 +25,9 @@ export async function signTransaction(txId?: string) {
     }
 
     // Get transaction to sign
-    let transactionId = txId
+    let selectedSafeTxHash = safeTxHash
 
-    if (!transactionId) {
+    if (!selectedSafeTxHash) {
       const pendingTxs = transactionStore
         .getAllTransactions()
         .filter((tx) => tx.status === 'pending' || tx.status === 'signed')
@@ -40,28 +40,28 @@ export async function signTransaction(txId?: string) {
 
       const chains = configStore.getAllChains()
 
-      transactionId = (await p.select({
+      selectedSafeTxHash = (await p.select({
         message: 'Select transaction to sign',
         options: pendingTxs.map((tx) => {
           const safe = safeStorage.getSafe(tx.chainId, tx.safeAddress)
           const eip3770 = formatSafeAddress(tx.safeAddress as Address, tx.chainId, chains)
           return {
-            value: tx.id,
-            label: `${tx.id.slice(0, 8)}... → ${tx.metadata.to}`,
+            value: tx.safeTxHash,
+            label: `${tx.safeTxHash.slice(0, 10)}... → ${tx.metadata.to}`,
             hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures.length}`,
           }
         }),
       })) as string
 
-      if (p.isCancel(transactionId)) {
+      if (p.isCancel(selectedSafeTxHash)) {
         p.cancel('Operation cancelled')
         return
       }
     }
 
-    const transaction = transactionStore.getTransaction(transactionId)
+    const transaction = transactionStore.getTransaction(selectedSafeTxHash)
     if (!transaction) {
-      p.log.error(`Transaction ${transactionId} not found`)
+      p.log.error(`Transaction ${selectedSafeTxHash} not found`)
       p.outro('Failed')
       return
     }
@@ -149,13 +149,6 @@ export async function signTransaction(txId?: string) {
 
     const txService = new TransactionService(chain, privateKey)
 
-    if (!transaction.safeTxHash) {
-      spinner.stop('Failed')
-      p.log.error('Transaction missing safeTxHash')
-      p.outro('Failed')
-      return
-    }
-
     const signature = await txService.signTransaction(
       transaction.safeAddress,
       transaction.safeTxHash,
@@ -163,7 +156,7 @@ export async function signTransaction(txId?: string) {
     )
 
     // Store signature
-    transactionStore.addSignature(transactionId, {
+    transactionStore.addSignature(selectedSafeTxHash, {
       signer: activeWallet.address as Address,
       signature,
       signedAt: new Date(),
@@ -171,19 +164,19 @@ export async function signTransaction(txId?: string) {
 
     // Update status to signed if not already
     if (transaction.status === 'pending') {
-      transactionStore.updateStatus(transactionId, 'signed')
+      transactionStore.updateStatus(selectedSafeTxHash, 'signed')
     }
 
     spinner.stop('Transaction signed')
 
     // Check if we have enough signatures
-    const updatedTx = transactionStore.getTransaction(transactionId)!
+    const updatedTx = transactionStore.getTransaction(selectedSafeTxHash)!
     const threshold = safe.threshold
 
     p.outro(
       `Signature added (${updatedTx.signatures.length}/${threshold} required).\n\n${
         updatedTx.signatures.length >= threshold
-          ? `Transaction is ready to execute!\nUse 'safe tx execute ${transactionId}' to execute.`
+          ? `Transaction is ready to execute!\nUse 'safe tx execute ${selectedSafeTxHash}' to execute.`
           : `Need ${threshold - updatedTx.signatures.length} more signature(s).`
       }`
     )

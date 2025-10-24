@@ -193,21 +193,19 @@ export async function createTransaction() {
       nonce,
     })
 
-    // Store transaction
+    // Store transaction with safeTxHash as ID
     const storedTx = transactionStore.createTransaction(
+      createdTx.safeTxHash,
       safe.address as Address,
       safe.chainId,
       createdTx.metadata,
       activeWallet.address as Address
     )
 
-    // Store the safeTxHash
-    transactionStore.setSafeTxHash(storedTx.id, createdTx.safeTxHash)
-
     spinner.stop('Transaction created')
 
     p.outro(
-      `Transaction ${storedTx.id} is ready for signatures.\n\nSafe TX Hash: ${createdTx.safeTxHash}\n\nUse 'safe tx sign ${storedTx.id}' to sign this transaction.`
+      `Transaction created with Safe TX Hash: ${createdTx.safeTxHash}\n\nUse 'safe tx sign ${createdTx.safeTxHash}' to sign this transaction.`
     )
   } catch (error) {
     if (error instanceof SafeCLIError) {

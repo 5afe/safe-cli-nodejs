@@ -1,5 +1,4 @@
 import Conf from 'conf'
-import { randomUUID } from 'crypto'
 import type { Address } from 'viem'
 import type {
   StoredTransaction,
@@ -27,14 +26,14 @@ export class TransactionStore {
   }
 
   createTransaction(
+    safeTxHash: string,
     safeAddress: Address,
     chainId: string,
     metadata: TransactionMetadata,
     createdBy: Address
   ): StoredTransaction {
-    const id = randomUUID()
     const transaction: StoredTransaction = {
-      id,
+      safeTxHash,
       safeAddress,
       chainId,
       status: 'pending',
@@ -45,15 +44,15 @@ export class TransactionStore {
     }
 
     const transactions = this.store.get('transactions')
-    transactions[id] = transaction
+    transactions[safeTxHash] = transaction
     this.store.set('transactions', transactions)
 
     return transaction
   }
 
-  getTransaction(id: string): StoredTransaction | undefined {
+  getTransaction(safeTxHash: string): StoredTransaction | undefined {
     const transactions = this.store.get('transactions')
-    return transactions[id]
+    return transactions[safeTxHash]
   }
 
   getTransactionsBySafe(safeAddress: Address, chainId?: string): StoredTransaction[] {
@@ -70,12 +69,12 @@ export class TransactionStore {
     return Object.values(transactions)
   }
 
-  addSignature(id: string, signature: TransactionSignature): void {
+  addSignature(safeTxHash: string, signature: TransactionSignature): void {
     const transactions = this.store.get('transactions')
-    const transaction = transactions[id]
+    const transaction = transactions[safeTxHash]
 
     if (!transaction) {
-      throw new SafeCLIError(`Transaction ${id} not found`)
+      throw new SafeCLIError(`Transaction ${safeTxHash} not found`)
     }
 
     // Check if this signer has already signed
@@ -91,16 +90,16 @@ export class TransactionStore {
       transaction.signatures.push(signature)
     }
 
-    transactions[id] = transaction
+    transactions[safeTxHash] = transaction
     this.store.set('transactions', transactions)
   }
 
-  updateStatus(id: string, status: TransactionStatus, txHash?: string): void {
+  updateStatus(safeTxHash: string, status: TransactionStatus, txHash?: string): void {
     const transactions = this.store.get('transactions')
-    const transaction = transactions[id]
+    const transaction = transactions[safeTxHash]
 
     if (!transaction) {
-      throw new SafeCLIError(`Transaction ${id} not found`)
+      throw new SafeCLIError(`Transaction ${safeTxHash} not found`)
     }
 
     transaction.status = status
@@ -111,26 +110,13 @@ export class TransactionStore {
       }
     }
 
-    transactions[id] = transaction
+    transactions[safeTxHash] = transaction
     this.store.set('transactions', transactions)
   }
 
-  setSafeTxHash(id: string, safeTxHash: string): void {
+  deleteTransaction(safeTxHash: string): void {
     const transactions = this.store.get('transactions')
-    const transaction = transactions[id]
-
-    if (!transaction) {
-      throw new SafeCLIError(`Transaction ${id} not found`)
-    }
-
-    transaction.safeTxHash = safeTxHash
-    transactions[id] = transaction
-    this.store.set('transactions', transactions)
-  }
-
-  deleteTransaction(id: string): void {
-    const transactions = this.store.get('transactions')
-    delete transactions[id]
+    delete transactions[safeTxHash]
     this.store.set('transactions', transactions)
   }
 

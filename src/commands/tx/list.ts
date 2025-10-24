@@ -54,7 +54,8 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
         rejected: '❌ REJECTED',
       }[tx.status]
 
-      console.log(`${statusBadge} ${tx.id}`)
+      console.log(`${statusBadge}`)
+      console.log(`  Safe TX Hash: ${tx.safeTxHash}`)
       console.log(`  Safe: ${safeName} (${eip3770})`)
       console.log(`  Chain: ${chain?.name || tx.chainId}`)
       console.log(`  To: ${tx.metadata.to}`)
@@ -63,10 +64,6 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
       console.log(`  Signatures: ${tx.signatures.length}${safe ? `/${safe.threshold}` : ''}`)
       console.log(`  Created: ${tx.createdAt.toLocaleString()}`)
       console.log(`  Created by: ${tx.createdBy}`)
-
-      if (tx.safeTxHash) {
-        console.log(`  Safe TX Hash: ${tx.safeTxHash}`)
-      }
 
       if (tx.executedAt) {
         console.log(`  Executed: ${tx.executedAt.toLocaleString()}`)
