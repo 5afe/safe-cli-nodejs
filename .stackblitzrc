@@ -1,0 +1,9 @@
+{
+  "installDependencies": true,
+  "startCommand": "npm run build",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "compileTrigger": "auto",
+  "view": "terminal"
+}

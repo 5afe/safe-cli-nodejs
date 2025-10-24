@@ -2,6 +2,8 @@
 
 Modern, interactive CLI for Safe Smart Account management. Built on top of the [Safe Core SDK](https://github.com/safe-global/safe-core-sdk).
 
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/5afe/safe-cli-nodejs?view=terminal&hideNavigation=1&hideDevTools=1&terminalHeight=100)
+
 ## Features
 
 - 🔐 Secure wallet management with encrypted storage
