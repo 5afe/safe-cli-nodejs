@@ -110,8 +110,13 @@ export class SafeTransactionServiceAPI {
       return await this.apiKit.getTransaction(safeTxHash)
     } catch (error) {
       // Transaction not found is expected, return null
-      if (error instanceof Error && error.message.includes('404')) {
-        return null
+      if (error instanceof Error) {
+        if (
+          error.message.includes('404') ||
+          error.message.includes('No MultisigTransaction matches the given query')
+        ) {
+          return null
+        }
       }
       throw new SafeCLIError(
         `Failed to fetch transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
