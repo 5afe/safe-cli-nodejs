@@ -188,6 +188,43 @@ safe tx status <safeTxHash>  # Shows: "2/3 signatures collected"
 safe tx execute <safeTxHash>
 ```
 
+*Option 3: Import from Safe Transaction Builder*
+```bash
+# Import transaction batch from Safe web app (https://app.safe.global)
+# The CLI will auto-detect the Transaction Builder JSON format
+safe tx import transaction-builder.json
+
+# Or paste the JSON directly
+safe tx import '{"version":"1.0","chainId":"1",...}'
+
+# Each transaction will prompt for:
+# - Nonce (suggested based on current Safe state)
+# - Gas parameters (optional)
+
+# Then sign and execute as usual
+safe tx sign <safeTxHash>
+safe tx execute <safeTxHash>
+```
+
+**Transaction Builder Format Support:**
+
+The CLI can import transaction batches from the Safe Transaction Builder (web app). This allows you to:
+- Create complex transaction batches in the web UI
+- Export as JSON from the Transaction Builder
+- Import into the CLI for signing and execution
+- Missing fields (nonce, gas parameters) will be configured during import
+
+**Note:** Transaction Builder batches with multiple transactions will be imported as separate transactions. Native batch support via MultiSend is planned for a future release.
+safe tx import '{"safeTxHash":"0x..."...}'
+safe tx sign <safeTxHash>
+
+# Check progress
+safe tx status <safeTxHash>  # Shows: "2/3 signatures collected"
+
+# Execute when threshold reached
+safe tx execute <safeTxHash>
+```
+
 ## Configuration
 
 Configuration files are stored in:
@@ -195,25 +232,49 @@ Configuration files are stored in:
 - **Linux**: `~/.config/safe-cli/`
 - **Windows**: `%APPDATA%\safe-cli\`
 
-### Safe Transaction Service API Key
+### Optional API Keys
+
+The CLI supports two optional API keys that enhance functionality:
+
+#### Safe Transaction Service API Key (Optional)
 
 Some chains require an API key to access the Safe Transaction Service. You can get one from [Safe Dashboard](https://dashboard.safe.global/).
+
+**Benefits:**
+- Push transactions to Safe Transaction Service (`safe tx push`)
+- Pull pending transactions from the service (`safe tx pull`)
+- Bidirectional sync (`safe tx sync`)
+- Multi-sig coordination via the Safe web interface
+
+**Without this key:** You can still use the offline JSON export/import workflow for multi-sig coordination.
+
+#### Etherscan API Key (Optional)
+
+An API key for Etherscan enables enhanced contract interaction features. Get a free key from [Etherscan](https://etherscan.io/myapikey).
+
+**Benefits:**
+- Automatic proxy contract detection (EIP-1967)
+- Better ABI fetching with implementation contract support
+- Automatic merging of proxy + implementation ABIs for proxy contracts
+
+**Without this key:** The CLI falls back to Sourcify (free, no API key required) for ABI fetching, but proxy contract detection will not work.
+
+#### Configuring API Keys
 
 **During initial setup:**
 ```bash
 safe config init
-# You'll be prompted: "Do you have a Safe Transaction Service API key?"
+# You'll be prompted for both API keys
 ```
 
-**To add or update your API key later:**
+**To view configured keys:**
+```bash
+safe config show
+# Shows obfuscated API keys (first 8 + last 4 characters)
+```
+
+**To add or update keys later:**
 Edit your configuration file directly or run `safe config init` again.
-
-The API key is optional but recommended for:
-- Using `safe tx push` to propose transactions
-- Using `safe tx pull` to fetch pending transactions
-- Using `safe tx sync` for bidirectional synchronization
-
-Without an API key, you can still use the offline JSON export/import workflow for multi-sig coordination.
 
 ### Supported Chains (Default)
 

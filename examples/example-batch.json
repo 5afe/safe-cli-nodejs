@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "chainId": "1",
+  "createdAt": 1761326849944,
+  "meta": {
+    "name": "Token Approvals Batch",
+    "description": "Approve multiple tokens for DeFi protocol",
+    "txBuilderVersion": "1.18.2",
+    "createdFromSafeAddress": "0xA77DE01e157f9f57C7c4A326eeE9C4874D0598b6",
+    "createdFromOwnerAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb2",
+    "checksum": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+  },
+  "transactions": [
+    {
+      "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "spender",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          }
+        ],
+        "name": "approve",
+        "payable": false
+      },
+      "contractInputsValues": {
+        "spender": "0x474e5Ded6b5D078163BFB8F6dBa355C3aA5478C8",
+        "value": "100000000000"
+      }
+    },
+    {
+      "to": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "spender",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          }
+        ],
+        "name": "approve",
+        "payable": false
+      },
+      "contractInputsValues": {
+        "spender": "0x474e5Ded6b5D078163BFB8F6dBa355C3aA5478C8",
+        "value": "50000000000000000000"
+      }
+    },
+    {
+      "to": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "value": "0",
+      "data": "0x095ea7b3000000000000000000000000474e5ded6b5d078163bfb8f6dba355c3aa5478c800000000000000000000000000000000000000000000000000000000000186a0"
+    }
+  ]
+}

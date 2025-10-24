@@ -119,13 +119,16 @@ export async function createTransaction() {
       console.log('')
       console.log(pc.dim('Attempting to fetch contract ABI...'))
 
-      // Check if it's a proxy contract
-      const implementationAddress = await contractService.getImplementationAddress(to)
-      if (implementationAddress) {
-        console.log(pc.cyan(`✓ Proxy detected! Implementation: ${implementationAddress}`))
+      const config = configStore.getConfig()
+      const etherscanApiKey = config.preferences?.etherscanApiKey
+
+      // Inform user about ABI source based on API key availability
+      if (!etherscanApiKey) {
+        console.log(pc.dim('  Using Sourcify for ABI (free, no API key required)'))
+        console.log(pc.dim('  Note: Proxy contract detection requires an Etherscan API key'))
       }
 
-      const abiService = new ABIService(chain)
+      const abiService = new ABIService(chain, etherscanApiKey)
       let abi: any = null
       let contractName: string | undefined
 
@@ -133,11 +136,23 @@ export async function createTransaction() {
         const contractInfo = await abiService.fetchContractInfo(to)
         abi = contractInfo.abi
         contractName = contractInfo.name
+        const implementationAddress = contractInfo.implementation
 
-        if (contractName) {
-          console.log(pc.green(`✓ Contract ABI found: ${pc.bold(contractName)}`))
+        // Check if Etherscan detected this as a proxy
+        if (implementationAddress) {
+          console.log(pc.cyan(`✓ Proxy detected! Implementation: ${implementationAddress}`))
+
+          if (contractName) {
+            console.log(pc.green(`✓ Proxy ABI found: ${pc.bold(contractName)}`))
+          } else {
+            console.log(pc.green('✓ Proxy ABI found!'))
+          }
         } else {
-          console.log(pc.green('✓ Contract ABI found!'))
+          if (contractName) {
+            console.log(pc.green(`✓ Contract ABI found: ${pc.bold(contractName)}`))
+          } else {
+            console.log(pc.green('✓ Contract ABI found!'))
+          }
         }
 
         // If proxy, also fetch implementation ABI and merge
@@ -146,7 +161,9 @@ export async function createTransaction() {
             const implInfo = await abiService.fetchContractInfo(implementationAddress)
             const implAbi = implInfo.abi
 
+            // Use implementation name as the main contract name
             if (implInfo.name) {
+              contractName = implInfo.name
               console.log(pc.green(`✓ Implementation ABI found: ${pc.bold(implInfo.name)}`))
             } else {
               console.log(pc.green('✓ Implementation ABI found!'))
@@ -206,22 +223,30 @@ export async function createTransaction() {
           }
 
           if (useBuilder) {
-            // Show function selector
-            const selectedFunc = await p.select({
+            // Show function selector with pagination
+            // Use function signature as unique identifier to handle overloaded functions
+            const selectedFuncSig = await p.select({
               message: 'Select function to call:',
-              options: functions.map((func) => ({
-                value: func.name,
-                label: abiService.formatFunctionSignature(func),
-                hint: func.stateMutability === 'payable' ? 'payable' : undefined,
-              })),
+              options: functions.map((func) => {
+                const signature = `${func.name}(${func.inputs?.map((i: any) => i.type).join(',') || ''})`
+                return {
+                  value: signature,
+                  label: abiService.formatFunctionSignature(func),
+                  hint: func.stateMutability === 'payable' ? 'payable' : undefined,
+                }
+              }),
+              maxItems: 15, // Limit visible items for pagination
             })
 
-            if (p.isCancel(selectedFunc)) {
+            if (p.isCancel(selectedFuncSig)) {
               p.cancel('Operation cancelled')
               return
             }
 
-            const func = functions.find((f) => f.name === selectedFunc)
+            const func = functions.find((f) => {
+              const sig = `${f.name}(${f.inputs?.map((i: any) => i.type).join(',') || ''})`
+              return sig === selectedFuncSig
+            })
             if (!func) {
               p.log.error('Function not found')
               p.outro('Failed')

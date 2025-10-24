@@ -107,7 +107,43 @@ export async function initConfig() {
     }
 
     configStore.setPreference('safeApiKey', apiKey as string)
-    console.log(pc.green('✓ API key saved'))
+    console.log(pc.green('✓ Safe API key saved'))
+  }
+
+  // Ask about Etherscan API key
+  console.log('')
+  console.log(pc.dim('An Etherscan API key is required for fetching contract ABIs and detecting proxy contracts.'))
+  console.log(pc.dim('Get a free key from https://etherscan.io/myapikey'))
+  console.log('')
+
+  const needsEtherscanKey = await p.confirm({
+    message: 'Do you have an Etherscan API key?',
+    initialValue: false,
+  })
+
+  if (p.isCancel(needsEtherscanKey)) {
+    p.cancel('Operation cancelled')
+    return
+  }
+
+  if (needsEtherscanKey) {
+    const etherscanKey = await p.text({
+      message: 'Enter your Etherscan API key:',
+      placeholder: 'ABC123...',
+      validate: (value) => {
+        if (!value || value.trim().length === 0) {
+          return 'API key cannot be empty'
+        }
+      },
+    })
+
+    if (p.isCancel(etherscanKey)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    configStore.setPreference('etherscanApiKey', etherscanKey as string)
+    console.log(pc.green('✓ Etherscan API key saved'))
   }
 
   console.log('')

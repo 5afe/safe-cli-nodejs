@@ -23,6 +23,7 @@ export type ABI = Array<ABIFunction | any>
 export interface ContractInfo {
   abi: ABI
   name?: string
+  implementation?: Address // Implementation address if this is a proxy
 }
 
 /**
@@ -30,9 +31,11 @@ export interface ContractInfo {
  */
 export class ABIService {
   private chain: ChainConfig
+  private etherscanApiKey?: string
 
-  constructor(chain: ChainConfig) {
+  constructor(chain: ChainConfig, etherscanApiKey?: string) {
     this.chain = chain
+    this.etherscanApiKey = etherscanApiKey
   }
 
   /**
@@ -46,23 +49,47 @@ export class ABIService {
 
   /**
    * Fetch contract info (ABI + name) for a contract address
-   * Tries Etherscan first, then falls back to Sourcify
+   * Smart ordering:
+   * - With API key: Etherscan first (has proxy detection), then Sourcify
+   * - Without API key: Sourcify first (free), then Etherscan
    */
   async fetchContractInfo(address: Address): Promise<ContractInfo> {
-    // Try Etherscan first
-    try {
-      const info = await this.fetchFromEtherscan(address)
-      if (info) return info
-    } catch (error) {
-      // Silently continue to Sourcify
-    }
+    // Smart ordering: prefer Etherscan if API key is configured (for proxy detection)
+    // Otherwise, try Sourcify first (free, no API key needed)
+    const tryEtherscanFirst = !!this.etherscanApiKey
 
-    // Try Sourcify as fallback
-    try {
-      const info = await this.fetchFromSourcify(address)
-      if (info) return info
-    } catch (error) {
-      // Both failed
+    if (tryEtherscanFirst) {
+      // Try Etherscan first (has proxy detection)
+      try {
+        const info = await this.fetchFromEtherscan(address)
+        if (info) return info
+      } catch (error) {
+        // Silently continue to Sourcify
+      }
+
+      // Try Sourcify as fallback
+      try {
+        const info = await this.fetchFromSourcify(address)
+        if (info) return info
+      } catch (error) {
+        // Both failed
+      }
+    } else {
+      // Try Sourcify first (free, no API key needed)
+      try {
+        const info = await this.fetchFromSourcify(address)
+        if (info) return info
+      } catch (error) {
+        // Silently continue to Etherscan
+      }
+
+      // Try Etherscan as fallback (will likely fail without API key, but worth trying)
+      try {
+        const info = await this.fetchFromEtherscan(address)
+        if (info) return info
+      } catch (error) {
+        // Both failed
+      }
     }
 
     throw new SafeCLIError(
@@ -80,28 +107,48 @@ export class ABIService {
       return null
     }
 
-    // Convert explorer URL to API URL
-    // https://etherscan.io -> https://api.etherscan.io/api
-    // https://sepolia.etherscan.io -> https://api-sepolia.etherscan.io/api
-    const apiUrl = explorerUrl
-      .replace('https://', 'https://api.')
-      .replace('https://api.', 'https://api-')
-      .replace('etherscan.io', 'etherscan.io/api')
-      .replace('https://api-https://api-', 'https://api-')
+    // Convert explorer URL to API URL (V2)
+    // https://etherscan.io -> https://api.etherscan.io/v2/api
+    // https://sepolia.etherscan.io -> https://api-sepolia.etherscan.io/v2/api
+    const explorerURL = new URL(explorerUrl)
+    const hostParts = explorerURL.hostname.split('.')
 
-    // Use getsourcecode to get both ABI and contract name
-    const url = `${apiUrl}?module=contract&action=getsourcecode&address=${address}`
+    let apiUrl: string
+    if (hostParts.length === 2) {
+      // No subdomain: etherscan.io -> api.etherscan.io
+      apiUrl = `https://api.${explorerURL.hostname}/v2/api`
+    } else {
+      // Has subdomain: sepolia.etherscan.io -> api-sepolia.etherscan.io
+      const subdomain = hostParts[0]
+      const domain = hostParts.slice(1).join('.')
+      apiUrl = `https://api-${subdomain}.${domain}/v2/api`
+    }
 
-    const response = await fetch(url)
+    // Use getsourcecode to get both ABI and contract name (V2 API requires chainid)
+    let requestUrl = `${apiUrl}?chainid=${this.chain.chainId}&module=contract&action=getsourcecode&address=${address}`
+
+    // Add API key if available
+    if (this.etherscanApiKey) {
+      requestUrl += `&apikey=${this.etherscanApiKey}`
+    }
+
+    const response = await fetch(requestUrl)
     const data = await response.json()
 
     if (data.status === '1' && data.result && data.result[0]) {
       const contractData = data.result[0]
 
       if (contractData.ABI && contractData.ABI !== 'Contract source code not verified') {
+        // Check if this is a proxy contract (Etherscan V2 returns Proxy="1" and Implementation address)
+        let implementation: Address | undefined
+        if (contractData.Proxy === '1' && contractData.Implementation) {
+          implementation = contractData.Implementation as Address
+        }
+
         return {
           abi: JSON.parse(contractData.ABI),
-          name: contractData.ContractName || undefined
+          name: contractData.ContractName || undefined,
+          implementation
         }
       }
     }

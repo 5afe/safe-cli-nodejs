@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "chainId": "1",
+  "createdAt": 1761326849944,
+  "meta": {
+    "name": "USDC Approval",
+    "description": "Approve USDC spending for a contract",
+    "txBuilderVersion": "1.18.2",
+    "createdFromSafeAddress": "0xA77DE01e157f9f57C7c4A326eeE9C4874D0598b6",
+    "createdFromOwnerAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb2",
+    "checksum": "0x8b5032f716845c8b08bab3d63dbd9ba92e056f3557793cd041e59b84e16aa989"
+  },
+  "transactions": [
+    {
+      "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "spender",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          }
+        ],
+        "name": "approve",
+        "payable": false
+      },
+      "contractInputsValues": {
+        "spender": "0x474e5Ded6b5D078163BFB8F6dBa355C3aA5478C8",
+        "value": "100000000000"
+      }
+    }
+  ]
+}

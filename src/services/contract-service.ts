@@ -80,8 +80,10 @@ export class ContractService {
       })
 
       if (implementationData && implementationData !== '0x' + '0'.repeat(64)) {
-        // Extract address from storage (last 20 bytes)
-        const implementationAddress = ('0x' + implementationData.slice(-40)) as Address
+        // Extract address from storage (last 20 bytes = 40 hex chars)
+        // Storage returns 0x + 64 hex chars, we need the last 40 hex chars
+        const addressHex = implementationData.slice(2) // Remove 0x prefix
+        const implementationAddress = ('0x' + addressHex.slice(-40)) as Address
 
         // Verify it's a valid contract
         const isValidContract = await this.isContract(implementationAddress)
@@ -97,7 +99,9 @@ export class ContractService {
       })
 
       if (beaconData && beaconData !== '0x' + '0'.repeat(64)) {
-        const beaconAddress = ('0x' + beaconData.slice(-40)) as Address
+        // Extract address from storage (last 20 bytes = 40 hex chars)
+        const addressHex = beaconData.slice(2) // Remove 0x prefix
+        const beaconAddress = ('0x' + addressHex.slice(-40)) as Address
 
         // Beacon proxies have an implementation() function
         try {
