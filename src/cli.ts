@@ -20,6 +20,9 @@ import { createTransaction } from './commands/tx/create.js'
 import { signTransaction } from './commands/tx/sign.js'
 import { executeTransaction } from './commands/tx/execute.js'
 import { listTransactions } from './commands/tx/list.js'
+import { showTransactionStatus } from './commands/tx/status.js'
+import { exportTransaction } from './commands/tx/export.js'
+import { importTransaction } from './commands/tx/import.js'
 import { handleError } from './utils/errors.js'
 
 const program = new Command()
@@ -294,6 +297,40 @@ tx
   .action(async () => {
     try {
       await listTransactions()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('status [safeTxHash]')
+  .description('Show transaction status and signature progress')
+  .action(async (safeTxHash?: string) => {
+    try {
+      await showTransactionStatus(safeTxHash)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('export [safeTxHash]')
+  .description('Export transaction as JSON for sharing')
+  .option('-o, --output <file>', 'Output to file instead of stdout')
+  .action(async (safeTxHash?: string, options?: { output?: string }) => {
+    try {
+      await exportTransaction(safeTxHash, options?.output)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('import [json]')
+  .description('Import transaction from JSON string or file')
+  .action(async (json?: string) => {
+    try {
+      await importTransaction(json)
     } catch (error) {
       handleError(error)
     }
