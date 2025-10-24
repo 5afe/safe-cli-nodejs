@@ -13,6 +13,9 @@ import { deploySafe } from './commands/account/deploy.js'
 import { openSafe } from './commands/account/open.js'
 import { listSafes } from './commands/account/list.js'
 import { showSafeInfo } from './commands/account/info.js'
+import { addOwner } from './commands/account/add-owner.js'
+import { removeOwner } from './commands/account/remove-owner.js'
+import { changeThreshold } from './commands/account/change-threshold.js'
 import { createTransaction } from './commands/tx/create.js'
 import { signTransaction } from './commands/tx/sign.js'
 import { executeTransaction } from './commands/tx/execute.js'
@@ -208,6 +211,39 @@ account
   .action(async (account?: string) => {
     try {
       await showSafeInfo(account)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('add-owner [account]')
+  .description('Add a new owner to a Safe (EIP-3770 format: shortName:address)')
+  .action(async (account?: string) => {
+    try {
+      await addOwner(account)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('remove-owner [account]')
+  .description('Remove an owner from a Safe (EIP-3770 format: shortName:address)')
+  .action(async (account?: string) => {
+    try {
+      await removeOwner(account)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('change-threshold [account]')
+  .description('Change the signature threshold of a Safe (EIP-3770 format: shortName:address)')
+  .action(async (account?: string) => {
+    try {
+      await changeThreshold(account)
     } catch (error) {
       handleError(error)
     }
