@@ -6,6 +6,7 @@ import { getTransactionStore } from '../../storage/transaction-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
+import { formatSafeAddress } from '../../utils/eip3770.js'
 
 export async function signTransaction(txId?: string) {
   p.intro('Sign Safe Transaction')
@@ -37,13 +38,19 @@ export async function signTransaction(txId?: string) {
         return
       }
 
+      const chains = configStore.getAllChains()
+
       transactionId = (await p.select({
         message: 'Select transaction to sign',
-        options: pendingTxs.map((tx) => ({
-          value: tx.id,
-          label: `${tx.id.slice(0, 8)}... → ${tx.metadata.to}`,
-          hint: `Safe: ${tx.safeAddress} | Signatures: ${tx.signatures.length}`,
-        })),
+        options: pendingTxs.map((tx) => {
+          const safe = safeStorage.getSafe(tx.chainId, tx.safeAddress)
+          const eip3770 = formatSafeAddress(tx.safeAddress as Address, tx.chainId, chains)
+          return {
+            value: tx.id,
+            label: `${tx.id.slice(0, 8)}... → ${tx.metadata.to}`,
+            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures.length}`,
+          }
+        }),
       })) as string
 
       if (p.isCancel(transactionId)) {
@@ -72,7 +79,7 @@ export async function signTransaction(txId?: string) {
     }
 
     // Get Safe info
-    const safe = safeStorage.getSafeByAddress(transaction.safeAddress, transaction.chainId)
+    const safe = safeStorage.getSafe(transaction.chainId, transaction.safeAddress)
     if (!safe) {
       p.log.error('Safe not found')
       p.outro('Failed')
