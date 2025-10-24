@@ -65,11 +65,12 @@ export function createMockConfigStore(): any {
       }
       return chains[chainId]
     }),
-    addChain: vi.fn(),
-    removeChain: vi.fn(),
+    setChain: vi.fn(),
+    deleteChain: vi.fn(),
+    chainExists: vi.fn().mockReturnValue(false),
     getPreferences: vi.fn().mockReturnValue({ autoUpdate: true }),
     setPreference: vi.fn(),
-    updatePreferences: vi.fn(),
+    getConfigPath: vi.fn().mockReturnValue('/mock/config/path'),
   }
 }
 
