@@ -37,7 +37,7 @@ export async function listTransactions(safeAddress?: Address, statusFilter?: Tra
     console.log(`\nFound ${transactions.length} transaction(s):\n`)
 
     for (const tx of transactions) {
-      const safe = safeStorage.getSafe(tx.safeAddress, tx.chainId)
+      const safe = safeStorage.getSafeByAddress(tx.safeAddress, tx.chainId)
       const safeName = safe?.name || 'Unknown'
 
       // Status badge

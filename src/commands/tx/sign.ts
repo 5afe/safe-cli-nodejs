@@ -72,7 +72,7 @@ export async function signTransaction(txId?: string) {
     }
 
     // Get Safe info
-    const safe = safeStorage.getSafe(transaction.safeAddress, transaction.chainId)
+    const safe = safeStorage.getSafeByAddress(transaction.safeAddress, transaction.chainId)
     if (!safe) {
       p.log.error('Safe not found')
       p.outro('Failed')

@@ -31,6 +31,7 @@ export async function listSafes() {
     const status = safe.deployed ? pc.green('deployed') : pc.yellow('not deployed')
 
     console.log(`${marker} ${label}`)
+    console.log(`  ${pc.dim('ID:')}      ${pc.cyan(safe.id)}`)
     console.log(`  ${pc.dim('Address:')} ${shortenAddress(safe.address)}`)
     console.log(`  ${pc.dim('Chain:')}   ${chain?.name || safe.chainId}`)
     console.log(`  ${pc.dim('Owners:')}  ${safe.threshold} / ${safe.owners.length}`)

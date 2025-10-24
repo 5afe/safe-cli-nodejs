@@ -71,10 +71,11 @@ safe wallet remove            # Remove a wallet
 
 ```bash
 safe account create           # Create new Safe account
-safe account deploy           # Deploy predicted Safe
+safe account deploy [safeId]  # Deploy predicted Safe
 safe account open             # Open existing Safe
-safe account list             # List all Safes
-safe account info             # Show Safe details
+safe account list             # List all Safes (with IDs)
+safe account use [safeId]     # Switch active Safe
+safe account info [safeId]    # Show Safe details
 ```
 
 ### Transaction Management

@@ -13,6 +13,7 @@ import { deploySafe } from './commands/account/deploy.js'
 import { openSafe } from './commands/account/open.js'
 import { listSafes } from './commands/account/list.js'
 import { showSafeInfo } from './commands/account/info.js'
+import { useSafe } from './commands/account/use.js'
 import { createTransaction } from './commands/tx/create.js'
 import { signTransaction } from './commands/tx/sign.js'
 import { executeTransaction } from './commands/tx/execute.js'
@@ -197,6 +198,18 @@ account
   .action(async () => {
     try {
       await listSafes()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+account
+  .command('use [safeId]')
+  .alias('switch')
+  .description('Switch active Safe account')
+  .action(async (safeId?: string) => {
+    try {
+      await useSafe(safeId)
     } catch (error) {
       handleError(error)
     }
