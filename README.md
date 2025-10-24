@@ -230,7 +230,7 @@ The CLI supports two optional API keys that enhance functionality:
 
 #### Safe Transaction Service API Key (Optional)
 
-Some chains require an API key to access the Safe Transaction Service. You can get one from [Safe Dashboard](https://dashboard.safe.global/).
+The Safe Transaction Service requires an API key. You can get one from [Safe Dashboard](https://developer.safe.global).
 
 **Benefits:**
 - Push transactions to Safe Transaction Service (`safe tx push`)
