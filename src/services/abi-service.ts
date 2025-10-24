@@ -20,6 +20,11 @@ export interface ABIFunction {
 
 export type ABI = Array<ABIFunction | any>
 
+export interface ContractInfo {
+  abi: ABI
+  name?: string
+}
+
 /**
  * Service for fetching contract ABIs from various sources
  */
@@ -35,18 +40,27 @@ export class ABIService {
    * Tries Etherscan first, then falls back to Sourcify
    */
   async fetchABI(address: Address): Promise<ABI> {
+    const info = await this.fetchContractInfo(address)
+    return info.abi
+  }
+
+  /**
+   * Fetch contract info (ABI + name) for a contract address
+   * Tries Etherscan first, then falls back to Sourcify
+   */
+  async fetchContractInfo(address: Address): Promise<ContractInfo> {
     // Try Etherscan first
     try {
-      const abi = await this.fetchFromEtherscan(address)
-      if (abi) return abi
+      const info = await this.fetchFromEtherscan(address)
+      if (info) return info
     } catch (error) {
       // Silently continue to Sourcify
     }
 
     // Try Sourcify as fallback
     try {
-      const abi = await this.fetchFromSourcify(address)
-      if (abi) return abi
+      const info = await this.fetchFromSourcify(address)
+      if (info) return info
     } catch (error) {
       // Both failed
     }
@@ -57,9 +71,9 @@ export class ABIService {
   }
 
   /**
-   * Fetch ABI from Etherscan-compatible API
+   * Fetch contract info from Etherscan-compatible API
    */
-  private async fetchFromEtherscan(address: Address): Promise<ABI | null> {
+  private async fetchFromEtherscan(address: Address): Promise<ContractInfo | null> {
     const explorerUrl = this.chain.explorer
 
     if (!explorerUrl) {
@@ -75,23 +89,30 @@ export class ABIService {
       .replace('etherscan.io', 'etherscan.io/api')
       .replace('https://api-https://api-', 'https://api-')
 
-    // Note: Using without API key (limited rate)
-    const url = `${apiUrl}?module=contract&action=getabi&address=${address}`
+    // Use getsourcecode to get both ABI and contract name
+    const url = `${apiUrl}?module=contract&action=getsourcecode&address=${address}`
 
     const response = await fetch(url)
     const data = await response.json()
 
-    if (data.status === '1' && data.result) {
-      return JSON.parse(data.result)
+    if (data.status === '1' && data.result && data.result[0]) {
+      const contractData = data.result[0]
+
+      if (contractData.ABI && contractData.ABI !== 'Contract source code not verified') {
+        return {
+          abi: JSON.parse(contractData.ABI),
+          name: contractData.ContractName || undefined
+        }
+      }
     }
 
     return null
   }
 
   /**
-   * Fetch ABI from Sourcify
+   * Fetch contract info from Sourcify
    */
-  private async fetchFromSourcify(address: Address): Promise<ABI | null> {
+  private async fetchFromSourcify(address: Address): Promise<ContractInfo | null> {
     const chainId = this.chain.chainId
 
     // Try full match first
@@ -102,7 +123,19 @@ export class ABIService {
       if (response.ok) {
         const metadata = await response.json()
         if (metadata.output?.abi) {
-          return metadata.output.abi
+          // Extract contract name from settings.compilationTarget
+          let contractName: string | undefined
+          if (metadata.settings?.compilationTarget) {
+            const targets = Object.values(metadata.settings.compilationTarget)
+            if (targets.length > 0) {
+              contractName = targets[0] as string
+            }
+          }
+
+          return {
+            abi: metadata.output.abi,
+            name: contractName
+          }
         }
       }
     } catch (error) {
@@ -117,7 +150,19 @@ export class ABIService {
       if (response.ok) {
         const metadata = await response.json()
         if (metadata.output?.abi) {
-          return metadata.output.abi
+          // Extract contract name from settings.compilationTarget
+          let contractName: string | undefined
+          if (metadata.settings?.compilationTarget) {
+            const targets = Object.values(metadata.settings.compilationTarget)
+            if (targets.length > 0) {
+              contractName = targets[0] as string
+            }
+          }
+
+          return {
+            abi: metadata.output.abi,
+            name: contractName
+          }
         }
       }
     } catch (error) {

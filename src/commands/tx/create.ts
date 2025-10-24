@@ -127,16 +127,30 @@ export async function createTransaction() {
 
       const abiService = new ABIService(chain)
       let abi: any = null
+      let contractName: string | undefined
 
       try {
-        abi = await abiService.fetchABI(to)
-        console.log(pc.green('✓ Proxy ABI found!'))
+        const contractInfo = await abiService.fetchContractInfo(to)
+        abi = contractInfo.abi
+        contractName = contractInfo.name
+
+        if (contractName) {
+          console.log(pc.green(`✓ Contract ABI found: ${pc.bold(contractName)}`))
+        } else {
+          console.log(pc.green('✓ Contract ABI found!'))
+        }
 
         // If proxy, also fetch implementation ABI and merge
         if (implementationAddress) {
           try {
-            const implAbi = await abiService.fetchABI(implementationAddress)
-            console.log(pc.green('✓ Implementation ABI found!'))
+            const implInfo = await abiService.fetchContractInfo(implementationAddress)
+            const implAbi = implInfo.abi
+
+            if (implInfo.name) {
+              console.log(pc.green(`✓ Implementation ABI found: ${pc.bold(implInfo.name)}`))
+            } else {
+              console.log(pc.green('✓ Implementation ABI found!'))
+            }
 
             // Merge ABIs (implementation functions + proxy functions)
             // Filter out duplicates by function signature
@@ -166,7 +180,6 @@ export async function createTransaction() {
             console.log(pc.dim(`  Found ${abi.length} items in proxy ABI`))
           }
         } else {
-          console.log(pc.green('✓ Contract ABI found!'))
           console.log(pc.dim(`  Found ${abi.length} items in ABI`))
         }
       } catch (error) {
