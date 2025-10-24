@@ -5,51 +5,69 @@ import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { SafeService } from '../../services/safe-service.js'
-import { shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
+import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 
-export async function deploySafe(safeId?: string) {
+export async function deploySafe(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Deploy Safe ')))
 
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
   const walletStorage = getWalletStorage()
+  const chains = configStore.getAllChains()
 
   // Get Safe to deploy
-  let safe
-  if (safeId) {
-    safe = safeStorage.getSafe(safeId)
-    if (!safe) {
-      logError(`Safe ${safeId} not found`)
+  let chainId: string
+  let address: Address
+
+  if (account) {
+    // Parse EIP-3770 address
+    try {
+      const parsed = parseSafeAddress(account, chains)
+      chainId = parsed.chainId
+      address = parsed.address
+    } catch (error) {
+      logError(error instanceof Error ? error.message : 'Invalid account')
       p.cancel('Operation cancelled')
       return
     }
   } else {
-    // Get active Safe
-    safe = safeStorage.getActiveSafe()
-    if (!safe) {
-      const safes = safeStorage.getAllSafes().filter((s) => !s.deployed)
-      if (safes.length === 0) {
-        logError('No undeployed Safes found')
-        p.cancel('Use "safe account create" to create a Safe first')
-        return
-      }
-
-      const selectedId = await p.select({
-        message: 'Select Safe to deploy:',
-        options: safes.map((s) => ({
-          value: s.id,
-          label: `${s.name} (${shortenAddress(s.address)}) on ${configStore.getChain(s.chainId)?.name}`,
-        })),
-      })
-
-      if (p.isCancel(selectedId)) {
-        p.cancel('Operation cancelled')
-        return
-      }
-
-      safe = safeStorage.getSafe(selectedId as string)!
+    // Show interactive selection
+    const undeployedSafes = safeStorage.getAllSafes().filter((s) => !s.deployed)
+    if (undeployedSafes.length === 0) {
+      logError('No undeployed Safes found')
+      p.cancel('Use "safe account create" to create a Safe first')
+      return
     }
+
+    const selected = await p.select({
+      message: 'Select Safe to deploy:',
+      options: undeployedSafes.map((s) => {
+        const chain = configStore.getChain(s.chainId)
+        const eip3770 = formatSafeAddress(s.address as Address, s.chainId, chains)
+        return {
+          value: `${s.chainId}:${s.address}`,
+          label: `${s.name} (${eip3770})`,
+          hint: chain?.name || s.chainId,
+        }
+      }),
+    })
+
+    if (p.isCancel(selected)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    const [selectedChainId, selectedAddress] = (selected as string).split(':')
+    chainId = selectedChainId
+    address = selectedAddress as Address
+  }
+
+  const safe = safeStorage.getSafe(chainId, address)
+  if (!safe) {
+    logError(`Safe not found: ${address} on chain ${chainId}`)
+    p.cancel('Operation cancelled')
+    return
   }
 
   if (safe.deployed) {
@@ -71,16 +89,16 @@ export async function deploySafe(safeId?: string) {
   }
 
   const chain = configStore.getChain(safe.chainId)!
+  const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
 
   console.log('')
   console.log(pc.bold('Safe to Deploy:'))
   console.log(`  ${pc.dim('Name:')}     ${safe.name}`)
-  console.log(`  ${pc.dim('Address:')}  ${shortenAddress(safe.address)}`)
+  console.log(`  ${pc.dim('Address:')}  ${pc.cyan(eip3770)}`)
   console.log(`  ${pc.dim('Chain:')}    ${chain.name}`)
-  console.log(`  ${pc.dim('Owners:')}   ${safe.owners.length}`)
-  console.log(`  ${pc.dim('Threshold:')} ${safe.threshold} / ${safe.owners.length}`)
+  console.log(`  ${pc.dim('Owners:')}   ${safe.threshold} / ${safe.owners.length}`)
   console.log('')
-  console.log(pc.dim(`Deploying with wallet: ${activeWallet.name} (${shortenAddress(activeWallet.address)})`))
+  console.log(pc.dim(`Deploying with wallet: ${activeWallet.name} (${activeWallet.address})`))
   console.log('')
 
   const confirm = await p.confirm({
@@ -120,17 +138,18 @@ export async function deploySafe(safeId?: string) {
     spinner.stop('Safe deployed!')
 
     // Update storage
-    safeStorage.updateSafe(safe.id, {
+    safeStorage.updateSafe(chainId, address, {
       deployed: true,
       address: deployedAddress,
       predictedConfig: undefined,
     })
 
+    const deployedEip3770 = formatSafeAddress(deployedAddress, chain.chainId, chains)
+
     console.log('')
     console.log(pc.green('✓ Safe deployed successfully!'))
     console.log('')
-    console.log(`  ${pc.dim('Address:')} ${pc.bold(deployedAddress)}`)
-    console.log(`  ${pc.dim('Short:')}   ${shortenAddress(deployedAddress)}`)
+    console.log(`  ${pc.dim('Address:')} ${pc.cyan(deployedEip3770)}`)
     console.log(`  ${pc.dim('Chain:')}   ${chain.name}`)
     if (chain.explorer) {
       console.log(`  ${pc.dim('Explorer:')} ${chain.explorer}/address/${deployedAddress}`)

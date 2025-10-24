@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const ChainConfigSchema = z.object({
   name: z.string(),
   chainId: z.string(),
+  shortName: z.string(), // EIP-3770 chain short name
   rpcUrl: z.string().url(),
   explorer: z.string().url().optional(),
   currency: z.string(),

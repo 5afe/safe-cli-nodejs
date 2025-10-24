@@ -1,7 +1,14 @@
 import Conf from 'conf'
-import { randomBytes } from 'crypto'
 import { SafeStoreSchema, type SafeAccount, type SafeStore } from '../types/safe.js'
 import { SafeCLIError } from '../utils/errors.js'
+
+/**
+ * Create a storage key from chainId and address
+ * Format: "chainId:address" (not EIP-3770 shortName:address)
+ */
+function getSafeKey(chainId: string, address: string): string {
+  return `${chainId}:${address.toLowerCase()}`
+}
 
 export class SafeAccountStorage {
   private store: Conf<SafeStore>
@@ -12,28 +19,27 @@ export class SafeAccountStorage {
       configName: 'safes',
       defaults: {
         safes: {},
-        activeSafe: null,
       },
     })
   }
 
   // Create a new Safe record
-  createSafe(safe: Omit<SafeAccount, 'id' | 'createdAt'>): SafeAccount {
-    const safeId = randomBytes(16).toString('hex')
+  createSafe(safe: Omit<SafeAccount, 'createdAt'>): SafeAccount {
+    const key = getSafeKey(safe.chainId, safe.address)
+
+    // Check if already exists
+    if (this.store.get(`safes.${key}`)) {
+      throw new SafeCLIError(
+        `Safe already exists: ${safe.address} on chain ${safe.chainId}`
+      )
+    }
+
     const newSafe: SafeAccount = {
       ...safe,
-      id: safeId,
       createdAt: new Date().toISOString(),
     }
 
-    this.store.set(`safes.${safeId}`, newSafe)
-
-    // Set as active if it's the first Safe
-    const existingSafes = this.getAllSafes()
-    if (existingSafes.length === 1) {
-      this.store.set('activeSafe', safeId)
-    }
-
+    this.store.set(`safes.${key}`, newSafe)
     return newSafe
   }
 
@@ -43,59 +49,40 @@ export class SafeAccountStorage {
     return Object.values(safes)
   }
 
-  // Get Safe by ID
-  getSafe(safeId: string): SafeAccount | undefined {
-    return this.store.get(`safes.${safeId}`)
-  }
-
-  // Get Safe by address and chain
-  getSafeByAddress(address: string, chainId: string): SafeAccount | undefined {
-    const safes = this.getAllSafes()
-    return safes.find(
-      (s) => s.address.toLowerCase() === address.toLowerCase() && s.chainId === chainId
-    )
-  }
-
-  // Get active Safe
-  getActiveSafe(): SafeAccount | null {
-    const activeId = this.store.get('activeSafe')
-    if (!activeId) return null
-    return this.getSafe(activeId) || null
-  }
-
-  // Set active Safe
-  setActiveSafe(safeId: string): void {
-    const safe = this.getSafe(safeId)
-    if (!safe) {
-      throw new SafeCLIError(`Safe ${safeId} not found`)
-    }
-    this.store.set('activeSafe', safeId)
-    this.store.set(`safes.${safeId}.lastUsed`, new Date().toISOString())
+  // Get Safe by chainId and address
+  getSafe(chainId: string, address: string): SafeAccount | undefined {
+    const key = getSafeKey(chainId, address)
+    return this.store.get(`safes.${key}`)
   }
 
   // Update Safe
-  updateSafe(safeId: string, updates: Partial<SafeAccount>): void {
-    const safe = this.getSafe(safeId)
+  updateSafe(chainId: string, address: string, updates: Partial<SafeAccount>): void {
+    const key = getSafeKey(chainId, address)
+    const safe = this.getSafe(chainId, address)
+
     if (!safe) {
-      throw new SafeCLIError(`Safe ${safeId} not found`)
+      throw new SafeCLIError(
+        `Safe not found: ${address} on chain ${chainId}`
+      )
     }
 
     const updated = { ...safe, ...updates }
-    this.store.set(`safes.${safeId}`, updated)
+    this.store.set(`safes.${key}`, updated)
   }
 
   // Remove Safe
-  removeSafe(safeId: string): void {
+  removeSafe(chainId: string, address: string): void {
+    const key = getSafeKey(chainId, address)
     const safes = this.store.get('safes', {})
-    delete safes[safeId]
-    this.store.set('safes', safes)
 
-    // Update active Safe if necessary
-    const activeId = this.store.get('activeSafe')
-    if (activeId === safeId) {
-      const remainingSafes = Object.keys(safes)
-      this.store.set('activeSafe', remainingSafes.length > 0 ? remainingSafes[0] : null)
+    if (!safes[key]) {
+      throw new SafeCLIError(
+        `Safe not found: ${address} on chain ${chainId}`
+      )
     }
+
+    delete safes[key]
+    this.store.set('safes', safes)
   }
 
   // Get Safes by chain
@@ -104,8 +91,13 @@ export class SafeAccountStorage {
   }
 
   // Check if Safe exists
-  safeExists(address: string, chainId: string): boolean {
-    return this.getSafeByAddress(address, chainId) !== undefined
+  safeExists(chainId: string, address: string): boolean {
+    return this.getSafe(chainId, address) !== undefined
+  }
+
+  // Get storage path (useful for debugging)
+  getStorePath(): string {
+    return this.store.path
   }
 }
 

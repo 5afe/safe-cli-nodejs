@@ -1,10 +1,12 @@
 import type { ChainConfig } from '../types/config.js'
 
 // Official Safe-supported chains from https://safe-client.safe.global/v1/chains
+// ShortNames follow EIP-3770 standard from https://github.com/ethereum-lists/chains
 export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '1': {
     name: 'Ethereum',
     chainId: '1',
+    shortName: 'eth',
     rpcUrl: 'https://eth.drpc.org',
     explorer: 'https://etherscan.io',
     currency: 'ETH',
@@ -12,6 +14,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '11155111': {
     name: 'Sepolia',
     chainId: '11155111',
+    shortName: 'sep',
     rpcUrl: 'https://rpc2.sepolia.org',
     explorer: 'https://sepolia.etherscan.io',
     currency: 'ETH',
@@ -19,6 +22,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '100': {
     name: 'Gnosis Chain',
     chainId: '100',
+    shortName: 'gno',
     rpcUrl: 'https://rpc.gnosischain.com',
     explorer: 'https://gnosisscan.io',
     currency: 'XDAI',
@@ -26,6 +30,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '137': {
     name: 'Polygon',
     chainId: '137',
+    shortName: 'matic',
     rpcUrl: 'https://polygon-rpc.com',
     explorer: 'https://polygonscan.com',
     currency: 'POL',
@@ -33,6 +38,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '42161': {
     name: 'Arbitrum',
     chainId: '42161',
+    shortName: 'arb1',
     rpcUrl: 'https://arb1.arbitrum.io/rpc',
     explorer: 'https://arbiscan.io',
     currency: 'AETH',
@@ -40,6 +46,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '10': {
     name: 'Optimism',
     chainId: '10',
+    shortName: 'oeth',
     rpcUrl: 'https://mainnet.optimism.io',
     explorer: 'https://optimistic.etherscan.io',
     currency: 'OETH',
@@ -47,6 +54,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '8453': {
     name: 'Base',
     chainId: '8453',
+    shortName: 'base',
     rpcUrl: 'https://mainnet.base.org',
     explorer: 'https://basescan.org',
     currency: 'ETH',
@@ -54,6 +62,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '56': {
     name: 'BNB Chain',
     chainId: '56',
+    shortName: 'bnb',
     rpcUrl: 'https://bsc.drpc.org',
     explorer: 'https://bscscan.com',
     currency: 'BNB',
@@ -61,6 +70,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '43114': {
     name: 'Avalanche',
     chainId: '43114',
+    shortName: 'avax',
     rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
     explorer: 'https://snowtrace.io',
     currency: 'AVAX',
@@ -68,6 +78,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '59144': {
     name: 'Linea',
     chainId: '59144',
+    shortName: 'linea',
     rpcUrl: 'https://rpc.linea.build',
     explorer: 'https://lineascan.build',
     currency: 'ETH',
@@ -75,6 +86,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '324': {
     name: 'zkSync Era',
     chainId: '324',
+    shortName: 'zksync',
     rpcUrl: 'https://mainnet.era.zksync.io',
     explorer: 'https://explorer.zksync.io',
     currency: 'ETH',
@@ -82,6 +94,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '1101': {
     name: 'Polygon zkEVM',
     chainId: '1101',
+    shortName: 'polygon-zkevm',
     rpcUrl: 'https://zkevm-rpc.com',
     explorer: 'https://zkevm.polygonscan.com',
     currency: 'ETH',
@@ -89,6 +102,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '534352': {
     name: 'Scroll',
     chainId: '534352',
+    shortName: 'scr',
     rpcUrl: 'https://rpc.scroll.io',
     explorer: 'https://scrollscan.com',
     currency: 'ETH',
@@ -96,6 +110,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '42220': {
     name: 'Celo',
     chainId: '42220',
+    shortName: 'celo',
     rpcUrl: 'https://rpc.ankr.com/celo',
     explorer: 'https://explorer.celo.org/mainnet',
     currency: 'CELO',
@@ -103,6 +118,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '5000': {
     name: 'Mantle',
     chainId: '5000',
+    shortName: 'mnt',
     rpcUrl: 'https://rpc.mantle.xyz',
     explorer: 'https://mantlescan.xyz',
     currency: 'MNT',
@@ -110,6 +126,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
   '1313161554': {
     name: 'Aurora',
     chainId: '1313161554',
+    shortName: 'aurora',
     rpcUrl: 'https://mainnet.aurora.dev',
     explorer: 'https://aurorascan.dev',
     currency: 'ETH',

@@ -6,8 +6,9 @@ import { getSafeStorage } from '../../storage/safe-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { SafeService } from '../../services/safe-service.js'
 import { isValidAddress } from '../../utils/validation.js'
-import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
+import { checksumAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
+import { formatSafeAddress } from '../../utils/eip3770.js'
 
 export async function createSafe() {
   p.intro(pc.bgCyan(pc.black(' Create Safe Account ')))
@@ -25,7 +26,7 @@ export async function createSafe() {
   }
 
   console.log('')
-  console.log(pc.dim(`Active wallet: ${activeWallet.name} (${shortenAddress(activeWallet.address)})`))
+  console.log(pc.dim(`Active wallet: ${activeWallet.name} (${activeWallet.address})`))
   console.log('')
 
   // Select chain
@@ -183,20 +184,22 @@ export async function createSafe() {
       },
     })
 
+    const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, configStore.getAllChains())
+
     console.log('')
     console.log(pc.green('✓ Safe created successfully!'))
     console.log('')
-    console.log(`  ${pc.dim('Name:')}            ${pc.bold(safe.name)}`)
-    console.log(`  ${pc.dim('Address:')}         ${pc.bold(safe.address)}`)
-    console.log(`  ${pc.dim('Short:')}           ${shortenAddress(safe.address)}`)
-    console.log(`  ${pc.dim('Chain:')}           ${chain.name}`)
-    console.log(`  ${pc.dim('Status:')}          ${pc.yellow('Not deployed')}`)
+    console.log(`  ${pc.dim('Name:')}    ${pc.bold(safe.name)}`)
+    console.log(`  ${pc.dim('Address:')} ${pc.cyan(eip3770)}`)
+    console.log(`  ${pc.dim('Chain:')}   ${chain.name}`)
+    console.log(`  ${pc.dim('Status:')}  ${pc.yellow('Not deployed')}`)
+
     console.log('')
     console.log(pc.dim('This Safe has been predicted but not yet deployed to the blockchain.'))
     console.log('')
     console.log('Next steps:')
-    console.log(`  ${pc.cyan('•')} Deploy:  ${pc.bold(`safe account deploy ${safe.id}`)}`)
-    console.log(`  ${pc.cyan('•')} Info:    ${pc.bold(`safe account info`)}`)
+    console.log(`  ${pc.cyan('•')} Deploy:  ${pc.bold(`safe account deploy ${eip3770}`)}`)
+    console.log(`  ${pc.cyan('•')} Info:    ${pc.bold(`safe account info ${eip3770}`)}`)
     console.log('')
 
     p.outro(pc.green('Safe ready for deployment'))

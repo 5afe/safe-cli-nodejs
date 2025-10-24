@@ -7,7 +7,6 @@ export const SafeAccountConfigSchema = z.object({
 })
 
 export const SafeAccountSchema = z.object({
-  id: z.string(),
   name: z.string(),
   address: z.string(),
   chainId: z.string(),
@@ -17,12 +16,11 @@ export const SafeAccountSchema = z.object({
   deployed: z.boolean(),
   predictedConfig: SafeAccountConfigSchema.optional(),
   createdAt: z.string(),
-  lastUsed: z.string().optional(),
 })
 
 export const SafeStoreSchema = z.object({
+  // Keyed by "chainId:address" for uniqueness
   safes: z.record(z.string(), SafeAccountSchema).default({}),
-  activeSafe: z.string().nullable().default(null),
 })
 
 export type SafeAccountConfig = z.infer<typeof SafeAccountConfigSchema>

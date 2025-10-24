@@ -2,7 +2,7 @@ import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
-import { shortenAddress } from '../../utils/ethereum.js'
+import { formatSafeAddress } from '../../utils/eip3770.js'
 
 export async function listSafes() {
   p.intro(pc.bgCyan(pc.black(' Safe Accounts ')))
@@ -11,7 +11,6 @@ export async function listSafes() {
   const safeStorage = getSafeStorage()
 
   const safes = safeStorage.getAllSafes()
-  const activeSafe = safeStorage.getActiveSafe()
 
   if (safes.length === 0) {
     console.log('')
@@ -21,29 +20,20 @@ export async function listSafes() {
     return
   }
 
+  const chains = configStore.getAllChains()
+
   console.log('')
   for (const safe of safes) {
-    const isActive = activeSafe?.id === safe.id
-    const marker = isActive ? pc.green('●') : pc.dim('○')
-    const label = isActive ? pc.bold(pc.green(safe.name)) : safe.name
-
     const chain = configStore.getChain(safe.chainId)
     const status = safe.deployed ? pc.green('deployed') : pc.yellow('not deployed')
+    const eip3770 = formatSafeAddress(safe.address as any, safe.chainId, chains)
 
-    console.log(`${marker} ${label}`)
-    console.log(`  ${pc.dim('ID:')}      ${pc.cyan(safe.id)}`)
-    console.log(`  ${pc.dim('Address:')} ${shortenAddress(safe.address)}`)
+    console.log(`${pc.bold(safe.name)}`)
+    console.log(`  ${pc.dim('Address:')} ${pc.cyan(eip3770)}`)
     console.log(`  ${pc.dim('Chain:')}   ${chain?.name || safe.chainId}`)
     console.log(`  ${pc.dim('Owners:')}  ${safe.threshold} / ${safe.owners.length}`)
     console.log(`  ${pc.dim('Status:')}  ${status}`)
-    if (safe.lastUsed) {
-      console.log(`  ${pc.dim('Last used:')} ${new Date(safe.lastUsed).toLocaleString()}`)
-    }
     console.log('')
-  }
-
-  if (activeSafe) {
-    console.log(pc.dim(`Active Safe: ${activeSafe.name}`))
   }
 
   p.outro(pc.green(`Total: ${safes.length} Safe(s)`))

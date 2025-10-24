@@ -13,7 +13,6 @@ import { deploySafe } from './commands/account/deploy.js'
 import { openSafe } from './commands/account/open.js'
 import { listSafes } from './commands/account/list.js'
 import { showSafeInfo } from './commands/account/info.js'
-import { useSafe } from './commands/account/use.js'
 import { createTransaction } from './commands/tx/create.js'
 import { signTransaction } from './commands/tx/sign.js'
 import { executeTransaction } from './commands/tx/execute.js'
@@ -171,11 +170,11 @@ account
   })
 
 account
-  .command('deploy [safeId]')
-  .description('Deploy a Safe to the blockchain')
-  .action(async (safeId?: string) => {
+  .command('deploy [account]')
+  .description('Deploy a Safe to the blockchain (EIP-3770 format: shortName:address)')
+  .action(async (account?: string) => {
     try {
-      await deploySafe(safeId)
+      await deploySafe(account)
     } catch (error) {
       handleError(error)
     }
@@ -204,23 +203,11 @@ account
   })
 
 account
-  .command('use [safeId]')
-  .alias('switch')
-  .description('Switch active Safe account')
-  .action(async (safeId?: string) => {
+  .command('info [account]')
+  .description('Display Safe information (EIP-3770 format: shortName:address)')
+  .action(async (account?: string) => {
     try {
-      await useSafe(safeId)
-    } catch (error) {
-      handleError(error)
-    }
-  })
-
-account
-  .command('info [safeId]')
-  .description('Display Safe information')
-  .action(async (safeId?: string) => {
-    try {
-      await showSafeInfo(safeId)
+      await showSafeInfo(account)
     } catch (error) {
       handleError(error)
     }
