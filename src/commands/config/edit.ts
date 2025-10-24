@@ -25,6 +25,7 @@ export async function editChains() {
       _format: {
         chainId: 'Chain ID as a string (e.g., "1", "11155111")',
         name: 'Human-readable chain name',
+        shortName: 'EIP-3770 short name (e.g., "eth", "sep", "matic")',
         rpcUrl: 'RPC endpoint URL',
         currency: 'Native currency symbol (e.g., "ETH")',
         explorer: '(Optional) Block explorer base URL',
@@ -78,15 +79,22 @@ export async function editChains() {
     for (const [chainId, chain] of Object.entries(newChains)) {
       const c = chain as any
 
-      if (!c.chainId || !c.name || !c.rpcUrl || !c.currency) {
+      if (!c.chainId || !c.name || !c.shortName || !c.rpcUrl || !c.currency) {
         throw new SafeCLIError(
-          `Invalid chain configuration for ${chainId}: missing required fields (chainId, name, rpcUrl, currency)`
+          `Invalid chain configuration for ${chainId}: missing required fields (chainId, name, shortName, rpcUrl, currency)`
         )
       }
 
       if (c.chainId !== chainId) {
         throw new SafeCLIError(
           `Chain ID mismatch: key is ${chainId} but chainId field is ${c.chainId}`
+        )
+      }
+
+      // Validate shortName format
+      if (!/^[a-z0-9-]+$/.test(c.shortName)) {
+        throw new SafeCLIError(
+          `Invalid shortName for chain ${chainId}: must be lowercase alphanumeric with hyphens`
         )
       }
 
@@ -160,6 +168,7 @@ export async function editChains() {
       configStore.addChain({
         chainId: c.chainId,
         name: c.name,
+        shortName: c.shortName,
         rpcUrl: c.rpcUrl,
         currency: c.currency,
         explorer: c.explorer,

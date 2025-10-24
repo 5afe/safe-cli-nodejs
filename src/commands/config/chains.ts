@@ -37,6 +37,21 @@ export async function addChain() {
     return
   }
 
+  const shortName = await p.text({
+    message: 'Short name (EIP-3770):',
+    placeholder: 'eth',
+    validate: (value) => {
+      if (!value) return 'Short name is required'
+      if (!/^[a-z0-9-]+$/.test(value)) return 'Short name must be lowercase alphanumeric with hyphens'
+      return undefined
+    },
+  })
+
+  if (p.isCancel(shortName)) {
+    p.cancel('Operation cancelled')
+    return
+  }
+
   const rpcUrl = await p.text({
     message: 'RPC URL:',
     placeholder: 'https://eth.llamarpc.com',
@@ -76,6 +91,7 @@ export async function addChain() {
   const chainConfig: ChainConfig = {
     name: name as string,
     chainId: chainId as string,
+    shortName: shortName as string,
     rpcUrl: rpcUrl as string,
     explorer: explorer ? (explorer as string) : undefined,
     currency: currency as string,
@@ -110,6 +126,7 @@ export async function listChains() {
   console.log('')
   for (const chain of chains) {
     console.log(`${pc.cyan('●')} ${pc.bold(chain.name)} ${pc.dim(`(Chain ID: ${chain.chainId})`)}`)
+    console.log(`  ${pc.dim('Short name:')} ${pc.cyan(chain.shortName)}`)
     console.log(`  ${pc.dim('RPC:')} ${chain.rpcUrl}`)
     if (chain.explorer) {
       console.log(`  ${pc.dim('Explorer:')} ${chain.explorer}`)
