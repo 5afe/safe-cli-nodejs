@@ -73,8 +73,7 @@ safe wallet remove            # Remove a wallet
 safe account create              # Create new Safe account
 safe account deploy [account]    # Deploy predicted Safe (EIP-3770 format)
 safe account open                # Open existing Safe
-safe account list                # List all Safes (active Safe marked with ●)
-safe account use [account]       # Switch active Safe (EIP-3770 format)
+safe account list                # List all Safe accounts
 safe account info [account]      # Show Safe details (EIP-3770 format)
 ```
 
@@ -86,7 +85,7 @@ Examples:
 - `sep:0x1405b9b5A42D07bD1D625B1DCcd5EF29Ee5a3f15` (Sepolia)
 - `matic:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` (Polygon)
 
-This makes it clear which chain a Safe belongs to. You can omit the `[account]` parameter to select interactively.
+This makes it clear which chain a Safe belongs to. Commands will interactively prompt for Safe selection when needed.
 
 ### Transaction Management
 
