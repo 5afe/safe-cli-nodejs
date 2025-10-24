@@ -13,9 +13,15 @@ export async function initConfig() {
   console.log('This wizard will help you set up your configuration.')
   console.log('')
 
+  // Check if chains already exist
+  const existingChains = configStore.getAllChains()
+  const hasExistingChains = Object.keys(existingChains).length > 0
+
   // Ask about default chains
   const useDefaults = await p.confirm({
-    message: 'Would you like to use the default chain configurations?',
+    message: hasExistingChains
+      ? 'Would you like to reset to default chain configurations? (This will overwrite your current chains)'
+      : 'Would you like to use the default chain configurations?',
     initialValue: true,
   })
 
@@ -24,7 +30,35 @@ export async function initConfig() {
     return
   }
 
-  if (!useDefaults) {
+  if (useDefaults) {
+    // Show warning if overwriting existing chains
+    if (hasExistingChains) {
+      console.log('')
+      console.log(pc.yellow('⚠ This will replace all existing chain configurations with defaults'))
+      console.log('')
+
+      const confirm = await p.confirm({
+        message: 'Are you sure you want to continue?',
+        initialValue: false,
+      })
+
+      if (p.isCancel(confirm) || !confirm) {
+        p.cancel('Operation cancelled')
+        return
+      }
+    }
+
+    // Load default chains
+    const spinner = p.spinner()
+    spinner.start('Loading default chains...')
+
+    for (const [chainId, chain] of Object.entries(DEFAULT_CHAINS)) {
+      configStore.setChain(chainId, chain)
+    }
+
+    spinner.stop('Default chains loaded')
+    console.log(pc.dim(`Loaded ${Object.keys(DEFAULT_CHAINS).length} default chains`))
+  } else {
     const shouldClear = await p.confirm({
       message: 'Remove all existing chain configurations?',
     })
