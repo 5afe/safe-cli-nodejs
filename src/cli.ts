@@ -23,6 +23,9 @@ import { listTransactions } from './commands/tx/list.js'
 import { showTransactionStatus } from './commands/tx/status.js'
 import { exportTransaction } from './commands/tx/export.js'
 import { importTransaction } from './commands/tx/import.js'
+import { pushTransaction } from './commands/tx/push.js'
+import { pullTransactions } from './commands/tx/pull.js'
+import { syncTransactions } from './commands/tx/sync.js'
 import { handleError } from './utils/errors.js'
 
 const program = new Command()
@@ -331,6 +334,39 @@ tx
   .action(async (json?: string) => {
     try {
       await importTransaction(json)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('push [safeTxHash]')
+  .description('Push transaction to Safe Transaction Service API')
+  .action(async (safeTxHash?: string) => {
+    try {
+      await pushTransaction(safeTxHash)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('pull [account]')
+  .description('Pull transactions from Safe Transaction Service API (EIP-3770 format)')
+  .action(async (account?: string) => {
+    try {
+      await pullTransactions(account)
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+tx
+  .command('sync [account]')
+  .description('Sync transactions with Safe Transaction Service API (EIP-3770 format)')
+  .action(async (account?: string) => {
+    try {
+      await syncTransactions(account)
     } catch (error) {
       handleError(error)
     }

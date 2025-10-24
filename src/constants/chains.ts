@@ -10,6 +10,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://eth.drpc.org',
     explorer: 'https://etherscan.io',
     currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-mainnet.safe.global',
   },
   '11155111': {
     name: 'Sepolia',
@@ -18,6 +19,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc2.sepolia.org',
     explorer: 'https://sepolia.etherscan.io',
     currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-sepolia.safe.global',
   },
   '100': {
     name: 'Gnosis Chain',
@@ -26,6 +28,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://rpc.gnosischain.com',
     explorer: 'https://gnosisscan.io',
     currency: 'XDAI',
+    transactionServiceUrl: 'https://safe-transaction-gnosis-chain.safe.global',
   },
   '137': {
     name: 'Polygon',
@@ -34,6 +37,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://polygon-rpc.com',
     explorer: 'https://polygonscan.com',
     currency: 'POL',
+    transactionServiceUrl: 'https://safe-transaction-polygon.safe.global',
   },
   '42161': {
     name: 'Arbitrum',
@@ -42,6 +46,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://arb1.arbitrum.io/rpc',
     explorer: 'https://arbiscan.io',
     currency: 'AETH',
+    transactionServiceUrl: 'https://safe-transaction-arbitrum.safe.global',
   },
   '10': {
     name: 'Optimism',
@@ -50,6 +55,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://mainnet.optimism.io',
     explorer: 'https://optimistic.etherscan.io',
     currency: 'OETH',
+    transactionServiceUrl: 'https://safe-transaction-optimism.safe.global',
   },
   '8453': {
     name: 'Base',
@@ -58,6 +64,7 @@ export const DEFAULT_CHAINS: Record<string, ChainConfig> = {
     rpcUrl: 'https://mainnet.base.org',
     explorer: 'https://basescan.org',
     currency: 'ETH',
+    transactionServiceUrl: 'https://safe-transaction-base.safe.global',
   },
   '56': {
     name: 'BNB Chain',

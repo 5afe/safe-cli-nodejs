@@ -1,0 +1,216 @@
+import * as p from '@clack/prompts'
+import pc from 'picocolors'
+import type { Address } from 'viem'
+import { getConfigStore } from '../../storage/config-store.js'
+import { getSafeStorage } from '../../storage/safe-store.js'
+import { getTransactionStore } from '../../storage/transaction-store.js'
+import { SafeTransactionServiceAPI } from '../../services/api-service.js'
+import { SafeCLIError } from '../../utils/errors.js'
+import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
+import type { TransactionMetadata } from '../../types/transaction.js'
+
+export async function pullTransactions(account?: string) {
+  p.intro(pc.bgCyan(pc.black(' Pull Transactions from Safe API ')))
+
+  try {
+    const configStore = getConfigStore()
+    const safeStorage = getSafeStorage()
+    const transactionStore = getTransactionStore()
+    const chains = configStore.getAllChains()
+
+    // Get Safe
+    let chainId: string
+    let address: Address
+
+    if (account) {
+      // Parse EIP-3770 address
+      try {
+        const parsed = parseSafeAddress(account, chains)
+        chainId = parsed.chainId
+        address = parsed.address
+      } catch (error) {
+        p.log.error(error instanceof Error ? error.message : 'Invalid account')
+        p.cancel('Operation cancelled')
+        return
+      }
+    } else {
+      // Show interactive selection
+      const safes = safeStorage.getAllSafes().filter((s) => s.deployed)
+      if (safes.length === 0) {
+        p.log.error('No deployed Safes found')
+        p.cancel('Use "safe account deploy" to deploy a Safe first')
+        return
+      }
+
+      const selected = await p.select({
+        message: 'Select Safe to pull transactions for:',
+        options: safes.map((s) => {
+          const chain = configStore.getChain(s.chainId)
+          const eip3770 = formatSafeAddress(s.address as Address, s.chainId, chains)
+          return {
+            value: `${s.chainId}:${s.address}`,
+            label: `${s.name} (${eip3770})`,
+            hint: chain?.name || s.chainId,
+          }
+        }),
+      })
+
+      if (p.isCancel(selected)) {
+        p.cancel('Operation cancelled')
+        return
+      }
+
+      const [selectedChainId, selectedAddress] = (selected as string).split(':')
+      chainId = selectedChainId
+      address = selectedAddress as Address
+    }
+
+    const safe = safeStorage.getSafe(chainId, address)
+    if (!safe) {
+      p.log.error(`Safe not found: ${address} on chain ${chainId}`)
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    if (!safe.deployed) {
+      p.log.error('Safe must be deployed to pull transactions')
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    // Get chain
+    const chain = configStore.getChain(chainId)
+    if (!chain) {
+      p.log.error(`Chain ${chainId} not found in configuration`)
+      p.outro('Failed')
+      return
+    }
+
+    if (!chain.transactionServiceUrl) {
+      p.log.error(`Transaction Service not configured for ${chain.name}`)
+      p.outro('Not available')
+      return
+    }
+
+    const spinner = p.spinner()
+    spinner.start('Fetching transactions from Safe Transaction Service...')
+
+    try {
+      const apiService = new SafeTransactionServiceAPI(chain)
+
+      // Get pending transactions
+      const remoteTxs = await apiService.getPendingTransactions(address)
+
+      if (remoteTxs.length === 0) {
+        spinner.stop('No pending transactions found')
+        console.log('')
+        console.log(pc.dim('No pending transactions on the Safe Transaction Service'))
+        console.log('')
+        p.outro('Up to date')
+        return
+      }
+
+      spinner.stop(`Found ${remoteTxs.length} pending transaction(s)`)
+
+      console.log('')
+      console.log(pc.bold('Pending transactions:'))
+      console.log('')
+
+      let imported = 0
+      let updated = 0
+      let skipped = 0
+
+      for (const remoteTx of remoteTxs) {
+        const safeTxHash = remoteTx.safeTxHash
+        const localTx = transactionStore.getTransaction(safeTxHash)
+
+        // Convert remote transaction to our metadata format
+        const metadata: TransactionMetadata = {
+          to: remoteTx.to as Address,
+          value: remoteTx.value,
+          data: remoteTx.data as `0x${string}`,
+          operation: remoteTx.operation,
+          safeTxGas: remoteTx.safeTxGas,
+          baseGas: remoteTx.baseGas,
+          gasPrice: remoteTx.gasPrice,
+          gasToken: remoteTx.gasToken as Address,
+          refundReceiver: remoteTx.refundReceiver as Address,
+          nonce: remoteTx.nonce,
+        }
+
+        if (!localTx) {
+          // Create new local transaction
+          const createdBy = remoteTx.proposer || remoteTx.confirmations?.[0]?.owner || address
+
+          transactionStore.createTransaction(
+            safeTxHash,
+            address,
+            chainId,
+            metadata,
+            createdBy as Address
+          )
+
+          // Add signatures
+          for (const confirmation of remoteTx.confirmations || []) {
+            transactionStore.addSignature(safeTxHash, {
+              signer: confirmation.owner as Address,
+              signature: confirmation.signature,
+              signedAt: new Date(confirmation.submissionDate),
+            })
+          }
+
+          console.log(
+            `  ${pc.green('✓')} Imported ${safeTxHash.slice(0, 10)}... (${remoteTx.confirmations?.length || 0} signatures)`
+          )
+          imported++
+        } else {
+          // Merge signatures
+          const localSigners = new Set(
+            localTx.signatures.map((sig) => sig.signer.toLowerCase())
+          )
+
+          const newSignatures = (remoteTx.confirmations || []).filter(
+            (conf: any) => !localSigners.has(conf.owner.toLowerCase())
+          )
+
+          if (newSignatures.length > 0) {
+            for (const confirmation of newSignatures) {
+              transactionStore.addSignature(safeTxHash, {
+                signer: confirmation.owner as Address,
+                signature: confirmation.signature,
+                signedAt: new Date(confirmation.submissionDate),
+              })
+            }
+
+            console.log(
+              `  ${pc.cyan('↻')} Updated ${safeTxHash.slice(0, 10)}... (+${newSignatures.length} signatures)`
+            )
+            updated++
+          } else {
+            console.log(`  ${pc.dim('−')} Skipped ${safeTxHash.slice(0, 10)}... (already up to date)`)
+            skipped++
+          }
+        }
+      }
+
+      console.log('')
+      console.log(pc.bold('Summary:'))
+      console.log(`  ${pc.green(`Imported: ${imported}`)}`)
+      console.log(`  ${pc.cyan(`Updated: ${updated}`)}`)
+      console.log(`  ${pc.dim(`Skipped: ${skipped}`)}`)
+      console.log('')
+
+      p.outro(pc.green('Pull complete'))
+    } catch (error) {
+      spinner.stop('Failed')
+      throw error
+    }
+  } catch (error) {
+    if (error instanceof SafeCLIError) {
+      p.log.error(error.message)
+    } else {
+      p.log.error(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+    p.outro('Failed')
+  }
+}

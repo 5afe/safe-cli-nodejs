@@ -104,6 +104,9 @@ safe tx status [safeTxHash]    # Show transaction status and signature progress
 safe tx export [safeTxHash]    # Export transaction as JSON for sharing
 safe tx export [safeTxHash] -o file  # Export to file
 safe tx import [json]          # Import transaction from JSON string or file
+safe tx push [safeTxHash]      # Push transaction to Safe Transaction Service
+safe tx pull [account]         # Pull transactions from Safe Transaction Service
+safe tx sync [account]         # Sync transactions (push local + pull remote)
 ```
 
 **Transaction Builder - Smart Contract Interactions:**
@@ -144,8 +147,28 @@ To address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
 ✓ Transaction created successfully!
 ```
 
-**Multi-sig Coordination Workflow:**
+**Multi-sig Coordination Workflows:**
 
+*Option 1: Using Safe Transaction Service (Recommended)*
+```bash
+# Owner A: Create, sign, and push to Safe API
+safe tx create
+safe tx sign <safeTxHash>
+safe tx push <safeTxHash>
+
+# Owner B: Pull and sign
+safe tx pull                 # Fetch pending transactions
+safe tx sign <safeTxHash>
+safe tx push <safeTxHash>    # Push signature back
+
+# Or sync everything at once
+safe tx sync                 # Pull + push in one command
+
+# Execute when threshold reached
+safe tx execute <safeTxHash>
+```
+
+*Option 2: Using JSON Export/Import (Offline)*
 ```bash
 # Owner A: Create and sign transaction
 safe tx create
@@ -306,12 +329,20 @@ src/
 - [x] Interactive transaction builder
 - [x] Function selector with parameter validation
 - [x] Automatic function encoding
+- [x] Display contract names
 
-### 📅 Phase 7+: Advanced Features
+### ✅ Phase 7: Safe Transaction Service Integration (Complete)
+- [x] Push transactions to Safe Transaction Service
+- [x] Pull transactions from Safe Transaction Service
+- [x] Sync transactions (push + pull)
+- [x] Automatic signature merging
+- [x] Multi-chain support for Transaction Service
+
+### 📅 Phase 8+: Advanced Features
 - [ ] Batch transactions
 - [ ] Transaction templates
 - [ ] Module & guard management
-- [ ] Safe Transaction Service integration
+- [ ] Recovery and social recovery flows
 
 ## Contributing
 

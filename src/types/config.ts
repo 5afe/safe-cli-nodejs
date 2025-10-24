@@ -7,6 +7,7 @@ export const ChainConfigSchema = z.object({
   rpcUrl: z.string().url(),
   explorer: z.string().url().optional(),
   currency: z.string(),
+  transactionServiceUrl: z.string().url().optional(), // Safe Transaction Service API URL
   contractNetworks: z
     .object({
       safeSingletonAddress: z.string().optional(),
