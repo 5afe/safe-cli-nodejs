@@ -18,7 +18,6 @@ export class ConfigStore {
           gasStrategy: 'medium',
         },
         preferences: {
-          analytics: false,
           autoUpdate: true,
         },
       },

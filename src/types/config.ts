@@ -26,7 +26,6 @@ export const DefaultsConfigSchema = z.object({
 })
 
 export const PreferencesConfigSchema = z.object({
-  analytics: z.boolean().default(false),
   autoUpdate: z.boolean().default(true),
 })
 

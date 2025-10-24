@@ -32,7 +32,6 @@ export async function showConfig() {
   console.log('')
 
   console.log(pc.bold('Preferences:'))
-  console.log(`  Analytics:   ${config.preferences.analytics ? 'enabled' : 'disabled'}`)
   console.log(`  Auto-Update: ${config.preferences.autoUpdate ? 'enabled' : 'disabled'}`)
   console.log('')
 
