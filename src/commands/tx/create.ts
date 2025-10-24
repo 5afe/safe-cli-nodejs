@@ -1,10 +1,14 @@
 import * as p from '@clack/prompts'
+import pc from 'picocolors'
 import { isAddress, type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
+import { ContractService } from '../../services/contract-service.js'
+import { ABIService } from '../../services/abi-service.js'
+import { TransactionBuilder } from '../../services/transaction-builder.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 
@@ -71,7 +75,7 @@ export async function createTransaction() {
 
     // Get transaction details
     const to = (await p.text({
-      message: 'Recipient address',
+      message: 'To address',
       placeholder: '0x...',
       validate: (value) => {
         if (!value) return 'Address is required'
@@ -85,43 +89,136 @@ export async function createTransaction() {
       return
     }
 
-    const value = (await p.text({
-      message: 'Value in wei (0 for token transfer)',
-      placeholder: '0',
-      initialValue: '0',
-      validate: (value) => {
-        if (!value) return 'Value is required'
-        try {
-          BigInt(value)
-          return undefined
-        } catch {
-          return 'Invalid number'
-        }
-      },
-    })) as string
-
-    if (p.isCancel(value)) {
-      p.cancel('Operation cancelled')
+    // Get chain for contract detection
+    const chain = configStore.getChain(safe.chainId)
+    if (!chain) {
+      p.log.error(`Chain ${safe.chainId} not found in configuration`)
+      p.outro('Failed')
       return
     }
 
-    const data = (await p.text({
-      message: 'Transaction data (hex)',
-      placeholder: '0x',
-      initialValue: '0x',
-      validate: (value) => {
-        if (!value) return 'Data is required (use 0x for empty)'
-        if (!value.startsWith('0x')) return 'Data must start with 0x'
-        if (value.length > 2 && !/^0x[0-9a-fA-F]*$/.test(value)) {
-          return 'Data must be valid hex'
-        }
-        return undefined
-      },
-    })) as `0x${string}`
+    // Check if address is a contract
+    const contractService = new ContractService(chain)
+    let isContract = false
+    let value = '0'
+    let data: `0x${string}` = '0x'
 
-    if (p.isCancel(data)) {
-      p.cancel('Operation cancelled')
-      return
+    const spinner = p.spinner()
+    spinner.start('Checking if address is a contract...')
+
+    try {
+      isContract = await contractService.isContract(to)
+      spinner.stop(isContract ? 'Contract detected' : 'EOA (regular address)')
+    } catch (error) {
+      spinner.stop('Failed to check contract')
+      p.log.warning('Could not determine if address is a contract, falling back to manual input')
+    }
+
+    // If contract, try to fetch ABI and use transaction builder
+    if (isContract) {
+      console.log('')
+      console.log(pc.dim('Attempting to fetch contract ABI...'))
+
+      const abiService = new ABIService(chain)
+      let abi: any = null
+
+      try {
+        abi = await abiService.fetchABI(to)
+        console.log(pc.green('✓ Contract ABI found!'))
+      } catch (error) {
+        console.log(pc.yellow('⚠ Could not fetch ABI'))
+        console.log(pc.dim('  Contract may not be verified. Falling back to manual input.'))
+      }
+
+      // If ABI found, offer transaction builder
+      if (abi) {
+        const functions = abiService.extractFunctions(abi)
+
+        if (functions.length > 0) {
+          const useBuilder = await p.confirm({
+            message: 'Use transaction builder to interact with contract?',
+            initialValue: true,
+          })
+
+          if (p.isCancel(useBuilder)) {
+            p.cancel('Operation cancelled')
+            return
+          }
+
+          if (useBuilder) {
+            // Show function selector
+            const selectedFunc = await p.select({
+              message: 'Select function to call:',
+              options: functions.map((func) => ({
+                value: func.name,
+                label: abiService.formatFunctionSignature(func),
+                hint: func.stateMutability === 'payable' ? 'payable' : undefined,
+              })),
+            })
+
+            if (p.isCancel(selectedFunc)) {
+              p.cancel('Operation cancelled')
+              return
+            }
+
+            const func = functions.find((f) => f.name === selectedFunc)
+            if (!func) {
+              p.log.error('Function not found')
+              p.outro('Failed')
+              return
+            }
+
+            // Build transaction using interactive builder
+            const builder = new TransactionBuilder(abi)
+            const result = await builder.buildFunctionCall(func)
+
+            value = result.value
+            data = result.data
+          }
+        }
+      }
+    }
+
+    // Manual input if not using transaction builder
+    if (data === '0x') {
+      value = (await p.text({
+        message: 'Value in wei (0 for token transfer)',
+        placeholder: '0',
+        initialValue: '0',
+        validate: (val) => {
+          if (!val) return 'Value is required'
+          try {
+            BigInt(val)
+            return undefined
+          } catch {
+            return 'Invalid number'
+          }
+        },
+      })) as string
+
+      if (p.isCancel(value)) {
+        p.cancel('Operation cancelled')
+        return
+      }
+
+      data = (await p.text({
+        message: 'Transaction data (hex)',
+        placeholder: '0x',
+        initialValue: '0x',
+        validate: (val) => {
+          if (!val) return 'Data is required (use 0x for empty)'
+          if (!val.startsWith('0x')) return 'Data must start with 0x'
+          if (val.length > 2 && !/^0x[0-9a-fA-F]*$/.test(val)) {
+            return 'Data must be valid hex'
+          }
+          return undefined
+        },
+      })) as `0x${string}`
+
+      if (p.isCancel(data)) {
+        p.cancel('Operation cancelled')
+        return
+      }
     }
 
     const operation = (await p.select({
@@ -139,13 +236,6 @@ export async function createTransaction() {
     }
 
     // Get current Safe nonce for recommendation
-    const chain = configStore.getChain(safe.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${safe.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
-
     const txService = new TransactionService(chain)
     let currentNonce: number
     try {
@@ -177,8 +267,8 @@ export async function createTransaction() {
     const nonce = nonceInput ? parseInt(nonceInput, 10) : undefined
 
     // Create transaction
-    const spinner = p.spinner()
-    spinner.start('Creating transaction')
+    const createSpinner = p.spinner()
+    createSpinner.start('Creating transaction')
 
     const createdTx = await txService.createTransaction(safe.address as Address, {
       to,
@@ -197,7 +287,7 @@ export async function createTransaction() {
       activeWallet.address as Address
     )
 
-    spinner.stop('Transaction created')
+    createSpinner.stop('Transaction created')
 
     p.outro(
       `Transaction created with Safe TX Hash: ${createdTx.safeTxHash}\n\nUse 'safe tx sign ${createdTx.safeTxHash}' to sign this transaction.`
