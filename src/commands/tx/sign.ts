@@ -8,6 +8,7 @@ import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
+import { TransactionStatus } from '../../types/transaction.js'
 
 export async function signTransaction(safeTxHash?: string) {
   p.intro('Sign Safe Transaction')
@@ -31,7 +32,7 @@ export async function signTransaction(safeTxHash?: string) {
     if (!selectedSafeTxHash) {
       const pendingTxs = transactionStore
         .getAllTransactions()
-        .filter((tx) => tx.status === 'pending' || tx.status === 'signed')
+        .filter((tx) => tx.status === TransactionStatus.PENDING || tx.status === TransactionStatus.SIGNED)
 
       if (pendingTxs.length === 0) {
         p.log.error('No pending transactions found')
@@ -164,8 +165,8 @@ export async function signTransaction(safeTxHash?: string) {
     })
 
     // Update status to signed if not already
-    if (transaction.status === 'pending') {
-      transactionStore.updateStatus(selectedSafeTxHash, 'signed')
+    if (transaction.status === TransactionStatus.PENDING) {
+      transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.SIGNED)
     }
 
     spinner.stop('Transaction signed')

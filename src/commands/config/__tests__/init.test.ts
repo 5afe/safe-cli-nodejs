@@ -32,6 +32,7 @@ describe('initConfig', () => {
   it('should initialize config with default chains', async () => {
     const mockConfigStore = {
       getAllChains: vi.fn().mockReturnValue({}),
+      setChain: vi.fn(),
       setPreference: vi.fn(),
     }
 
@@ -49,6 +50,7 @@ describe('initConfig', () => {
       getAllChains: vi.fn().mockReturnValue({
         '1': { chainId: '1', name: 'Ethereum' },
       }),
+      setChain: vi.fn(),
       setPreference: vi.fn(),
     }
 

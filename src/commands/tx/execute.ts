@@ -7,6 +7,7 @@ import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
+import { TransactionStatus } from '../../types/transaction.js'
 
 export async function executeTransaction(safeTxHash?: string) {
   p.intro('Execute Safe Transaction')
@@ -30,7 +31,7 @@ export async function executeTransaction(safeTxHash?: string) {
     if (!selectedSafeTxHash) {
       const signedTxs = transactionStore
         .getAllTransactions()
-        .filter((tx) => tx.status === 'signed')
+        .filter((tx) => tx.status === TransactionStatus.SIGNED)
 
       if (signedTxs.length === 0) {
         p.log.error('No signed transactions ready for execution')
@@ -66,7 +67,7 @@ export async function executeTransaction(safeTxHash?: string) {
       return
     }
 
-    if (transaction.status === 'executed') {
+    if (transaction.status === TransactionStatus.EXECUTED) {
       p.log.error('Transaction already executed')
       p.outro('Failed')
       return
@@ -169,7 +170,7 @@ export async function executeTransaction(safeTxHash?: string) {
     )
 
     // Update transaction status
-    transactionStore.updateStatus(selectedSafeTxHash, 'executed', txHash)
+    transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.EXECUTED, txHash)
 
     spinner.stop('Transaction executed')
 

@@ -139,6 +139,8 @@ describe('importTransaction', () => {
 
     const mockTransactionStore = {
       getTransaction: vi.fn(),
+      createTransaction: vi.fn(),
+      addSignature: vi.fn(),
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)
@@ -162,6 +164,8 @@ describe('importTransaction', () => {
 
     const mockTransactionStore = {
       getTransaction: vi.fn(),
+      createTransaction: vi.fn(),
+      addSignature: vi.fn(),
     }
 
     vi.mocked(configStoreModule.getConfigStore).mockReturnValue(mockConfigStore as any)

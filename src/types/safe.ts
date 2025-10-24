@@ -13,6 +13,9 @@ export const SafeAccountSchema = z.object({
   deployed: z.boolean(),
   predictedConfig: SafeAccountConfigSchema.optional(),
   createdAt: z.string(),
+  // For deployed Safes, store the current on-chain state
+  owners: z.array(z.string()).optional(),
+  threshold: z.number().optional(),
 })
 
 export const SafeStoreSchema = z.object({

@@ -1,7 +1,4 @@
 import { vi } from 'vitest'
-import type { ConfigStore } from '../../storage/config-store.js'
-import type { WalletStore } from '../../storage/wallet-store.js'
-import type { SafeStore } from '../../storage/safe-store.js'
 
 /**
  * Mock implementations for storage layers
@@ -97,6 +94,19 @@ export function createMockSafeStorage(): any {
     removeSafe: vi.fn(),
     safeExists: vi.fn().mockReturnValue(false),
     getStorePath: vi.fn().mockReturnValue('/mock/safe/path'),
+  }
+}
+
+export function createMockTransactionStore(): any {
+  return {
+    createTransaction: vi.fn(),
+    getTransaction: vi.fn(),
+    getAllTransactions: vi.fn().mockReturnValue([]),
+    getTransactionsBySafe: vi.fn().mockReturnValue([]),
+    addSignature: vi.fn(),
+    updateTransactionStatus: vi.fn(),
+    deleteTransaction: vi.fn(),
+    getStorePath: vi.fn().mockReturnValue('/mock/transaction/path'),
   }
 }
 

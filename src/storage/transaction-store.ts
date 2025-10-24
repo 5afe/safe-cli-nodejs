@@ -36,7 +36,7 @@ export class TransactionStore {
       safeTxHash,
       safeAddress,
       chainId,
-      status: 'pending',
+      status: TransactionStatus.PENDING,
       metadata,
       signatures: [],
       createdBy,
