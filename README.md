@@ -53,8 +53,8 @@ safe config show
 ### Configuration Management
 
 ```bash
-safe config init              # Initialize CLI configuration
-safe config show              # Display current configuration
+safe config init              # Initialize CLI configuration (includes API key setup)
+safe config show              # Display current configuration (shows API key status)
 safe config chains list       # List configured chains
 safe config chains add        # Add a custom chain
 safe config chains remove     # Remove a chain
@@ -192,6 +192,26 @@ Configuration files are stored in:
 - **macOS**: `~/.config/safe-cli/`
 - **Linux**: `~/.config/safe-cli/`
 - **Windows**: `%APPDATA%\safe-cli\`
+
+### Safe Transaction Service API Key
+
+Some chains require an API key to access the Safe Transaction Service. You can get one from [Safe Dashboard](https://dashboard.safe.global/).
+
+**During initial setup:**
+```bash
+safe config init
+# You'll be prompted: "Do you have a Safe Transaction Service API key?"
+```
+
+**To add or update your API key later:**
+Edit your configuration file directly or run `safe config init` again.
+
+The API key is optional but recommended for:
+- Using `safe tx push` to propose transactions
+- Using `safe tx pull` to fetch pending transactions
+- Using `safe tx sync` for bidirectional synchronization
+
+Without an API key, you can still use the offline JSON export/import workflow for multi-sig coordination.
 
 ### Supported Chains (Default)
 
