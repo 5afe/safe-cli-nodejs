@@ -262,4 +262,123 @@ export class TransactionService {
       )
     }
   }
+
+  // Create add owner transaction
+  async createAddOwnerTransaction(
+    safeAddress: Address,
+    ownerAddress: Address,
+    threshold: number
+  ): Promise<CreatedTransaction> {
+    try {
+      const protocolKit = await Safe.init({
+        provider: this.chain.rpcUrl,
+        safeAddress,
+      })
+
+      const safeTransaction = await protocolKit.createAddOwnerTx({
+        ownerAddress,
+        threshold,
+      })
+
+      const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
+
+      return {
+        safeTxHash,
+        metadata: {
+          to: safeTransaction.data.to as Address,
+          value: safeTransaction.data.value,
+          data: safeTransaction.data.data as `0x${string}`,
+          operation: safeTransaction.data.operation,
+          nonce: safeTransaction.data.nonce,
+          safeTxGas: safeTransaction.data.safeTxGas,
+          baseGas: safeTransaction.data.baseGas,
+          gasPrice: safeTransaction.data.gasPrice,
+          gasToken: safeTransaction.data.gasToken as Address,
+          refundReceiver: safeTransaction.data.refundReceiver as Address,
+        },
+      }
+    } catch (error) {
+      throw new SafeCLIError(
+        `Failed to create add owner transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
+
+  // Create remove owner transaction
+  async createRemoveOwnerTransaction(
+    safeAddress: Address,
+    ownerAddress: Address,
+    threshold: number
+  ): Promise<CreatedTransaction> {
+    try {
+      const protocolKit = await Safe.init({
+        provider: this.chain.rpcUrl,
+        safeAddress,
+      })
+
+      const safeTransaction = await protocolKit.createRemoveOwnerTx({
+        ownerAddress,
+        threshold,
+      })
+
+      const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
+
+      return {
+        safeTxHash,
+        metadata: {
+          to: safeTransaction.data.to as Address,
+          value: safeTransaction.data.value,
+          data: safeTransaction.data.data as `0x${string}`,
+          operation: safeTransaction.data.operation,
+          nonce: safeTransaction.data.nonce,
+          safeTxGas: safeTransaction.data.safeTxGas,
+          baseGas: safeTransaction.data.baseGas,
+          gasPrice: safeTransaction.data.gasPrice,
+          gasToken: safeTransaction.data.gasToken as Address,
+          refundReceiver: safeTransaction.data.refundReceiver as Address,
+        },
+      }
+    } catch (error) {
+      throw new SafeCLIError(
+        `Failed to create remove owner transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
+
+  // Create change threshold transaction
+  async createChangeThresholdTransaction(
+    safeAddress: Address,
+    threshold: number
+  ): Promise<CreatedTransaction> {
+    try {
+      const protocolKit = await Safe.init({
+        provider: this.chain.rpcUrl,
+        safeAddress,
+      })
+
+      const safeTransaction = await protocolKit.createChangeThresholdTx(threshold)
+
+      const safeTxHash = await protocolKit.getTransactionHash(safeTransaction)
+
+      return {
+        safeTxHash,
+        metadata: {
+          to: safeTransaction.data.to as Address,
+          value: safeTransaction.data.value,
+          data: safeTransaction.data.data as `0x${string}`,
+          operation: safeTransaction.data.operation,
+          nonce: safeTransaction.data.nonce,
+          safeTxGas: safeTransaction.data.safeTxGas,
+          baseGas: safeTransaction.data.baseGas,
+          gasPrice: safeTransaction.data.gasPrice,
+          gasToken: safeTransaction.data.gasToken as Address,
+          refundReceiver: safeTransaction.data.refundReceiver as Address,
+        },
+      }
+    } catch (error) {
+      throw new SafeCLIError(
+        `Failed to create change threshold transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
 }
