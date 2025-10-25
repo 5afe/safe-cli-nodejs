@@ -50,23 +50,34 @@ export class TransactionStore {
     return transaction
   }
 
+  private normalizeTransaction(tx: StoredTransaction): StoredTransaction {
+    // Ensure signatures array is initialized
+    if (!tx.signatures) {
+      tx.signatures = []
+    }
+    return tx
+  }
+
   getTransaction(safeTxHash: string): StoredTransaction | undefined {
     const transactions = this.store.get('transactions')
-    return transactions[safeTxHash]
+    const tx = transactions[safeTxHash]
+    return tx ? this.normalizeTransaction(tx) : undefined
   }
 
   getTransactionsBySafe(safeAddress: Address, chainId?: string): StoredTransaction[] {
     const transactions = this.store.get('transactions')
-    return Object.values(transactions).filter(
-      (tx) =>
-        tx.safeAddress.toLowerCase() === safeAddress.toLowerCase() &&
-        (!chainId || tx.chainId === chainId)
-    )
+    return Object.values(transactions)
+      .filter(
+        (tx) =>
+          tx.safeAddress.toLowerCase() === safeAddress.toLowerCase() &&
+          (!chainId || tx.chainId === chainId)
+      )
+      .map((tx) => this.normalizeTransaction(tx))
   }
 
   getAllTransactions(): StoredTransaction[] {
     const transactions = this.store.get('transactions')
-    return Object.values(transactions)
+    return Object.values(transactions).map((tx) => this.normalizeTransaction(tx))
   }
 
   addSignature(safeTxHash: string, signature: TransactionSignature): void {
@@ -75,6 +86,11 @@ export class TransactionStore {
 
     if (!transaction) {
       throw new SafeCLIError(`Transaction ${safeTxHash} not found`)
+    }
+
+    // Initialize signatures array if it's null or undefined
+    if (!transaction.signatures) {
+      transaction.signatures = []
     }
 
     // Check if this signer has already signed

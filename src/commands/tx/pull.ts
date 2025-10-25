@@ -164,7 +164,9 @@ export async function pullTransactions(account?: string) {
           imported++
         } else {
           // Merge signatures
-          const localSigners = new Set(localTx.signatures.map((sig) => sig.signer.toLowerCase()))
+          const localSigners = new Set(
+            (localTx.signatures || []).map((sig) => sig.signer.toLowerCase())
+          )
 
           const newSignatures = (remoteTx.confirmations || []).filter(
             (conf: any) => !localSigners.has(conf.owner.toLowerCase())

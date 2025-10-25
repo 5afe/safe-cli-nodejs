@@ -317,9 +317,9 @@ export async function importTransaction(input?: string) {
       p.log.warning('Transaction already exists locally')
 
       // Merge signatures
-      const newSignatures = importData.signatures.filter(
+      const newSignatures = (importData.signatures || []).filter(
         (importSig) =>
-          !existingTx.signatures.some(
+          !(existingTx.signatures || []).some(
             (existingSig) => existingSig.signer.toLowerCase() === importSig.signer.toLowerCase()
           )
       )
@@ -347,14 +347,16 @@ export async function importTransaction(input?: string) {
 
       const updatedTx = transactionStore.getTransaction(importData.safeTxHash)!
       const readyToExecute =
-        safe && safe.threshold !== undefined && updatedTx.signatures.length >= safe.threshold
+        safe &&
+        safe.threshold !== undefined &&
+        (updatedTx.signatures?.length || 0) >= safe.threshold
 
       await renderScreen(TransactionImportSuccessScreen, {
         safeTxHash: importData.safeTxHash,
         safe: importData.safe || importData.safeAddress,
         to: importData.metadata.to,
         mode: 'merged' as const,
-        signatureCount: updatedTx.signatures.length,
+        signatureCount: updatedTx.signatures?.length || 0,
         threshold: safe?.threshold,
         newSigners: newSignatures.map((sig) => sig.signer as Address),
         readyToExecute: !!readyToExecute,
@@ -386,14 +388,16 @@ export async function importTransaction(input?: string) {
       }
 
       const readyToExecute =
-        safe && safe.threshold !== undefined && importData.signatures.length >= safe.threshold
+        safe &&
+        safe.threshold !== undefined &&
+        (importData.signatures?.length || 0) >= safe.threshold
 
       await renderScreen(TransactionImportSuccessScreen, {
         safeTxHash: importData.safeTxHash,
         safe: importData.safe || importData.safeAddress,
         to: importData.metadata.to,
         mode: 'new' as const,
-        signatureCount: importData.signatures.length,
+        signatureCount: importData.signatures?.length || 0,
         threshold: safe?.threshold,
         readyToExecute: !!readyToExecute,
       })

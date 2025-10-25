@@ -95,6 +95,20 @@ export async function addChain() {
     return
   }
 
+  const transactionServiceUrl = await p.text({
+    message: 'Safe Transaction Service URL (optional):',
+    placeholder: 'https://safe-transaction-mainnet.safe.global',
+    validate: (value) => {
+      if (value && !isValidUrl(value)) return 'Invalid URL'
+      return undefined
+    },
+  })
+
+  if (p.isCancel(transactionServiceUrl)) {
+    p.cancel('Operation cancelled')
+    return
+  }
+
   const chainConfig: ChainConfig = {
     name: name as string,
     chainId: chainId as string,
@@ -102,6 +116,7 @@ export async function addChain() {
     rpcUrl: rpcUrl as string,
     explorer: explorer ? (explorer as string) : undefined,
     currency: currency as string,
+    transactionServiceUrl: transactionServiceUrl ? (transactionServiceUrl as string) : undefined,
   }
 
   const spinner = p.spinner()

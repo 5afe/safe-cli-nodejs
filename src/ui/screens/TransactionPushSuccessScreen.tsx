@@ -26,7 +26,7 @@ export interface TransactionPushSuccessScreenProps {
   signers: Address[]
 
   /**
-   * Safe Transaction Service URL for viewing the transaction
+   * Safe Wallet app URL for viewing the transaction
    */
   serviceUrl: string
 
@@ -44,7 +44,7 @@ export interface TransactionPushSuccessScreenProps {
  * - Shows transaction hash and Safe
  * - Displays mode (proposed new or updated existing)
  * - Lists pushed signers
- * - Shows Safe Transaction Service URL
+ * - Shows Safe Wallet app URL
  */
 export function TransactionPushSuccessScreen({
   safeTxHash,
@@ -101,7 +101,7 @@ export function TransactionPushSuccessScreen({
 
       {/* Service URL */}
       <Box flexDirection="column">
-        <Text color={theme.colors.dim}>View on Safe Transaction Service:</Text>
+        <Text color={theme.colors.dim}>View in Safe Wallet:</Text>
         <Text color={theme.colors.info}>{serviceUrl}</Text>
       </Box>
     </Box>

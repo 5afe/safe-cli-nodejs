@@ -104,9 +104,9 @@ export class TransactionService {
         transactions: [
           {
             to: metadata.to,
-            value: metadata.value,
-            data: metadata.data,
-            operation: metadata.operation,
+            value: metadata.value || '0',
+            data: metadata.data || '0x',
+            operation: metadata.operation || 0,
           },
         ],
         // Use the original nonce to ensure we sign the same transaction
@@ -156,9 +156,9 @@ export class TransactionService {
         transactions: [
           {
             to: metadata.to,
-            value: metadata.value,
-            data: metadata.data,
-            operation: metadata.operation,
+            value: metadata.value || '0',
+            data: metadata.data || '0x',
+            operation: metadata.operation || 0,
           },
         ],
         // Use the original nonce to ensure we execute the same transaction

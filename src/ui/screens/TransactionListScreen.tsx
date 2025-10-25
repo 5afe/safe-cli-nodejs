@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Box, Text } from 'ink'
 import type { Address } from 'viem'
 import { useTransactions, useTransactionsBySafe } from '../hooks/index.js'
@@ -8,6 +8,7 @@ import type { StoredTransaction, TransactionStatus } from '../../types/transacti
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
+import { TransactionService } from '../../services/transaction-service.js'
 
 export interface TransactionListScreenProps {
   /**
@@ -60,6 +61,7 @@ function TransactionItem({ transaction }: TransactionItemProps): React.ReactElem
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
   const chains = configStore.getAllChains()
+  const [threshold, setThreshold] = useState<number | undefined>(undefined)
 
   const safe = safeStorage.getSafe(transaction.chainId, transaction.safeAddress)
   const safeName = safe?.name || 'Unknown'
@@ -67,6 +69,23 @@ function TransactionItem({ transaction }: TransactionItemProps): React.ReactElem
   const chain = configStore.getChain(transaction.chainId)
 
   const statusBadge = getStatusBadge(transaction.status)
+
+  // Fetch live threshold from blockchain
+  useEffect(() => {
+    if (!safe?.deployed || !chain) return
+
+    const fetchThreshold = async () => {
+      try {
+        const txService = new TransactionService(chain)
+        const liveThreshold = await txService.getThreshold(transaction.safeAddress as Address)
+        setThreshold(liveThreshold)
+      } catch {
+        // Silently fail - threshold will remain undefined
+      }
+    }
+
+    fetchThreshold()
+  }, [safe?.deployed, chain, transaction.safeAddress])
 
   return (
     <Box flexDirection="column" marginBottom={1}>
@@ -92,7 +111,7 @@ function TransactionItem({ transaction }: TransactionItemProps): React.ReactElem
             },
             {
               key: 'Signatures',
-              value: `${transaction.signatures.length}${safe ? `/${safe.threshold}` : ''}`,
+              value: `${transaction.signatures?.length || 0}${threshold !== undefined ? `/${threshold}` : ''}`,
             },
             { key: 'Created', value: new Date(transaction.createdAt).toLocaleString() },
             { key: 'Created by', value: transaction.createdBy },

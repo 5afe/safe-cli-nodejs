@@ -33,7 +33,7 @@ export async function exportTransaction(safeTxHash?: string, outputFile?: string
         options: transactions.map((tx) => ({
           value: tx.safeTxHash,
           label: `${tx.safeTxHash.slice(0, 10)}... → ${tx.metadata.to}`,
-          hint: `${tx.signatures.length} signature(s)`,
+          hint: `${tx.signatures?.length || 0} signature(s)`,
         })),
       })
 

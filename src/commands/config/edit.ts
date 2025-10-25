@@ -31,6 +31,8 @@ export async function editChains() {
         rpcUrl: 'RPC endpoint URL',
         currency: 'Native currency symbol (e.g., "ETH")',
         explorer: '(Optional) Block explorer base URL',
+        transactionServiceUrl: '(Optional) Safe Transaction Service API URL',
+        contractNetworks: '(Optional) Safe contract addresses for this chain',
       },
       chains,
     }
@@ -166,6 +168,8 @@ export async function editChains() {
         rpcUrl: c.rpcUrl,
         currency: c.currency,
         explorer: c.explorer,
+        transactionServiceUrl: c.transactionServiceUrl,
+        contractNetworks: c.contractNetworks,
       })
     }
 

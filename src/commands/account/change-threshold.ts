@@ -88,14 +88,38 @@ export async function changeThreshold(account?: string) {
       return
     }
 
-    // Check if wallet is an owner
-    if (!safe.owners || !safe.threshold) {
-      p.log.error('Safe owner information not available. Please sync Safe data.')
+    // Get chain
+    const chain = configStore.getChain(safe.chainId)
+    if (!chain) {
+      p.log.error(`Chain ${safe.chainId} not found in configuration`)
       p.outro('Failed')
       return
     }
 
-    if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
+    // Fetch live owners and threshold from blockchain
+    const spinner = p.spinner()
+    spinner.start('Fetching Safe information from blockchain...')
+
+    let owners: Address[]
+    let currentThreshold: number
+    try {
+      const txService = new TransactionService(chain)
+      ;[owners, currentThreshold] = await Promise.all([
+        txService.getOwners(safe.address as Address),
+        txService.getThreshold(safe.address as Address),
+      ])
+      spinner.stop('Safe information fetched')
+    } catch (error) {
+      spinner.stop('Failed to fetch Safe information')
+      p.log.error(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      )
+      p.outro('Failed')
+      return
+    }
+
+    // Check if wallet is an owner
+    if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
       return
@@ -103,17 +127,16 @@ export async function changeThreshold(account?: string) {
 
     // Ask for new threshold
     const newThreshold = await p.text({
-      message: `New threshold (current: ${safe.threshold}, max: ${safe.owners.length}):`,
-      placeholder: `${safe.threshold}`,
+      message: `New threshold (current: ${currentThreshold}, max: ${owners.length}):`,
+      placeholder: `${currentThreshold}`,
       validate: (value) => {
         if (!value) return 'Threshold is required'
         const num = parseInt(value, 10)
         if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
-        if (!safe.owners || !safe.threshold) return 'Safe data not available'
-        if (num > safe.owners.length) {
-          return `Threshold cannot exceed ${safe.owners.length} (current owners)`
+        if (num > owners.length) {
+          return `Threshold cannot exceed ${owners.length} (current owners)`
         }
-        if (num === safe.threshold) {
+        if (num === currentThreshold) {
           return 'New threshold must be different from current threshold'
         }
         return undefined
@@ -131,8 +154,8 @@ export async function changeThreshold(account?: string) {
     console.log('')
     console.log(pc.bold('Change Threshold Summary:'))
     console.log(`  ${pc.dim('Safe:')}         ${safe.name}`)
-    console.log(`  ${pc.dim('Owners:')}       ${safe.owners.length}`)
-    console.log(`  ${pc.dim('Old Threshold:')} ${safe.threshold}`)
+    console.log(`  ${pc.dim('Owners:')}       ${owners.length}`)
+    console.log(`  ${pc.dim('Old Threshold:')} ${currentThreshold}`)
     console.log(`  ${pc.dim('New Threshold:')} ${thresholdNum}`)
     console.log('')
 
@@ -146,16 +169,8 @@ export async function changeThreshold(account?: string) {
       return
     }
 
-    // Get chain
-    const chain = configStore.getChain(safe.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${safe.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
-
-    const spinner = p.spinner()
-    spinner.start('Creating change threshold transaction...')
+    const spinner2 = p.spinner()
+    spinner2.start('Creating change threshold transaction...')
 
     // Create the change threshold transaction using Safe SDK
     const txService = new TransactionService(chain)
@@ -174,13 +189,13 @@ export async function changeThreshold(account?: string) {
       activeWallet.address as Address
     )
 
-    spinner.stop('Transaction created')
+    spinner2.stop('Transaction created')
 
     await renderScreen(ThresholdChangeSuccessScreen, {
       safeTxHash: safeTransaction.safeTxHash,
       safeAddress: safe.address as Address,
       chainId: safe.chainId,
-      oldThreshold: safe.threshold,
+      oldThreshold: currentThreshold,
       newThreshold: thresholdNum,
     })
   } catch (error) {
