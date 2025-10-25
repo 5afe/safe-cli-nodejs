@@ -164,10 +164,44 @@ export async function createSafe() {
 
   try {
     const safeService = new SafeService(chain)
-    const { predictedAddress, safeAccountConfig } = await safeService.createPredictedSafe({
-      owners,
-      threshold: thresholdNum,
-    })
+
+    // Find an available salt nonce (increment if Safe already deployed)
+    let saltNonce = '0'
+    let predictedAddress: Address | undefined
+    let safeAccountConfig: { owners: string[]; threshold: number } | undefined
+    let attempts = 0
+    const maxAttempts = 100
+
+    while (attempts < maxAttempts) {
+      const result = await safeService.createPredictedSafe({
+        owners,
+        threshold: thresholdNum,
+        saltNonce,
+      })
+
+      predictedAddress = result.predictedAddress
+      safeAccountConfig = result.safeAccountConfig
+
+      // Check if Safe already deployed at this address
+      try {
+        const safeInfo = await safeService.getSafeInfo(predictedAddress)
+        if (safeInfo.isDeployed) {
+          // Safe already deployed, try next salt nonce
+          saltNonce = (BigInt(saltNonce) + 1n).toString()
+          attempts++
+          continue
+        }
+      } catch {
+        // Error checking deployment status, assume not deployed
+      }
+
+      // Found an available address
+      break
+    }
+
+    if (attempts >= maxAttempts || !predictedAddress || !safeAccountConfig) {
+      throw new Error(`Could not find available Safe address after ${maxAttempts} attempts`)
+    }
 
     spinner.stop('Safe created!')
 
@@ -180,6 +214,7 @@ export async function createSafe() {
       predictedConfig: {
         owners: safeAccountConfig.owners,
         threshold: safeAccountConfig.threshold,
+        saltNonce,
       },
     })
 
