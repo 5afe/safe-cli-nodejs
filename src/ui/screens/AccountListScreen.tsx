@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Box, Text } from 'ink'
 import type { Address } from 'viem'
 import { useSafes } from '../hooks/index.js'
@@ -37,6 +37,7 @@ export function AccountListScreen({ onExit }: AccountListScreenProps): React.Rea
   const { safes, loading, error } = useSafes()
   const [liveData, setLiveData] = useState<Map<string, SafeLiveData>>(new Map())
   const [fetchingLive, setFetchingLive] = useState(false)
+  const completedCountRef = useRef(0)
 
   // Fetch live data for deployed Safes
   useEffect(() => {
@@ -46,43 +47,40 @@ export function AccountListScreen({ onExit }: AccountListScreenProps): React.Rea
     if (deployedSafes.length === 0) return
 
     setFetchingLive(true)
+    completedCountRef.current = 0
 
-    // Fetch live data in parallel
-    Promise.all(
-      deployedSafes.map(async (safe) => {
-        const configStore = getConfigStore()
-        const chain = configStore.getChain(safe.chainId)
+    // Fetch live data independently for each safe
+    deployedSafes.forEach(async (safe) => {
+      const configStore = getConfigStore()
+      const chain = configStore.getChain(safe.chainId)
 
-        if (!chain) {
-          return { address: safe.address, data: { error: true } }
+      if (!chain) {
+        setLiveData((prev) => new Map(prev).set(safe.address, { error: true }))
+        completedCountRef.current++
+        if (completedCountRef.current === deployedSafes.length) {
+          setFetchingLive(false)
+          if (onExit) onExit()
         }
+        return
+      }
 
-        try {
-          const txService = new TransactionService(chain)
-          const [owners, threshold] = await Promise.all([
-            txService.getOwners(safe.address as Address),
-            txService.getThreshold(safe.address as Address),
-          ])
+      try {
+        const txService = new TransactionService(chain)
+        const [owners, threshold] = await Promise.all([
+          txService.getOwners(safe.address as Address),
+          txService.getThreshold(safe.address as Address),
+        ])
 
-          return {
-            address: safe.address,
-            data: { owners, threshold },
-          }
-        } catch {
-          return { address: safe.address, data: { error: true } }
+        // Update state independently as soon as data is available
+        setLiveData((prev) => new Map(prev).set(safe.address, { owners, threshold }))
+      } catch {
+        setLiveData((prev) => new Map(prev).set(safe.address, { error: true }))
+      } finally {
+        completedCountRef.current++
+        if (completedCountRef.current === deployedSafes.length) {
+          setFetchingLive(false)
+          if (onExit) onExit()
         }
-      })
-    ).then((results) => {
-      const newLiveData = new Map<string, SafeLiveData>()
-      results.forEach(({ address, data }) => {
-        newLiveData.set(address, data)
-      })
-      setLiveData(newLiveData)
-      setFetchingLive(false)
-
-      // Auto-exit after live data is loaded
-      if (onExit) {
-        onExit()
       }
     })
   }, [loading, safes, onExit])

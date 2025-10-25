@@ -78,7 +78,7 @@ safe wallet remove            # Remove a wallet
 ```bash
 safe account create                   # Create new Safe account
 safe account deploy [account]         # Deploy predicted Safe (EIP-3770 format)
-safe account open                     # Open existing Safe
+safe account open [address]           # Open existing Safe (EIP-3770 format or bare address)
 safe account list                     # List all Safe accounts
 safe account info [account]           # Show Safe details (EIP-3770 format)
 safe account add-owner [account]      # Add a new owner to a Safe
@@ -95,6 +95,27 @@ Examples:
 - `matic:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` (Polygon)
 
 This makes it clear which chain a Safe belongs to. Commands will interactively prompt for Safe selection when needed.
+
+**Opening an Existing Safe:**
+
+The `account open` command supports three usage modes:
+
+1. **EIP-3770 format** - Provide both chain and address in one argument:
+   ```bash
+   safe account open sep:0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+   ```
+
+2. **Bare address** - Provide just the address, CLI will ask for chain:
+   ```bash
+   safe account open 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+   # → Prompts for chain selection
+   ```
+
+3. **Interactive** - No arguments, CLI asks for both chain and address:
+   ```bash
+   safe account open
+   # → Prompts for chain and address
+   ```
 
 ### Transaction Management
 

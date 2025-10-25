@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import { type Address } from 'viem'
+import { type Address, isAddress } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { SafeService } from '../../services/safe-service.js'
@@ -9,47 +9,98 @@ import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
 import { SafeOpenSuccessScreen } from '../../ui/screens/index.js'
+import { parseEIP3770, getChainIdFromShortName } from '../../utils/eip3770.js'
 
-export async function openSafe() {
+export async function openSafe(addressArg?: string) {
   p.intro(pc.bgCyan(pc.black(' Open Existing Safe ')))
 
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
+  const chains = configStore.getAllChains()
 
-  // Select chain
-  const chains = Object.values(configStore.getAllChains())
-  const chainId = await p.select({
-    message: 'Select chain:',
-    options: chains.map((chain) => ({
-      value: chain.chainId,
-      label: `${chain.name} (${chain.chainId})`,
-    })),
-  })
-
-  if (p.isCancel(chainId)) {
-    p.cancel('Operation cancelled')
+  if (Object.keys(chains).length === 0) {
+    logError('No chains configured. Please run "safe config init" first.')
     return
   }
 
-  const chain = configStore.getChain(chainId as string)!
+  let chainId: string
+  let safeAddress: Address
 
-  // Get Safe address
-  const address = await p.text({
-    message: 'Safe address:',
-    placeholder: '0x...',
-    validate: (value) => {
-      if (!value) return 'Address is required'
-      if (!isValidAddress(value)) return 'Invalid Ethereum address'
-      return undefined
-    },
-  })
+  // Scenario 1: EIP-3770 format provided (shortName:address)
+  if (addressArg && addressArg.includes(':')) {
+    try {
+      const { shortName, address } = parseEIP3770(addressArg)
+      chainId = getChainIdFromShortName(shortName, chains)
+      safeAddress = address
+    } catch (error) {
+      logError(error instanceof Error ? error.message : 'Invalid address format')
+      return
+    }
+  }
+  // Scenario 2: Bare address provided - ask for chain
+  else if (addressArg) {
+    if (!isAddress(addressArg)) {
+      logError('Invalid Ethereum address')
+      return
+    }
+    safeAddress = checksumAddress(addressArg) as Address
 
-  if (p.isCancel(address)) {
-    p.cancel('Operation cancelled')
-    return
+    // Ask for chain
+    const chainsList = Object.values(chains)
+    const selectedChainId = await p.select({
+      message: 'Select chain:',
+      options: chainsList.map((chain) => ({
+        value: chain.chainId,
+        label: `${chain.name} (${chain.chainId})`,
+      })),
+    })
+
+    if (p.isCancel(selectedChainId)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    chainId = selectedChainId as string
+  }
+  // Scenario 3: No address provided - ask for both chain and address
+  else {
+    const chainsList = Object.values(chains)
+
+    const selectedChainId = await p.select({
+      message: 'Select chain:',
+      options: chainsList.map((chain) => ({
+        value: chain.chainId,
+        label: `${chain.name} (${chain.chainId})`,
+      })),
+    })
+
+    if (p.isCancel(selectedChainId)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    chainId = selectedChainId as string
+
+    // Get Safe address
+    const address = await p.text({
+      message: 'Safe address:',
+      placeholder: '0x...',
+      validate: (value) => {
+        if (!value) return 'Address is required'
+        if (!isValidAddress(value)) return 'Invalid Ethereum address'
+        return undefined
+      },
+    })
+
+    if (p.isCancel(address)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    safeAddress = checksumAddress(address as string) as Address
   }
 
-  const safeAddress = checksumAddress(address as string) as Address
+  const chain = configStore.getChain(chainId)!
 
   // Check if already exists
   if (safeStorage.safeExists(safeAddress, chain.chainId)) {
