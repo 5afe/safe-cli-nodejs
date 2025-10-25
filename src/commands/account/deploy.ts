@@ -72,14 +72,35 @@ export async function deploySafe(account?: string) {
     return
   }
 
-  if (safe.deployed) {
-    logError('Safe is already deployed')
-    return
-  }
-
   if (!safe.predictedConfig) {
     logError('Safe does not have deployment configuration')
     return
+  }
+
+  // Verify on-chain deployment status
+  const chain = configStore.getChain(safe.chainId)!
+  const safeService = new SafeService(chain)
+
+  try {
+    const safeInfo = await safeService.getSafeInfo(address)
+
+    // If Safe is actually deployed on-chain
+    if (safeInfo.isDeployed) {
+      // Sync local storage with on-chain reality
+      if (!safe.deployed) {
+        safeStorage.updateSafe(chainId, address, { deployed: true })
+      }
+      logError('Safe is already deployed on-chain')
+      return
+    }
+
+    // If local storage says deployed but on-chain says not deployed, fix the storage
+    if (safe.deployed && !safeInfo.isDeployed) {
+      safeStorage.updateSafe(chainId, address, { deployed: false })
+    }
+  } catch {
+    // If we can't verify, log warning but continue
+    console.log(pc.yellow('⚠ Warning: Could not verify on-chain deployment status'))
   }
 
   // Get active wallet
@@ -90,7 +111,6 @@ export async function deploySafe(account?: string) {
     return
   }
 
-  const chain = configStore.getChain(safe.chainId)!
   const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
 
   console.log('')
