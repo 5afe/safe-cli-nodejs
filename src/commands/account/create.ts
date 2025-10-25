@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -7,12 +6,13 @@ import { getWalletStorage } from '../../storage/wallet-store.js'
 import { SafeService } from '../../services/safe-service.js'
 import { isValidAddress } from '../../utils/validation.js'
 import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
+import { formatSafeAddress } from '../../utils/eip3770.js'
 import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
 import { AccountCreateSuccessScreen } from '../../ui/screens/index.js'
 
 export async function createSafe() {
-  p.intro(pc.bgCyan(pc.black(' Create Safe Account ')))
+  p.intro('Create Safe Account')
 
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
@@ -27,7 +27,7 @@ export async function createSafe() {
   }
 
   console.log('')
-  console.log(pc.dim(`Active wallet: ${activeWallet.name} (${activeWallet.address})`))
+  console.log(`Active wallet: ${activeWallet.name} (${activeWallet.address})`)
   console.log('')
 
   // Select chain
@@ -62,7 +62,7 @@ export async function createSafe() {
 
   if (includeActiveWallet) {
     owners.push(checksumAddress(activeWallet.address))
-    console.log(pc.green(`✓ Added ${shortenAddress(activeWallet.address)}`))
+    console.log(`✓ Added ${shortenAddress(activeWallet.address)}`)
   }
 
   // Add more owners
@@ -102,7 +102,7 @@ export async function createSafe() {
 
     const checksummed = checksumAddress(ownerAddress as string)
     owners.push(checksummed)
-    console.log(pc.green(`✓ Added ${shortenAddress(checksummed)}`))
+    console.log(`✓ Added ${shortenAddress(checksummed)}`)
   }
 
   if (owners.length === 0) {
@@ -145,18 +145,16 @@ export async function createSafe() {
 
   // Summary
   console.log('')
-  console.log(pc.bold('📋 Safe Configuration Summary'))
+  console.log('Safe Configuration Summary')
   console.log('')
-  console.log(`  ${pc.dim('Chain:')}      ${chain.name} (${chain.chainId})`)
-  console.log(`  ${pc.dim('Version:')}    1.4.1`)
-  console.log(`  ${pc.dim('Owners:')}     ${owners.length}`)
+  console.log(`  Chain:      ${chain.name} (${chain.chainId})`)
+  console.log(`  Version:    1.4.1`)
+  console.log(`  Owners:     ${owners.length}`)
   owners.forEach((owner, i) => {
     const isActive = owner.toLowerCase() === activeWallet.address.toLowerCase()
-    console.log(
-      `              ${pc.dim(`${i + 1}.`)} ${shortenAddress(owner)}${isActive ? pc.green(' (you)') : ''}`
-    )
+    console.log(`              ${i + 1}. ${shortenAddress(owner)}${isActive ? ' (you)' : ''}`)
   })
-  console.log(`  ${pc.dim('Threshold:')} ${thresholdNum} / ${owners.length}`)
+  console.log(`  Threshold: ${thresholdNum} / ${owners.length}`)
   console.log('')
 
   const spinner = p.spinner()
@@ -203,7 +201,7 @@ export async function createSafe() {
       throw new Error(`Could not find available Safe address after ${maxAttempts} attempts`)
     }
 
-    spinner.stop('Safe created!')
+    spinner.stop()
 
     // Save to storage
     const safe = safeStorage.createSafe({
@@ -218,13 +216,37 @@ export async function createSafe() {
       },
     })
 
-    // Display success screen with Safe details and next steps
-    await renderScreen(AccountCreateSuccessScreen, {
-      name: safe.name,
-      address: safe.address as Address,
-      chainId: safe.chainId,
-      chainName: chain.name,
+    // Show brief success message
+    const allChains = configStore.getAllChains()
+    const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, allChains)
+    console.log('')
+    console.log('✓ Safe created successfully!')
+    console.log('')
+    console.log(`  Name:    ${safe.name}`)
+    console.log(`  Address: ${eip3770}`)
+    console.log(`  Chain:   ${chain.name}`)
+    console.log(`  Status:  Not deployed`)
+    console.log('')
+
+    // Offer to deploy the Safe
+    const shouldDeploy = await p.confirm({
+      message: 'Would you like to deploy this Safe now?',
+      initialValue: true,
     })
+
+    if (!p.isCancel(shouldDeploy) && shouldDeploy) {
+      console.log('')
+      const { deploySafe } = await import('./deploy.js')
+      await deploySafe(eip3770)
+    } else {
+      // Show full success screen with next steps
+      await renderScreen(AccountCreateSuccessScreen, {
+        name: safe.name,
+        address: safe.address as Address,
+        chainId: safe.chainId,
+        chainName: chain.name,
+      })
+    }
   } catch (error) {
     spinner.stop('Failed to create Safe')
     logError(error instanceof Error ? error.message : 'Unknown error')

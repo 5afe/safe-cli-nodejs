@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -11,7 +10,7 @@ import { renderScreen } from '../../ui/render.js'
 import { TransactionStatusScreen } from '../../ui/screens/index.js'
 
 export async function showTransactionStatus(safeTxHash?: string) {
-  p.intro(pc.bgCyan(pc.black(' Transaction Status ')))
+  p.intro('Transaction Status')
 
   try {
     const configStore = getConfigStore()

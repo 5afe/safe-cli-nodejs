@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import { isAddress, type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -148,15 +147,15 @@ export async function createTransaction() {
     // If contract, try to fetch ABI and use transaction builder
     if (isContract) {
       console.log('')
-      console.log(pc.dim('Attempting to fetch contract ABI...'))
+      console.log()
 
       const config = configStore.getConfig()
       const etherscanApiKey = config.preferences?.etherscanApiKey
 
       // Inform user about ABI source based on API key availability
       if (!etherscanApiKey) {
-        console.log(pc.dim('  Using Sourcify for ABI (free, no API key required)'))
-        console.log(pc.dim('  Note: Proxy contract detection requires an Etherscan API key'))
+        console.log('  Using Sourcify for ABI (free, no API key required)')
+        console.log('  Note: Proxy contract detection requires an Etherscan API key')
       }
 
       const abiService = new ABIService(chain, etherscanApiKey)
@@ -171,18 +170,18 @@ export async function createTransaction() {
 
         // Check if Etherscan detected this as a proxy
         if (implementationAddress) {
-          console.log(pc.cyan(`✓ Proxy detected! Implementation: ${implementationAddress}`))
+          console.log(`✓ Proxy detected! Implementation: ${implementationAddress}`)
 
           if (contractName) {
-            console.log(pc.green(`✓ Proxy ABI found: ${pc.bold(contractName)}`))
+            console.log(`✓ Proxy ABI found: ${contractName}`)
           } else {
-            console.log(pc.green('✓ Proxy ABI found!'))
+            console.log('✓ Proxy ABI found!')
           }
         } else {
           if (contractName) {
-            console.log(pc.green(`✓ Contract ABI found: ${pc.bold(contractName)}`))
+            console.log(`✓ Contract ABI found: ${contractName}`)
           } else {
-            console.log(pc.green('✓ Contract ABI found!'))
+            console.log('✓ Contract ABI found!')
           }
         }
 
@@ -195,9 +194,9 @@ export async function createTransaction() {
             // Use implementation name as the main contract name
             if (implInfo.name) {
               contractName = implInfo.name
-              console.log(pc.green(`✓ Implementation ABI found: ${pc.bold(implInfo.name)}`))
+              console.log(`✓ Implementation ABI found: ${implInfo.name}`)
             } else {
-              console.log(pc.green('✓ Implementation ABI found!'))
+              console.log('✓ Implementation ABI found!')
             }
 
             // Merge ABIs (implementation functions + proxy functions)
@@ -225,17 +224,17 @@ export async function createTransaction() {
             }
 
             abi = combinedAbi
-            console.log(pc.dim(`  Combined: ${abi.length} items total`))
+            console.log(`  Combined: ${abi.length} items total`)
           } catch (error) {
-            console.log(pc.yellow('⚠ Could not fetch implementation ABI, using proxy ABI only'))
-            console.log(pc.dim(`  Found ${abi.length} items in proxy ABI`))
+            console.log('⚠ Could not fetch implementation ABI, using proxy ABI only')
+            console.log(`  Found ${abi.length} items in proxy ABI`)
           }
         } else {
-          console.log(pc.dim(`  Found ${abi.length} items in ABI`))
+          console.log(`  Found ${abi.length} items in ABI`)
         }
       } catch (error) {
-        console.log(pc.yellow('⚠ Could not fetch ABI'))
-        console.log(pc.dim('  Contract may not be verified. Falling back to manual input.'))
+        console.log('⚠ Could not fetch ABI')
+        console.log('  Contract may not be verified. Falling back to manual input.')
       }
 
       // If ABI found, offer transaction builder
@@ -244,7 +243,7 @@ export async function createTransaction() {
 
         console.log('')
         if (functions.length > 0) {
-          console.log(pc.green(`✓ Found ${functions.length} writable function(s)`))
+          console.log(`✓ Found ${functions.length} writable function(s)`)
 
           const useBuilder = await p.confirm({
             message: 'Use transaction builder to interact with contract?',
@@ -295,9 +294,9 @@ export async function createTransaction() {
             data = result.data
           }
         } else {
-          console.log(pc.yellow('⚠ No writable functions found in ABI'))
-          console.log(pc.dim('  Contract may only have view/pure functions'))
-          console.log(pc.dim('  Falling back to manual input'))
+          console.log('⚠ No writable functions found in ABI')
+          console.log('  Contract may only have view/pure functions')
+          console.log('  Falling back to manual input')
         }
       }
     }
@@ -413,11 +412,31 @@ export async function createTransaction() {
       activeWallet.address as Address
     )
 
-    createSpinner.stop('Transaction created')
+    createSpinner.stop()
 
-    await renderScreen(TransactionCreateSuccessScreen, {
-      safeTxHash: createdTx.safeTxHash,
+    // Show transaction hash
+    console.log('')
+    console.log('✓ Transaction created successfully!')
+    console.log('')
+    console.log(`  Safe TX Hash: ${createdTx.safeTxHash}`)
+    console.log('')
+
+    // Offer to sign the transaction
+    const shouldSign = await p.confirm({
+      message: 'Would you like to sign this transaction now?',
+      initialValue: true,
     })
+
+    if (!p.isCancel(shouldSign) && shouldSign) {
+      console.log('')
+      const { signTransaction } = await import('./sign.js')
+      await signTransaction(createdTx.safeTxHash)
+    } else {
+      // Show full success screen with next steps
+      await renderScreen(TransactionCreateSuccessScreen, {
+        safeTxHash: createdTx.safeTxHash,
+      })
+    }
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

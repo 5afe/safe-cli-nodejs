@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import { type Address } from 'viem'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { isValidPrivateKey } from '../../utils/validation.js'
@@ -8,7 +7,7 @@ import { renderScreen } from '../../ui/render.js'
 import { WalletImportSuccessScreen } from '../../ui/screens/index.js'
 
 export async function importWallet() {
-  p.intro(pc.bgCyan(pc.black(' Import Wallet ')))
+  p.intro('Import Wallet')
 
   const walletStorage = getWalletStorage()
 
