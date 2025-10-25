@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import { type Address } from 'viem'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { shortenAddress } from '../../utils/ethereum.js'
@@ -8,7 +7,7 @@ import { renderScreen } from '../../ui/render.js'
 import { WalletUseSuccessScreen } from '../../ui/screens/index.js'
 
 export async function useWallet() {
-  p.intro(pc.bgCyan(pc.black(' Switch Wallet ')))
+  p.intro('Switch Wallet')
 
   const walletStorage = getWalletStorage()
   const wallets = walletStorage.getAllWallets()

@@ -17,23 +17,23 @@ export interface SpinnerProps {
 
 /**
  * Spinner component for displaying loading states.
- * Replaces p.spinner() from @clack/prompts with Ink-native spinner.
+ * Styled to match @clack/prompts visual style for consistency.
  *
  * @example
  * ```tsx
  * <Spinner message="Deploying Safe..." />
- * <Spinner message="Fetching transactions..." type="dots2" />
+ * <Spinner message="Fetching transactions..." />
  * ```
  */
 export function Spinner({ message, type = 'dots' }: SpinnerProps): React.ReactElement {
   return (
     <Box>
-      <Text color={theme.colors.primary}>
+      <Text color={theme.colors.dim}>
         <InkSpinner type={type} />
       </Text>
       {message && (
         <Box marginLeft={1}>
-          <Text>{message}</Text>
+          <Text color={theme.colors.dim}>{message}</Text>
         </Box>
       )}
     </Box>

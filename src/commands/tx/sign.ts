@@ -190,16 +190,79 @@ export async function signTransaction(safeTxHash?: string) {
       transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.SIGNED)
     }
 
-    spinner2.stop('Transaction signed')
+    spinner2.stop()
 
     // Check if we have enough signatures
     const updatedTx = transactionStore.getTransaction(selectedSafeTxHash)!
+    const currentSignatures = updatedTx.signatures?.length || 0
 
-    await renderScreen(TransactionSignSuccessScreen, {
-      safeTxHash: selectedSafeTxHash,
-      currentSignatures: updatedTx.signatures?.length || 0,
-      requiredSignatures: threshold,
-    })
+    // Show brief success message
+    console.log('')
+    console.log(`✓ Signature added (${currentSignatures}/${threshold} required)`)
+    console.log('')
+
+    // Offer next action based on signature status
+    if (currentSignatures >= threshold) {
+      // Transaction is ready to execute
+      console.log('✓ Transaction is ready to execute!')
+      console.log('')
+
+      const nextAction = (await p.select({
+        message: 'What would you like to do?',
+        options: [
+          { value: 'execute', label: 'Execute transaction on-chain', hint: 'Recommended' },
+          {
+            value: 'push',
+            label: 'Push to Safe Transaction Service',
+            hint: 'Share with other signers',
+          },
+          { value: 'skip', label: 'Skip for now' },
+        ],
+        initialValue: 'execute',
+      })) as string
+
+      if (!p.isCancel(nextAction)) {
+        console.log('')
+        if (nextAction === 'execute') {
+          const { executeTransaction } = await import('./execute.js')
+          await executeTransaction(selectedSafeTxHash)
+        } else if (nextAction === 'push') {
+          const { pushTransaction } = await import('./push.js')
+          await pushTransaction(selectedSafeTxHash)
+        } else {
+          // Show full success screen with next steps
+          await renderScreen(TransactionSignSuccessScreen, {
+            safeTxHash: selectedSafeTxHash,
+            currentSignatures,
+            requiredSignatures: threshold,
+          })
+        }
+      } else {
+        p.outro('Done!')
+      }
+    } else {
+      // Need more signatures
+      console.log(`Still need ${threshold - currentSignatures} more signature(s)`)
+      console.log('')
+
+      const shouldPush = await p.confirm({
+        message: 'Would you like to push this transaction to Safe Transaction Service?',
+        initialValue: true,
+      })
+
+      if (!p.isCancel(shouldPush) && shouldPush) {
+        console.log('')
+        const { pushTransaction } = await import('./push.js')
+        await pushTransaction(selectedSafeTxHash)
+      } else {
+        // Show full success screen with next steps
+        await renderScreen(TransactionSignSuccessScreen, {
+          safeTxHash: selectedSafeTxHash,
+          currentSignatures,
+          requiredSignatures: threshold,
+        })
+      }
+    }
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

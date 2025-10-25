@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -12,7 +11,7 @@ import { renderScreen } from '../../ui/render.js'
 import { TransactionPullSuccessScreen, type TransactionPullResult } from '../../ui/screens/index.js'
 
 export async function pullTransactions(account?: string) {
-  p.intro(pc.bgCyan(pc.black(' Pull Transactions from Safe API ')))
+  p.intro('Pull Transactions from Safe API')
 
   try {
     const configStore = getConfigStore()

@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -11,7 +10,7 @@ import { renderScreen } from '../../ui/render.js'
 import { AccountDeploySuccessScreen } from '../../ui/screens/index.js'
 
 export async function deploySafe(account?: string) {
-  p.intro(pc.bgCyan(pc.black(' Deploy Safe ')))
+  p.intro('Deploy Safe')
 
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
@@ -100,7 +99,7 @@ export async function deploySafe(account?: string) {
     }
   } catch {
     // If we can't verify, log warning but continue
-    console.log(pc.yellow('⚠ Warning: Could not verify on-chain deployment status'))
+    console.log('⚠ Warning: Could not verify on-chain deployment status')
   }
 
   // Get active wallet
@@ -114,15 +113,15 @@ export async function deploySafe(account?: string) {
   const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
 
   console.log('')
-  console.log(pc.bold('Safe to Deploy:'))
-  console.log(`  ${pc.dim('Name:')}     ${safe.name}`)
-  console.log(`  ${pc.dim('Address:')}  ${pc.cyan(eip3770)}`)
-  console.log(`  ${pc.dim('Chain:')}    ${chain.name}`)
+  console.log('Safe to Deploy:')
+  console.log(`  Name:     ${safe.name}`)
+  console.log(`  Address:  ${eip3770}`)
+  console.log(`  Chain:    ${chain.name}`)
   console.log(
-    `  ${pc.dim('Owners:')}   ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`
+    `  Owners:   ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`
   )
   console.log('')
-  console.log(pc.dim(`Deploying with wallet: ${activeWallet.name} (${activeWallet.address})`))
+  console.log(`Deploying with wallet: ${activeWallet.name} (${activeWallet.address})`)
   console.log('')
 
   const confirm = await p.confirm({

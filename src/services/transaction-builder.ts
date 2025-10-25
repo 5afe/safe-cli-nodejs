@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import { encodeFunctionData, parseEther, type Address } from 'viem'
 import type { ABIFunction, ABI } from './abi-service.js'
 import { SafeCLIError } from '../utils/errors.js'
@@ -54,7 +53,7 @@ export class TransactionBuilder {
     // Prompt for each parameter
     if (func.inputs.length > 0) {
       console.log('')
-      console.log(pc.bold('Function Parameters:'))
+      console.log('Function Parameters:')
       console.log('')
 
       for (const input of func.inputs) {
@@ -84,7 +83,7 @@ export class TransactionBuilder {
    */
   private async promptForParameter(name: string, type: string): Promise<any> {
     const value = await p.text({
-      message: `${name} (${pc.cyan(type)}):`,
+      message: `${name} (${type}):`,
       placeholder: this.getPlaceholder(type),
       validate: (val) => {
         if (!val) return 'Value is required'
