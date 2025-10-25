@@ -4,6 +4,7 @@ import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
+import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { renderScreen } from '../../ui/render.js'
@@ -64,17 +65,39 @@ export async function showTransactionStatus(safeTxHash?: string) {
     }
 
     const chain = configStore.getChain(tx.chainId)
+    if (!chain) {
+      p.log.error(`Chain ${tx.chainId} not found in configuration`)
+      p.outro('Failed')
+      return
+    }
+
     const eip3770 = formatSafeAddress(tx.safeAddress, tx.chainId, chains)
 
-    if (!safe.owners || !safe.threshold) {
-      p.log.error('Safe owner information not available. Please sync Safe data.')
+    // Fetch live owners and threshold from blockchain
+    const spinner = p.spinner()
+    spinner.start('Fetching Safe information from blockchain...')
+
+    let owners: Address[]
+    let threshold: number
+    try {
+      const txService = new TransactionService(chain)
+      ;[owners, threshold] = await Promise.all([
+        txService.getOwners(tx.safeAddress),
+        txService.getThreshold(tx.safeAddress),
+      ])
+      spinner.stop('Safe information fetched')
+    } catch (error) {
+      spinner.stop('Failed to fetch Safe information')
+      p.log.error(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      )
       p.outro('Failed')
       return
     }
 
     // Calculate signature status
-    const signaturesCollected = tx.signatures.length
-    const signaturesRequired = safe.threshold
+    const signaturesCollected = tx.signatures?.length || 0
+    const signaturesRequired = threshold
 
     await renderScreen(TransactionStatusScreen, {
       safeTxHash: tx.safeTxHash,
@@ -85,8 +108,8 @@ export async function showTransactionStatus(safeTxHash?: string) {
       status: tx.status,
       signaturesCollected,
       signaturesRequired,
-      signers: tx.signatures.map((sig) => sig.signer as Address),
-      owners: safe.owners as Address[],
+      signers: (tx.signatures || []).map((sig) => sig.signer as Address),
+      owners,
       txHash: tx.txHash,
       explorerUrl: tx.txHash && chain?.explorer ? `${chain.explorer}/tx/${tx.txHash}` : undefined,
     })

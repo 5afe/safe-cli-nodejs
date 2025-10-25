@@ -69,14 +69,34 @@ export async function createTransaction() {
       return
     }
 
-    // Check if wallet is an owner
-    if (!safe.owners) {
-      p.log.error('Safe owner information not available. Please sync Safe data.')
+    // Get chain
+    const chain = configStore.getChain(chainId)
+    if (!chain) {
+      p.log.error(`Chain ${chainId} not found in configuration`)
       p.outro('Failed')
       return
     }
 
-    if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
+    // Fetch live owners from blockchain
+    const spinner = p.spinner()
+    spinner.start('Fetching Safe information from blockchain...')
+
+    let owners: Address[]
+    try {
+      const txService = new TransactionService(chain)
+      owners = await txService.getOwners(address as Address)
+      spinner.stop('Safe information fetched')
+    } catch (error) {
+      spinner.stop('Failed to fetch Safe information')
+      p.log.error(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      )
+      p.outro('Failed')
+      return
+    }
+
+    // Check if wallet is an owner
+    if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
       return
@@ -108,28 +128,20 @@ export async function createTransaction() {
       return
     }
 
-    // Get chain for contract detection
-    const chain = configStore.getChain(safe.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${safe.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
-
     // Check if address is a contract
     const contractService = new ContractService(chain)
     let isContract = false
     let value = '0'
     let data: `0x${string}` = '0x'
 
-    const spinner = p.spinner()
-    spinner.start('Checking if address is a contract...')
+    const spinner2 = p.spinner()
+    spinner2.start('Checking if address is a contract...')
 
     try {
       isContract = await contractService.isContract(to)
-      spinner.stop(isContract ? 'Contract detected' : 'EOA (regular address)')
+      spinner2.stop(isContract ? 'Contract detected' : 'EOA (regular address)')
     } catch (error) {
-      spinner.stop('Failed to check contract')
+      spinner2.stop('Failed to check contract')
       p.log.warning('Could not determine if address is a contract, falling back to manual input')
     }
 

@@ -88,21 +88,45 @@ export async function removeOwner(account?: string) {
       return
     }
 
-    // Check if wallet is an owner
-    if (!safe.owners || !safe.threshold) {
-      p.log.error('Safe owner information not available. Please sync Safe data.')
+    // Get chain
+    const chain = configStore.getChain(safe.chainId)
+    if (!chain) {
+      p.log.error(`Chain ${safe.chainId} not found in configuration`)
       p.outro('Failed')
       return
     }
 
-    if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
+    // Fetch live owners and threshold from blockchain
+    const spinner = p.spinner()
+    spinner.start('Fetching Safe information from blockchain...')
+
+    let owners: Address[]
+    let currentThreshold: number
+    try {
+      const txService = new TransactionService(chain)
+      ;[owners, currentThreshold] = await Promise.all([
+        txService.getOwners(safe.address as Address),
+        txService.getThreshold(safe.address as Address),
+      ])
+      spinner.stop('Safe information fetched')
+    } catch (error) {
+      spinner.stop('Failed to fetch Safe information')
+      p.log.error(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      )
+      p.outro('Failed')
+      return
+    }
+
+    // Check if wallet is an owner
+    if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
       return
     }
 
     // Check that Safe has at least 2 owners
-    if (safe.owners.length <= 1) {
+    if (owners.length <= 1) {
       p.log.error('Cannot remove the last owner from a Safe')
       p.outro('Failed')
       return
@@ -111,7 +135,7 @@ export async function removeOwner(account?: string) {
     // Select owner to remove
     const ownerToRemove = await p.select({
       message: 'Select owner to remove:',
-      options: safe.owners.map((owner) => ({
+      options: owners.map((owner) => ({
         value: owner,
         label: owner,
       })),
@@ -125,10 +149,9 @@ export async function removeOwner(account?: string) {
     const removeAddress = ownerToRemove as Address
 
     // Calculate max threshold after removal
-    const maxThreshold = safe.owners.length - 1
+    const maxThreshold = owners.length - 1
 
     // Ask about threshold
-    const currentThreshold = safe.threshold
     const suggestedThreshold = Math.min(currentThreshold, maxThreshold)
 
     const newThreshold = await p.text({
@@ -158,9 +181,9 @@ export async function removeOwner(account?: string) {
     console.log(pc.bold('Remove Owner Summary:'))
     console.log(`  ${pc.dim('Safe:')}          ${safe.name}`)
     console.log(`  ${pc.dim('Remove Owner:')}  ${removeAddress}`)
-    console.log(`  ${pc.dim('Current Owners:')} ${safe.owners.length}`)
-    console.log(`  ${pc.dim('New Owners:')}     ${safe.owners.length - 1}`)
-    console.log(`  ${pc.dim('Old Threshold:')}  ${safe.threshold}`)
+    console.log(`  ${pc.dim('Current Owners:')} ${owners.length}`)
+    console.log(`  ${pc.dim('New Owners:')}     ${owners.length - 1}`)
+    console.log(`  ${pc.dim('Old Threshold:')}  ${currentThreshold}`)
     console.log(`  ${pc.dim('New Threshold:')}  ${thresholdNum}`)
     console.log('')
 
@@ -174,16 +197,8 @@ export async function removeOwner(account?: string) {
       return
     }
 
-    // Get chain
-    const chain = configStore.getChain(safe.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${safe.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
-
-    const spinner = p.spinner()
-    spinner.start('Creating remove owner transaction...')
+    const spinner2 = p.spinner()
+    spinner2.start('Creating remove owner transaction...')
 
     // Create the remove owner transaction using Safe SDK
     const txService = new TransactionService(chain)
@@ -203,13 +218,13 @@ export async function removeOwner(account?: string) {
       activeWallet.address as Address
     )
 
-    spinner.stop('Transaction created')
+    spinner2.stop('Transaction created')
 
     await renderScreen(OwnerRemoveSuccessScreen, {
       safeTxHash: safeTransaction.safeTxHash,
       safeAddress: safe.address as Address,
       chainId: safe.chainId,
-      threshold: safe.threshold,
+      threshold: currentThreshold,
     })
   } catch (error) {
     if (error instanceof SafeCLIError) {

@@ -49,7 +49,7 @@ export async function pushTransaction(safeTxHash?: string) {
           return {
             value: tx.safeTxHash,
             label: `${tx.safeTxHash.slice(0, 10)}... → ${tx.metadata.to}`,
-            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures.length}`,
+            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures?.length || 0}`,
           }
         }),
       })) as string
@@ -90,7 +90,7 @@ export async function pushTransaction(safeTxHash?: string) {
     }
 
     // Check if active wallet has signed
-    const walletSignature = transaction.signatures.find(
+    const walletSignature = (transaction.signatures || []).find(
       (sig) => sig.signer.toLowerCase() === activeWallet.address.toLowerCase()
     )
 
@@ -124,7 +124,7 @@ export async function pushTransaction(safeTxHash?: string) {
         const remoteSignatures = existingTx.confirmations || []
         const remoteSigners = new Set(remoteSignatures.map((conf: any) => conf.owner.toLowerCase()))
 
-        const newSignatures = transaction.signatures.filter(
+        const newSignatures = (transaction.signatures || []).filter(
           (sig) => !remoteSigners.has(sig.signer.toLowerCase())
         )
 
@@ -153,7 +153,7 @@ export async function pushTransaction(safeTxHash?: string) {
         pushedSigners.push(activeWallet.address as Address)
 
         // Add additional signatures if any
-        const additionalSignatures = transaction.signatures.filter(
+        const additionalSignatures = (transaction.signatures || []).filter(
           (sig) => sig.signer.toLowerCase() !== activeWallet.address.toLowerCase()
         )
 
@@ -163,13 +163,13 @@ export async function pushTransaction(safeTxHash?: string) {
         }
       }
 
-      const serviceUrl = `${chain.transactionServiceUrl}/api/v1/safes/${transaction.safeAddress}/multisig-transactions/${selectedSafeTxHash}/`
       const chains = configStore.getAllChains()
       const eip3770 = formatSafeAddress(
         transaction.safeAddress as Address,
         transaction.chainId,
         chains
       )
+      const serviceUrl = `https://app.safe.global/transactions/tx?safe=${chain.shortName}:${transaction.safeAddress}&id=${selectedSafeTxHash}`
 
       await renderScreen(TransactionPushSuccessScreen, {
         safeTxHash: selectedSafeTxHash,

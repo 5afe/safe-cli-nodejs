@@ -51,7 +51,7 @@ export async function executeTransaction(safeTxHash?: string) {
           return {
             value: tx.safeTxHash,
             label: `${tx.safeTxHash.slice(0, 10)}... → ${tx.metadata.to}`,
-            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures.length}`,
+            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures?.length || 0}`,
           }
         }),
       })) as string
@@ -89,24 +89,47 @@ export async function executeTransaction(safeTxHash?: string) {
       return
     }
 
-    // Check if wallet is an owner
-    if (!safe.owners || !safe.threshold) {
-      p.log.error('Safe owner information not available. Please sync Safe data.')
+    // Get chain
+    const chain = configStore.getChain(transaction.chainId)
+    if (!chain) {
+      p.log.error(`Chain ${transaction.chainId} not found in configuration`)
       p.outro('Failed')
       return
     }
 
-    if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
+    // Fetch live owners and threshold from blockchain
+    const spinner = p.spinner()
+    spinner.start('Fetching Safe information from blockchain...')
+
+    let owners: Address[]
+    let threshold: number
+    try {
+      const txService = new TransactionService(chain)
+      ;[owners, threshold] = await Promise.all([
+        txService.getOwners(transaction.safeAddress),
+        txService.getThreshold(transaction.safeAddress),
+      ])
+      spinner.stop('Safe information fetched')
+    } catch (error) {
+      spinner.stop('Failed to fetch Safe information')
+      p.log.error(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      )
+      p.outro('Failed')
+      return
+    }
+
+    // Check if wallet is an owner
+    if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
       return
     }
 
     // Check if we have enough signatures
-    if (transaction.signatures.length < safe.threshold) {
-      p.log.error(
-        `Not enough signatures. Have ${transaction.signatures.length}, need ${safe.threshold}`
-      )
+    const sigCount = transaction.signatures?.length || 0
+    if (sigCount < threshold) {
+      p.log.error(`Not enough signatures. Have ${sigCount}, need ${threshold}`)
       p.outro('Failed')
       return
     }
@@ -117,7 +140,7 @@ export async function executeTransaction(safeTxHash?: string) {
     console.log(`  Value: ${transaction.metadata.value} wei`)
     console.log(`  Data: ${transaction.metadata.data}`)
     console.log(`  Operation: ${transaction.metadata.operation === 0 ? 'Call' : 'DelegateCall'}`)
-    console.log(`  Signatures: ${transaction.signatures.length}/${safe.threshold}`)
+    console.log(`  Signatures: ${sigCount}/${threshold}`)
 
     const confirm = await p.confirm({
       message: 'Execute this transaction on-chain?',
@@ -144,34 +167,26 @@ export async function executeTransaction(safeTxHash?: string) {
     }
 
     // Get private key
-    const spinner = p.spinner()
-    spinner.start('Executing transaction')
+    const spinner2 = p.spinner()
+    spinner2.start('Executing transaction')
 
     let privateKey: string
     try {
       privateKey = walletStorage.getPrivateKey(activeWallet.id, password)
     } catch (error) {
-      spinner.stop('Failed')
+      spinner2.stop('Failed')
       p.log.error('Invalid password')
       p.outro('Failed')
       return
     }
 
     // Execute transaction
-    const chain = configStore.getChain(transaction.chainId)
-    if (!chain) {
-      spinner.stop('Failed')
-      p.log.error(`Chain ${transaction.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
-
     const txService = new TransactionService(chain, privateKey)
 
     const txHash = await txService.executeTransaction(
       transaction.safeAddress,
       transaction.metadata,
-      transaction.signatures.map((sig) => ({
+      (transaction.signatures || []).map((sig) => ({
         signer: sig.signer,
         signature: sig.signature,
       }))
@@ -180,7 +195,7 @@ export async function executeTransaction(safeTxHash?: string) {
     // Update transaction status
     transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.EXECUTED, txHash)
 
-    spinner.stop('Transaction executed')
+    spinner2.stop('Transaction executed')
 
     const explorerUrl = chain.explorer ? `${chain.explorer}/tx/${txHash}` : undefined
 

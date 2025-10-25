@@ -155,7 +155,9 @@ export async function syncTransactions(account?: string) {
 
           pullImported++
         } else {
-          const localSigners = new Set(localTx.signatures.map((sig) => sig.signer.toLowerCase()))
+          const localSigners = new Set(
+            (localTx.signatures || []).map((sig) => sig.signer.toLowerCase())
+          )
           const newSignatures = (remoteTx.confirmations || []).filter(
             (conf: any) => !localSigners.has(conf.owner.toLowerCase())
           )
@@ -198,7 +200,7 @@ export async function syncTransactions(account?: string) {
 
       for (const localTx of localTxs) {
         // Check if active wallet has signed
-        const walletSignature = localTx.signatures.find(
+        const walletSignature = (localTx.signatures || []).find(
           (sig) => sig.signer.toLowerCase() === activeWallet.address.toLowerCase()
         )
 
@@ -216,7 +218,7 @@ export async function syncTransactions(account?: string) {
             remoteSignatures.map((conf: any) => conf.owner.toLowerCase())
           )
 
-          const newSignatures = localTx.signatures.filter(
+          const newSignatures = (localTx.signatures || []).filter(
             (sig) => !remoteSigners.has(sig.signer.toLowerCase())
           )
 
@@ -237,7 +239,7 @@ export async function syncTransactions(account?: string) {
           )
 
           // Add additional signatures
-          const additionalSignatures = localTx.signatures.filter(
+          const additionalSignatures = (localTx.signatures || []).filter(
             (sig) => sig.signer.toLowerCase() !== activeWallet.address.toLowerCase()
           )
 

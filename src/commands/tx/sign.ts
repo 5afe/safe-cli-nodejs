@@ -53,7 +53,7 @@ export async function signTransaction(safeTxHash?: string) {
           return {
             value: tx.safeTxHash,
             label: `${tx.safeTxHash.slice(0, 10)}... → ${tx.metadata.to}`,
-            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures.length}`,
+            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures?.length || 0}`,
           }
         }),
       })) as string
@@ -91,21 +91,45 @@ export async function signTransaction(safeTxHash?: string) {
       return
     }
 
-    // Check if wallet is an owner
-    if (!safe.owners || !safe.threshold) {
-      p.log.error('Safe owner information not available. Please sync Safe data.')
+    // Get chain
+    const chain = configStore.getChain(transaction.chainId)
+    if (!chain) {
+      p.log.error(`Chain ${transaction.chainId} not found in configuration`)
       p.outro('Failed')
       return
     }
 
-    if (!safe.owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
+    // Fetch live owners and threshold from blockchain
+    const spinner = p.spinner()
+    spinner.start('Fetching Safe information from blockchain...')
+
+    let owners: Address[]
+    let threshold: number
+    try {
+      const txService = new TransactionService(chain)
+      ;[owners, threshold] = await Promise.all([
+        txService.getOwners(transaction.safeAddress),
+        txService.getThreshold(transaction.safeAddress),
+      ])
+      spinner.stop('Safe information fetched')
+    } catch (error) {
+      spinner.stop('Failed to fetch Safe information')
+      p.log.error(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      )
+      p.outro('Failed')
+      return
+    }
+
+    // Check if wallet is an owner
+    if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
       return
     }
 
     // Check if already signed
-    const existingSignature = transaction.signatures.find(
+    const existingSignature = transaction.signatures?.find(
       (sig) => sig.signer.toLowerCase() === activeWallet.address.toLowerCase()
     )
 
@@ -136,28 +160,20 @@ export async function signTransaction(safeTxHash?: string) {
     }
 
     // Get private key
-    const spinner = p.spinner()
-    spinner.start('Signing transaction')
+    const spinner2 = p.spinner()
+    spinner2.start('Signing transaction')
 
     let privateKey: string
     try {
       privateKey = walletStorage.getPrivateKey(activeWallet.id, password)
     } catch (error) {
-      spinner.stop('Failed')
+      spinner2.stop('Failed')
       p.log.error('Invalid password')
       p.outro('Failed')
       return
     }
 
     // Sign transaction
-    const chain = configStore.getChain(transaction.chainId)
-    if (!chain) {
-      spinner.stop('Failed')
-      p.log.error(`Chain ${transaction.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
-
     const txService = new TransactionService(chain, privateKey)
 
     const signature = await txService.signTransaction(transaction.safeAddress, transaction.metadata)
@@ -174,15 +190,14 @@ export async function signTransaction(safeTxHash?: string) {
       transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.SIGNED)
     }
 
-    spinner.stop('Transaction signed')
+    spinner2.stop('Transaction signed')
 
     // Check if we have enough signatures
     const updatedTx = transactionStore.getTransaction(selectedSafeTxHash)!
-    const threshold = safe.threshold
 
     await renderScreen(TransactionSignSuccessScreen, {
       safeTxHash: selectedSafeTxHash,
-      currentSignatures: updatedTx.signatures.length,
+      currentSignatures: updatedTx.signatures?.length || 0,
       requiredSignatures: threshold,
     })
   } catch (error) {
