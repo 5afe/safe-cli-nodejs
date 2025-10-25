@@ -178,11 +178,11 @@ account
   })
 
 account
-  .command('open')
-  .description('Open an existing Safe')
-  .action(async () => {
+  .command('open [address]')
+  .description('Open an existing Safe (EIP-3770 format: shortName:address)')
+  .action(async (address?: string) => {
     try {
-      await openSafe()
+      await openSafe(address)
     } catch (error) {
       handleError(error)
     }
