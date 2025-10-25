@@ -3,6 +3,8 @@ import pc from 'picocolors'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
+import { renderScreen } from '../../ui/render.js'
+import { WalletRemoveSuccessScreen } from '../../ui/screens/index.js'
 
 export async function removeWallet() {
   p.intro(pc.bgCyan(pc.black(' Remove Wallet ')))
@@ -52,11 +54,9 @@ export async function removeWallet() {
   try {
     walletStorage.removeWallet(walletId as string)
 
-    console.log('')
-    console.log(pc.green('✓ Wallet removed successfully'))
-    console.log('')
-
-    p.outro(pc.green(`Wallet "${wallet.name}" has been removed`))
+    await renderScreen(WalletRemoveSuccessScreen, {
+      walletName: wallet.name,
+    })
   } catch (error) {
     logError(error instanceof Error ? error.message : 'Unknown error')
     process.exit(1)

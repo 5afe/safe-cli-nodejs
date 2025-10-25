@@ -54,10 +54,7 @@ export class ConfigStore {
     return this.store.get('defaults')
   }
 
-  setDefault<K extends keyof Config['defaults']>(
-    key: K,
-    value: Config['defaults'][K]
-  ): void {
+  setDefault<K extends keyof Config['defaults']>(key: K, value: Config['defaults'][K]): void {
     this.store.set(`defaults.${key}`, value)
   }
 

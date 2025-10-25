@@ -2,6 +2,8 @@ import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { getConfigStore } from '../../storage/config-store.js'
 import { DEFAULT_CHAINS } from '../../constants/chains.js'
+import { renderScreen } from '../../ui/render.js'
+import { ConfigInitSuccessScreen } from '../../ui/screens/index.js'
 
 export async function initConfig() {
   p.intro(pc.bgCyan(pc.black(' Initialize Safe CLI ')))
@@ -113,7 +115,11 @@ export async function initConfig() {
 
   // Ask about Etherscan API key
   console.log('')
-  console.log(pc.dim('An Etherscan API key is required for fetching contract ABIs and detecting proxy contracts.'))
+  console.log(
+    pc.dim(
+      'An Etherscan API key is required for fetching contract ABIs and detecting proxy contracts.'
+    )
+  )
   console.log(pc.dim('Get a free key from https://etherscan.io/myapikey'))
   console.log('')
 
@@ -148,14 +154,6 @@ export async function initConfig() {
     console.log(pc.green('✓ Etherscan API key saved'))
   }
 
-  console.log('')
-  console.log(pc.green('✓ Configuration initialized successfully!'))
-  console.log('')
-  console.log('Next steps:')
-  console.log(`  ${pc.cyan('•')} Import a wallet:    ${pc.bold('safe wallet import')}`)
-  console.log(`  ${pc.cyan('•')} View configuration: ${pc.bold('safe config show')}`)
-  console.log(`  ${pc.cyan('•')} Manage chains:      ${pc.bold('safe config chains list')}`)
-  console.log('')
-
-  p.outro(pc.green('Ready to use Safe CLI!'))
+  // Display success screen with next steps
+  await renderScreen(ConfigInitSuccessScreen, {})
 }

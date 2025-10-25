@@ -4,6 +4,12 @@ import { getConfigStore } from '../../storage/config-store.js'
 import type { ChainConfig } from '../../types/config.js'
 import { isValidChainId, isValidUrl } from '../../utils/validation.js'
 import { logError } from '../../ui/messages.js'
+import { renderScreen } from '../../ui/render.js'
+import {
+  ChainAddSuccessScreen,
+  ChainListScreen,
+  ChainRemoveSuccessScreen,
+} from '../../ui/screens/index.js'
 
 export async function addChain() {
   p.intro(pc.bgCyan(pc.black(' Add Chain ')))
@@ -42,7 +48,8 @@ export async function addChain() {
     placeholder: 'eth',
     validate: (value) => {
       if (!value) return 'Short name is required'
-      if (!/^[a-z0-9-]+$/.test(value)) return 'Short name must be lowercase alphanumeric with hyphens'
+      if (!/^[a-z0-9-]+$/.test(value))
+        return 'Short name must be lowercase alphanumeric with hyphens'
       return undefined
     },
   })
@@ -103,7 +110,11 @@ export async function addChain() {
   try {
     configStore.setChain(chainId as string, chainConfig)
     spinner.stop('Chain added successfully')
-    p.outro(pc.green(`✓ Chain ${name} (${chainId}) has been added`))
+
+    await renderScreen(ChainAddSuccessScreen, {
+      chainName: name as string,
+      chainId: chainId as string,
+    })
   } catch (error) {
     spinner.stop('Failed to add chain')
     logError(error instanceof Error ? error.message : 'Unknown error')
@@ -117,25 +128,9 @@ export async function listChains() {
   const configStore = getConfigStore()
   const chains = Object.values(configStore.getAllChains())
 
-  if (chains.length === 0) {
-    console.log(pc.dim('No chains configured'))
-    p.outro('Use "safe config chains add" to add a chain')
-    return
-  }
-
-  console.log('')
-  for (const chain of chains) {
-    console.log(`${pc.cyan('●')} ${pc.bold(chain.name)} ${pc.dim(`(Chain ID: ${chain.chainId})`)}`)
-    console.log(`  ${pc.dim('Short name:')} ${pc.cyan(chain.shortName)}`)
-    console.log(`  ${pc.dim('RPC:')} ${chain.rpcUrl}`)
-    if (chain.explorer) {
-      console.log(`  ${pc.dim('Explorer:')} ${chain.explorer}`)
-    }
-    console.log(`  ${pc.dim('Currency:')} ${chain.currency}`)
-    console.log('')
-  }
-
-  p.outro(pc.green(`Total: ${chains.length} chain(s) configured`))
+  await renderScreen(ChainListScreen, {
+    chains,
+  })
 }
 
 export async function removeChain() {
@@ -174,8 +169,12 @@ export async function removeChain() {
   }
 
   try {
+    const chainName = chains[chainId as string].name
     configStore.deleteChain(chainId as string)
-    p.outro(pc.green(`✓ Chain ${chains[chainId as string].name} has been removed`))
+
+    await renderScreen(ChainRemoveSuccessScreen, {
+      chainName,
+    })
   } catch (error) {
     logError(error instanceof Error ? error.message : 'Unknown error')
     process.exit(1)

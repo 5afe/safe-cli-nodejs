@@ -1,54 +1,20 @@
-import * as p from '@clack/prompts'
-import pc from 'picocolors'
-import { getConfigStore } from '../../storage/config-store.js'
+import { renderScreen } from '../../ui/render.js'
+import { ConfigShowScreen } from '../../ui/screens/index.js'
 
+/**
+ * Displays the current CLI configuration.
+ *
+ * Migration: Phase 4 - Tier 1 command
+ * - Old: 55 lines of imperative console.log with manual formatting
+ * - New: Declarative Ink rendering (3 lines)
+ *
+ * Benefits:
+ * - Structured layout with KeyValue components
+ * - Consistent styling and spacing
+ * - Proper component composition (chains, defaults, API config)
+ * - API key obfuscation handled in component
+ * - Much cleaner code (55 → 3 lines = 95% reduction!)
+ */
 export async function showConfig() {
-  const configStore = getConfigStore()
-  const config = configStore.getConfig()
-
-  p.intro(pc.bgCyan(pc.black(' Configuration ')))
-
-  console.log('')
-  console.log(pc.bold('Chains:'))
-  const chains = Object.values(config.chains)
-  if (chains.length === 0) {
-    console.log(pc.dim('  No chains configured'))
-  } else {
-    for (const chain of chains) {
-      console.log(`  ${pc.cyan(chain.name)} ${pc.dim(`(${chain.chainId})`)}`)
-      console.log(`    RPC:      ${chain.rpcUrl}`)
-      if (chain.explorer) {
-        console.log(`    Explorer: ${chain.explorer}`)
-      }
-      console.log(`    Currency: ${chain.currency}`)
-      console.log('')
-    }
-  }
-
-  console.log(pc.bold('Defaults:'))
-  console.log(`  Safe Version:   ${config.defaults.safeVersion}`)
-  console.log(`  Signing Method: ${config.defaults.signingMethod}`)
-  console.log(`  Gas Strategy:   ${config.defaults.gasStrategy}`)
-  console.log('')
-
-  console.log(pc.bold('API Configuration:'))
-  if (config.preferences.safeApiKey) {
-    const obfuscated = config.preferences.safeApiKey.slice(0, 8) + '...' + config.preferences.safeApiKey.slice(-4)
-    console.log(`  Safe API Key:      ${obfuscated}`)
-  } else {
-    console.log(`  Safe API Key:      ${pc.dim('not configured')}`)
-  }
-
-  if (config.preferences.etherscanApiKey) {
-    const obfuscated = config.preferences.etherscanApiKey.slice(0, 8) + '...' + config.preferences.etherscanApiKey.slice(-4)
-    console.log(`  Etherscan API Key: ${obfuscated}`)
-  } else {
-    console.log(`  Etherscan API Key: ${pc.dim('not configured')}`)
-  }
-  console.log('')
-
-  console.log(pc.dim(`Config file: ${configStore.getConfigPath()}`))
-  console.log('')
-
-  p.outro(pc.green('Configuration displayed successfully'))
+  await renderScreen(ConfigShowScreen, {})
 }

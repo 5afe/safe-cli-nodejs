@@ -8,6 +8,8 @@ import { getTransactionStore } from '../../storage/transaction-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
+import { renderScreen } from '../../ui/render.js'
+import { OwnerRemoveSuccessScreen } from '../../ui/screens/index.js'
 
 export async function removeOwner(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Remove Safe Owner ')))
@@ -203,26 +205,12 @@ export async function removeOwner(account?: string) {
 
     spinner.stop('Transaction created')
 
-    const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
-
-    console.log('')
-    console.log(pc.green('✓ Remove owner transaction created'))
-    console.log('')
-    console.log(`  ${pc.dim('Safe TX Hash:')} ${safeTransaction.safeTxHash}`)
-    console.log(`  ${pc.dim('Safe:')}         ${eip3770}`)
-    console.log('')
-    console.log(pc.bold('Next steps:'))
-    console.log('')
-    console.log(`  1. Get ${safe.threshold} signature(s):`)
-    console.log('')
-    console.log(`     ${pc.cyan(`safe tx sign ${safeTransaction.safeTxHash}`)}`)
-    console.log('')
-    console.log(`  2. Execute the transaction:`)
-    console.log('')
-    console.log(`     ${pc.cyan(`safe tx execute ${safeTransaction.safeTxHash}`)}`)
-    console.log('')
-
-    p.outro(pc.green('Owner removal transaction ready'))
+    await renderScreen(OwnerRemoveSuccessScreen, {
+      safeTxHash: safeTransaction.safeTxHash,
+      safeAddress: safe.address as Address,
+      chainId: safe.chainId,
+      threshold: safe.threshold,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

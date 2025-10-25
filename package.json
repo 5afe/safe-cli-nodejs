@@ -35,12 +35,16 @@
     "@safe-global/types-kit": "^3.0.0",
     "commander": "^12.1.0",
     "conf": "^13.0.1",
+    "ink": "^6.3.1",
+    "ink-spinner": "^5.0.0",
     "picocolors": "^1.1.1",
+    "react": "^19.2.0",
     "viem": "^2.21.8",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
+    "@types/react": "^19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
     "@vitest/coverage-v8": "^2.1.9",
@@ -48,7 +52,7 @@
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",
     "tsup": "^8.3.5",
-    "tsx": "^4.19.2",
+    "tsx": "^4.20.6",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.46.2",
     "vitest": "^2.1.8"

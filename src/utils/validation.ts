@@ -22,7 +22,9 @@ export function validateAndChecksumAddress(address: string): Address {
   try {
     return getAddress(address)
   } catch (error) {
-    throw new Error(`Invalid address checksum: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(
+      `Invalid address checksum: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
   }
 }
 

@@ -5,6 +5,8 @@ import { getConfigStore } from '../../storage/config-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
+import { renderScreen } from '../../ui/render.js'
+import { TransactionExportSuccessScreen } from '../../ui/screens/index.js'
 
 export async function exportTransaction(safeTxHash?: string, outputFile?: string) {
   try {
@@ -72,13 +74,9 @@ export async function exportTransaction(safeTxHash?: string, outputFile?: string
       writeFileSync(outputFile, jsonOutput, 'utf-8')
 
       if (!safeTxHash) {
-        console.log('')
-        console.log(pc.green(`✓ Transaction exported to ${outputFile}`))
-        console.log('')
-        console.log(pc.bold('Share this file with other Safe owners:'))
-        console.log(`  ${pc.cyan(`safe tx import ${outputFile}`)}`)
-        console.log('')
-        p.outro('Export complete')
+        await renderScreen(TransactionExportSuccessScreen, {
+          outputFile,
+        })
       }
     } else {
       // Output to stdout

@@ -1,9 +1,11 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
+import { type Address } from 'viem'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { isValidPrivateKey } from '../../utils/validation.js'
-import { shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
+import { renderScreen } from '../../ui/render.js'
+import { WalletImportSuccessScreen } from '../../ui/screens/index.js'
 
 export async function importWallet() {
   p.intro(pc.bgCyan(pc.black(' Import Wallet ')))
@@ -80,15 +82,10 @@ export async function importWallet() {
     )
     spinner.stop('Wallet imported successfully')
 
-    console.log('')
-    console.log(pc.green('✓ Wallet imported successfully!'))
-    console.log('')
-    console.log(`  ${pc.dim('Name:')}    ${pc.bold(wallet.name)}`)
-    console.log(`  ${pc.dim('Address:')} ${pc.bold(wallet.address)}`)
-    console.log(`  ${pc.dim('Short:')}   ${shortenAddress(wallet.address)}`)
-    console.log('')
-
-    p.outro(pc.green('Wallet is now ready to use'))
+    await renderScreen(WalletImportSuccessScreen, {
+      name: wallet.name,
+      address: wallet.address as Address,
+    })
   } catch (error) {
     spinner.stop('Failed to import wallet')
     logError(error instanceof Error ? error.message : 'Unknown error')

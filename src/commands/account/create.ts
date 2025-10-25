@@ -8,7 +8,8 @@ import { SafeService } from '../../services/safe-service.js'
 import { isValidAddress } from '../../utils/validation.js'
 import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
-import { formatSafeAddress } from '../../utils/eip3770.js'
+import { renderScreen } from '../../ui/render.js'
+import { AccountCreateSuccessScreen } from '../../ui/screens/index.js'
 
 export async function createSafe() {
   p.intro(pc.bgCyan(pc.black(' Create Safe Account ')))
@@ -151,7 +152,9 @@ export async function createSafe() {
   console.log(`  ${pc.dim('Owners:')}     ${owners.length}`)
   owners.forEach((owner, i) => {
     const isActive = owner.toLowerCase() === activeWallet.address.toLowerCase()
-    console.log(`              ${pc.dim(`${i + 1}.`)} ${shortenAddress(owner)}${isActive ? pc.green(' (you)') : ''}`)
+    console.log(
+      `              ${pc.dim(`${i + 1}.`)} ${shortenAddress(owner)}${isActive ? pc.green(' (you)') : ''}`
+    )
   })
   console.log(`  ${pc.dim('Threshold:')} ${thresholdNum} / ${owners.length}`)
   console.log('')
@@ -161,11 +164,10 @@ export async function createSafe() {
 
   try {
     const safeService = new SafeService(chain)
-    const { predictedAddress, safeAccountConfig } =
-      await safeService.createPredictedSafe({
-        owners,
-        threshold: thresholdNum,
-      })
+    const { predictedAddress, safeAccountConfig } = await safeService.createPredictedSafe({
+      owners,
+      threshold: thresholdNum,
+    })
 
     spinner.stop('Safe created!')
 
@@ -181,31 +183,13 @@ export async function createSafe() {
       },
     })
 
-    const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, configStore.getAllChains())
-
-    console.log('')
-    console.log(pc.green('✓ Safe created successfully!'))
-    console.log('')
-    console.log(`  ${pc.dim('Name:')}    ${pc.bold(safe.name)}`)
-    console.log(`  ${pc.dim('Address:')} ${pc.cyan(eip3770)}`)
-    console.log(`  ${pc.dim('Chain:')}   ${chain.name}`)
-    console.log(`  ${pc.dim('Status:')}  ${pc.yellow('Not deployed')}`)
-
-    console.log('')
-    console.log(pc.dim('This Safe has been predicted but not yet deployed to the blockchain.'))
-    console.log('')
-    console.log(pc.bold('Next steps:'))
-    console.log('')
-    console.log(`  Deploy the Safe:`)
-    console.log('')
-    console.log(`    ${pc.cyan(`safe account deploy ${eip3770}`)}`)
-    console.log('')
-    console.log(`  View Safe info:`)
-    console.log('')
-    console.log(`    ${pc.cyan(`safe account info ${eip3770}`)}`)
-    console.log('')
-
-    p.outro(pc.green('Safe ready for deployment'))
+    // Display success screen with Safe details and next steps
+    await renderScreen(AccountCreateSuccessScreen, {
+      name: safe.name,
+      address: safe.address as Address,
+      chainId: safe.chainId,
+      chainName: chain.name,
+    })
   } catch (error) {
     spinner.stop('Failed to create Safe')
     logError(error instanceof Error ? error.message : 'Unknown error')

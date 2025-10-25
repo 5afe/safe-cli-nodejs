@@ -1,8 +1,11 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
+import { type Address } from 'viem'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
+import { renderScreen } from '../../ui/render.js'
+import { WalletUseSuccessScreen } from '../../ui/screens/index.js'
 
 export async function useWallet() {
   p.intro(pc.bgCyan(pc.black(' Switch Wallet ')))
@@ -37,14 +40,10 @@ export async function useWallet() {
     walletStorage.setActiveWallet(walletId as string)
     const wallet = walletStorage.getWallet(walletId as string)!
 
-    console.log('')
-    console.log(pc.green('✓ Active wallet changed'))
-    console.log('')
-    console.log(`  ${pc.dim('Name:')}    ${pc.bold(wallet.name)}`)
-    console.log(`  ${pc.dim('Address:')} ${wallet.address}`)
-    console.log('')
-
-    p.outro(pc.green(`Now using wallet: ${wallet.name}`))
+    await renderScreen(WalletUseSuccessScreen, {
+      name: wallet.name,
+      address: wallet.address as Address,
+    })
   } catch (error) {
     logError(error instanceof Error ? error.message : 'Unknown error')
     process.exit(1)

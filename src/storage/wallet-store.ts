@@ -106,7 +106,7 @@ export class WalletStorageService {
 
     // Check if wallet already exists
     const existingWallets = this.store.get('wallets', {})
-    const duplicate = Object.values(existingWallets).find(w => w.address === address)
+    const duplicate = Object.values(existingWallets).find((w) => w.address === address)
     if (duplicate) {
       throw new WalletError(`Wallet with address ${address} already exists as "${duplicate.name}"`)
     }

@@ -9,6 +9,8 @@ import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 import { validateAndChecksumAddress } from '../../utils/validation.js'
+import { renderScreen } from '../../ui/render.js'
+import { OwnerAddSuccessScreen } from '../../ui/screens/index.js'
 
 export async function addOwner(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
@@ -106,13 +108,17 @@ export async function addOwner(account?: string) {
         txService.getThreshold(safe.address as Address),
       ])
     } catch (error) {
-      p.log.error(`Failed to fetch Safe data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      p.log.error(
+        `Failed to fetch Safe data: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
       p.outro('Failed')
       return
     }
 
     // Check if wallet is an owner
-    if (!currentOwners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
+    if (
+      !currentOwners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())
+    ) {
       p.log.error('Active wallet is not an owner of this Safe')
       p.outro('Failed')
       return
@@ -212,26 +218,12 @@ export async function addOwner(account?: string) {
 
     spinner.stop('Transaction created')
 
-    const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
-
-    console.log('')
-    console.log(pc.green('✓ Add owner transaction created'))
-    console.log('')
-    console.log(`  ${pc.dim('Safe TX Hash:')} ${safeTransaction.safeTxHash}`)
-    console.log(`  ${pc.dim('Safe:')}         ${eip3770}`)
-    console.log('')
-    console.log(pc.bold('Next steps:'))
-    console.log('')
-    console.log(`  1. Get ${currentThreshold} signature(s):`)
-    console.log('')
-    console.log(`     ${pc.cyan(`safe tx sign ${safeTransaction.safeTxHash}`)}`)
-    console.log('')
-    console.log(`  2. Execute the transaction:`)
-    console.log('')
-    console.log(`     ${pc.cyan(`safe tx execute ${safeTransaction.safeTxHash}`)}`)
-    console.log('')
-
-    p.outro(pc.green('Owner addition transaction ready'))
+    await renderScreen(OwnerAddSuccessScreen, {
+      safeTxHash: safeTransaction.safeTxHash,
+      safeAddress: safe.address as Address,
+      chainId: safe.chainId,
+      threshold: currentThreshold,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

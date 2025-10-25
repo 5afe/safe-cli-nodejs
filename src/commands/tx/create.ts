@@ -12,6 +12,8 @@ import { TransactionBuilder } from '../../services/transaction-builder.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { validateAndChecksumAddress } from '../../utils/validation.js'
+import { renderScreen } from '../../ui/render.js'
+import { TransactionCreateSuccessScreen } from '../../ui/screens/index.js'
 
 export async function createTransaction() {
   p.intro('Create Safe Transaction')
@@ -192,7 +194,10 @@ export async function createTransaction() {
             const existingSignatures = new Set(
               implAbi
                 .filter((item: any) => item.type === 'function')
-                .map((item: any) => `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`)
+                .map(
+                  (item: any) =>
+                    `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`
+                )
             )
 
             for (const item of abi) {
@@ -347,7 +352,9 @@ export async function createTransaction() {
     try {
       currentNonce = await txService.getNonce(safe.address as Address)
     } catch (error) {
-      p.log.error(`Failed to get Safe nonce: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      p.log.error(
+        `Failed to get Safe nonce: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
       p.outro('Failed')
       return
     }
@@ -360,7 +367,8 @@ export async function createTransaction() {
         if (!value) return undefined // Empty is OK (will use default)
         const num = parseInt(value, 10)
         if (isNaN(num) || num < 0) return 'Nonce must be a non-negative number'
-        if (num < currentNonce) return `Nonce cannot be lower than current Safe nonce (${currentNonce})`
+        if (num < currentNonce)
+          return `Nonce cannot be lower than current Safe nonce (${currentNonce})`
         return undefined
       },
     })) as string
@@ -395,17 +403,9 @@ export async function createTransaction() {
 
     createSpinner.stop('Transaction created')
 
-    console.log('')
-    console.log(pc.green('✓ Transaction created successfully!'))
-    console.log('')
-    console.log(`  ${pc.dim('Safe TX Hash:')} ${createdTx.safeTxHash}`)
-    console.log('')
-    console.log(pc.bold('To sign this transaction, run:'))
-    console.log('')
-    console.log(`  ${pc.cyan(`safe tx sign ${createdTx.safeTxHash}`)}`)
-    console.log('')
-
-    p.outro('Transaction ready')
+    await renderScreen(TransactionCreateSuccessScreen, {
+      safeTxHash: createdTx.safeTxHash,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

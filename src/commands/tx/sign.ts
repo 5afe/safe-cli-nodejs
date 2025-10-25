@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -9,6 +8,8 @@ import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { TransactionStatus } from '../../types/transaction.js'
+import { renderScreen } from '../../ui/render.js'
+import { TransactionSignSuccessScreen } from '../../ui/screens/index.js'
 
 export async function signTransaction(safeTxHash?: string) {
   p.intro('Sign Safe Transaction')
@@ -32,7 +33,9 @@ export async function signTransaction(safeTxHash?: string) {
     if (!selectedSafeTxHash) {
       const pendingTxs = transactionStore
         .getAllTransactions()
-        .filter((tx) => tx.status === TransactionStatus.PENDING || tx.status === TransactionStatus.SIGNED)
+        .filter(
+          (tx) => tx.status === TransactionStatus.PENDING || tx.status === TransactionStatus.SIGNED
+        )
 
       if (pendingTxs.length === 0) {
         p.log.error('No pending transactions found')
@@ -157,10 +160,7 @@ export async function signTransaction(safeTxHash?: string) {
 
     const txService = new TransactionService(chain, privateKey)
 
-    const signature = await txService.signTransaction(
-      transaction.safeAddress,
-      transaction.metadata
-    )
+    const signature = await txService.signTransaction(transaction.safeAddress, transaction.metadata)
 
     // Store signature
     transactionStore.addSignature(selectedSafeTxHash, {
@@ -180,23 +180,11 @@ export async function signTransaction(safeTxHash?: string) {
     const updatedTx = transactionStore.getTransaction(selectedSafeTxHash)!
     const threshold = safe.threshold
 
-    console.log('')
-    console.log(pc.green(`✓ Signature added (${updatedTx.signatures.length}/${threshold} required)`))
-    console.log('')
-
-    if (updatedTx.signatures.length >= threshold) {
-      console.log(pc.bold('Transaction is ready to execute!'))
-      console.log('')
-      console.log(pc.bold('To execute this transaction, run:'))
-      console.log('')
-      console.log(`  ${pc.cyan(`safe tx execute ${selectedSafeTxHash}`)}`)
-      console.log('')
-      p.outro('Ready to execute')
-    } else {
-      console.log(pc.yellow(`Need ${threshold - updatedTx.signatures.length} more signature(s)`))
-      console.log('')
-      p.outro('Signature added')
-    }
+    await renderScreen(TransactionSignSuccessScreen, {
+      safeTxHash: selectedSafeTxHash,
+      currentSignatures: updatedTx.signatures.length,
+      requiredSignatures: threshold,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

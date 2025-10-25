@@ -1,4 +1,8 @@
-import SafeSDK, { predictSafeAddress, SafeAccountConfig, SafeProvider } from '@safe-global/protocol-kit'
+import SafeSDK, {
+  predictSafeAddress,
+  SafeAccountConfig,
+  SafeProvider,
+} from '@safe-global/protocol-kit'
 import { createPublicClient, createWalletClient, http, type Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { ChainConfig } from '../types/config.js'

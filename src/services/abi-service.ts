@@ -133,7 +133,7 @@ export class ABIService {
     }
 
     const response = await fetch(requestUrl)
-    const data = await response.json() as any
+    const data = (await response.json()) as any
 
     if (data.status === '1' && data.result && data.result[0]) {
       const contractData = data.result[0] as any
@@ -148,7 +148,7 @@ export class ABIService {
         return {
           abi: JSON.parse(contractData.ABI),
           name: contractData.ContractName || undefined,
-          implementation
+          implementation,
         }
       }
     }
@@ -168,12 +168,14 @@ export class ABIService {
       const response = await fetch(url)
 
       if (response.ok) {
-        const metadata = await response.json() as any
+        const metadata = (await response.json()) as any
         if (metadata.output?.abi) {
           // Extract contract name from settings.compilationTarget
           let contractName: string | undefined
           if (metadata.settings?.compilationTarget) {
-            const targets = Object.values(metadata.settings.compilationTarget as Record<string, any>)
+            const targets = Object.values(
+              metadata.settings.compilationTarget as Record<string, any>
+            )
             if (targets.length > 0) {
               contractName = targets[0] as string
             }
@@ -181,7 +183,7 @@ export class ABIService {
 
           return {
             abi: metadata.output.abi,
-            name: contractName
+            name: contractName,
           }
         }
       }
@@ -195,12 +197,14 @@ export class ABIService {
       const response = await fetch(url)
 
       if (response.ok) {
-        const metadata = await response.json() as any
+        const metadata = (await response.json()) as any
         if (metadata.output?.abi) {
           // Extract contract name from settings.compilationTarget
           let contractName: string | undefined
           if (metadata.settings?.compilationTarget) {
-            const targets = Object.values(metadata.settings.compilationTarget as Record<string, any>)
+            const targets = Object.values(
+              metadata.settings.compilationTarget as Record<string, any>
+            )
             if (targets.length > 0) {
               contractName = targets[0] as string
             }
@@ -208,7 +212,7 @@ export class ABIService {
 
           return {
             abi: metadata.output.abi,
-            name: contractName
+            name: contractName,
           }
         }
       }
@@ -258,10 +262,12 @@ export class ABIService {
    * Format function signature for display
    */
   formatFunctionSignature(func: ABIFunction): string {
-    const params = func.inputs.map((input) => {
-      const name = input.name || '_'
-      return `${input.type} ${name}`
-    }).join(', ')
+    const params = func.inputs
+      .map((input) => {
+        const name = input.name || '_'
+        return `${input.type} ${name}`
+      })
+      .join(', ')
 
     return `${func.name}(${params})`
   }

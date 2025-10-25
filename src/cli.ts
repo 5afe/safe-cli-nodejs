@@ -1,5 +1,4 @@
 import { Command } from 'commander'
-import pc from 'picocolors'
 import { initConfig } from './commands/config/init.js'
 import { showConfig } from './commands/config/show.js'
 import { addChain, listChains, removeChain } from './commands/config/chains.js'
@@ -30,15 +29,10 @@ import { handleError } from './utils/errors.js'
 
 const program = new Command()
 
-program
-  .name('safe')
-  .description('Modern CLI for Safe Smart Account management')
-  .version('0.1.0')
+program.name('safe').description('Modern CLI for Safe Smart Account management').version('0.1.0')
 
 // Config commands
-const config = program
-  .command('config')
-  .description('Manage CLI configuration')
+const config = program.command('config').description('Manage CLI configuration')
 
 config
   .command('init')
@@ -63,9 +57,7 @@ config
   })
 
 // Config chains commands
-const chains = config
-  .command('chains')
-  .description('Manage chain configurations')
+const chains = config.command('chains').description('Manage chain configurations')
 
 chains
   .command('list')
@@ -112,9 +104,7 @@ chains
   })
 
 // Wallet commands
-const wallet = program
-  .command('wallet')
-  .description('Manage wallets and signers')
+const wallet = program.command('wallet').description('Manage wallets and signers')
 
 wallet
   .command('import')
@@ -163,9 +153,7 @@ wallet
   })
 
 // Account commands
-const account = program
-  .command('account')
-  .description('Manage Safe accounts')
+const account = program.command('account').description('Manage Safe accounts')
 
 account
   .command('create')
@@ -256,12 +244,9 @@ account
   })
 
 // Transaction commands
-const tx = program
-  .command('tx')
-  .description('Manage Safe transactions')
+const tx = program.command('tx').description('Manage Safe transactions')
 
-tx
-  .command('create')
+tx.command('create')
   .description('Create a new transaction')
   .action(async () => {
     try {
@@ -271,8 +256,7 @@ tx
     }
   })
 
-tx
-  .command('sign [safeTxHash]')
+tx.command('sign [safeTxHash]')
   .description('Sign a pending transaction (use Safe TX Hash)')
   .action(async (safeTxHash?: string) => {
     try {
@@ -282,8 +266,7 @@ tx
     }
   })
 
-tx
-  .command('execute [safeTxHash]')
+tx.command('execute [safeTxHash]')
   .alias('exec')
   .description('Execute a signed transaction (use Safe TX Hash)')
   .action(async (safeTxHash?: string) => {
@@ -294,8 +277,7 @@ tx
     }
   })
 
-tx
-  .command('list [account]')
+tx.command('list [account]')
   .description('List transactions (optionally filtered by Safe in EIP-3770 format)')
   .action(async (account?: string) => {
     try {
@@ -305,8 +287,7 @@ tx
     }
   })
 
-tx
-  .command('status [safeTxHash]')
+tx.command('status [safeTxHash]')
   .description('Show transaction status and signature progress')
   .action(async (safeTxHash?: string) => {
     try {
@@ -316,8 +297,7 @@ tx
     }
   })
 
-tx
-  .command('export [safeTxHash]')
+tx.command('export [safeTxHash]')
   .description('Export transaction as JSON for sharing')
   .option('-o, --output <file>', 'Output to file instead of stdout')
   .action(async (safeTxHash?: string, options?: { output?: string }) => {
@@ -328,8 +308,7 @@ tx
     }
   })
 
-tx
-  .command('import [json]')
+tx.command('import [json]')
   .description('Import transaction from JSON string or file')
   .action(async (json?: string) => {
     try {
@@ -339,8 +318,7 @@ tx
     }
   })
 
-tx
-  .command('push [safeTxHash]')
+tx.command('push [safeTxHash]')
   .description('Push transaction to Safe Transaction Service API')
   .action(async (safeTxHash?: string) => {
     try {
@@ -350,8 +328,7 @@ tx
     }
   })
 
-tx
-  .command('pull [account]')
+tx.command('pull [account]')
   .description('Pull transactions from Safe Transaction Service API (EIP-3770 format)')
   .action(async (account?: string) => {
     try {
@@ -361,8 +338,7 @@ tx
     }
   })
 
-tx
-  .command('sync [account]')
+tx.command('sync [account]')
   .description('Sync transactions with Safe Transaction Service API (EIP-3770 format)')
   .action(async (account?: string) => {
     try {
@@ -374,20 +350,13 @@ tx
 
 // Show welcome message if no command provided
 if (process.argv.length === 2) {
-  console.log('')
-  console.log(pc.bold(pc.cyan('🔐 Safe CLI')))
-  console.log('')
-  console.log('Modern CLI for Safe Smart Account management')
-  console.log('')
-  console.log(pc.bold('Getting Started:'))
-  console.log(`  ${pc.cyan('safe config init')}     Initialize configuration`)
-  console.log(`  ${pc.cyan('safe wallet import')}   Import a wallet`)
-  console.log(`  ${pc.cyan('safe account create')}  Create a Safe`)
-  console.log(`  ${pc.cyan('safe tx create')}       Create a transaction`)
-  console.log(`  ${pc.cyan('safe --help')}          Show all commands`)
-  console.log('')
-  console.log(pc.dim('For more information, visit: https://github.com/safe-global/safe-cli'))
-  console.log('')
+  // Migration: Phase 4 - Tier 1 command
+  // Old: 14 lines of imperative console.log
+  // New: Declarative Ink rendering
+  const { renderScreen } = await import('./ui/render.js')
+  const { WelcomeScreen } = await import('./ui/screens/index.js')
+
+  await renderScreen(WelcomeScreen, {})
   process.exit(0)
 }
 

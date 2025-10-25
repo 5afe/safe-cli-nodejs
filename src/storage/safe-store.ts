@@ -29,9 +29,7 @@ export class SafeAccountStorage {
 
     // Check if already exists
     if (this.store.get(`safes.${key}`)) {
-      throw new SafeCLIError(
-        `Safe already exists: ${safe.address} on chain ${safe.chainId}`
-      )
+      throw new SafeCLIError(`Safe already exists: ${safe.address} on chain ${safe.chainId}`)
     }
 
     const newSafe: SafeAccount = {
@@ -61,9 +59,7 @@ export class SafeAccountStorage {
     const safe = this.getSafe(chainId, address)
 
     if (!safe) {
-      throw new SafeCLIError(
-        `Safe not found: ${address} on chain ${chainId}`
-      )
+      throw new SafeCLIError(`Safe not found: ${address} on chain ${chainId}`)
     }
 
     const updated = { ...safe, ...updates }
@@ -76,9 +72,7 @@ export class SafeAccountStorage {
     const safes = this.store.get('safes', {})
 
     if (!safes[key]) {
-      throw new SafeCLIError(
-        `Safe not found: ${address} on chain ${chainId}`
-      )
+      throw new SafeCLIError(`Safe not found: ${address} on chain ${chainId}`)
     }
 
     delete safes[key]

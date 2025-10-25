@@ -8,6 +8,8 @@ import { TransactionService } from '../../services/transaction-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { TransactionStatus } from '../../types/transaction.js'
+import { renderScreen } from '../../ui/render.js'
+import { TransactionExecuteSuccessScreen } from '../../ui/screens/index.js'
 
 export async function executeTransaction(safeTxHash?: string) {
   p.intro('Execute Safe Transaction')
@@ -180,13 +182,12 @@ export async function executeTransaction(safeTxHash?: string) {
 
     spinner.stop('Transaction executed')
 
-    const explorerUrl = chain.explorer ? `${chain.explorer}/tx/${txHash}` : null
+    const explorerUrl = chain.explorer ? `${chain.explorer}/tx/${txHash}` : undefined
 
-    p.outro(
-      `Transaction executed successfully!\n\nTx Hash: ${txHash}${
-        explorerUrl ? `\nExplorer: ${explorerUrl}` : ''
-      }`
-    )
+    await renderScreen(TransactionExecuteSuccessScreen, {
+      txHash,
+      explorerUrl,
+    })
   } catch (error) {
     if (error instanceof SafeCLIError) {
       p.log.error(error.message)

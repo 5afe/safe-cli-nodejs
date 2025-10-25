@@ -23,7 +23,9 @@ export const ChainConfigSchema = z.object({
 
 export const DefaultsConfigSchema = z.object({
   safeVersion: z.string().default('1.4.1'),
-  signingMethod: z.enum(['ETH_SIGN_TYPED_DATA_V4', 'ETH_SIGN_TYPED_DATA_V3', 'ETH_SIGN']).default('ETH_SIGN_TYPED_DATA_V4'),
+  signingMethod: z
+    .enum(['ETH_SIGN_TYPED_DATA_V4', 'ETH_SIGN_TYPED_DATA_V3', 'ETH_SIGN'])
+    .default('ETH_SIGN_TYPED_DATA_V4'),
   gasStrategy: z.enum(['fast', 'medium', 'slow']).default('medium'),
 })
 

@@ -7,6 +7,8 @@ import { getWalletStorage } from '../../storage/wallet-store.js'
 import { SafeService } from '../../services/safe-service.js'
 import { logError } from '../../ui/messages.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
+import { renderScreen } from '../../ui/render.js'
+import { AccountDeploySuccessScreen } from '../../ui/screens/index.js'
 
 export async function deploySafe(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Deploy Safe ')))
@@ -96,7 +98,9 @@ export async function deploySafe(account?: string) {
   console.log(`  ${pc.dim('Name:')}     ${safe.name}`)
   console.log(`  ${pc.dim('Address:')}  ${pc.cyan(eip3770)}`)
   console.log(`  ${pc.dim('Chain:')}    ${chain.name}`)
-  console.log(`  ${pc.dim('Owners:')}   ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`)
+  console.log(
+    `  ${pc.dim('Owners:')}   ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`
+  )
   console.log('')
   console.log(pc.dim(`Deploying with wallet: ${activeWallet.name} (${activeWallet.address})`))
   console.log('')
@@ -144,19 +148,13 @@ export async function deploySafe(account?: string) {
       predictedConfig: undefined,
     })
 
-    const deployedEip3770 = formatSafeAddress(deployedAddress, chain.chainId, chains)
-
-    console.log('')
-    console.log(pc.green('✓ Safe deployed successfully!'))
-    console.log('')
-    console.log(`  ${pc.dim('Address:')} ${pc.cyan(deployedEip3770)}`)
-    console.log(`  ${pc.dim('Chain:')}   ${chain.name}`)
-    if (chain.explorer) {
-      console.log(`  ${pc.dim('Explorer:')} ${chain.explorer}/address/${deployedAddress}`)
-    }
-    console.log('')
-
-    p.outro(pc.green('Safe is now ready to use!'))
+    // Display success screen with deployment details
+    await renderScreen(AccountDeploySuccessScreen, {
+      address: deployedAddress,
+      chainId: chain.chainId,
+      chainName: chain.name,
+      explorerUrl: chain.explorer ? `${chain.explorer}/address/${deployedAddress}` : undefined,
+    })
   } catch (error) {
     spinner.stop('Failed to deploy Safe')
     logError(error instanceof Error ? error.message : 'Unknown error')
