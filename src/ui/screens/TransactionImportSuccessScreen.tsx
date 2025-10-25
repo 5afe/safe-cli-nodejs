@@ -110,6 +110,11 @@ export function TransactionImportSuccessScreen({
               icon: theme.icons.success,
               iconColor: theme.colors.success,
             }))}
+            renderItem={(item) => (
+              <Text>
+                <Text color={item.iconColor}>{item.icon}</Text> {item.label}
+              </Text>
+            )}
           />
         </Box>
       )}

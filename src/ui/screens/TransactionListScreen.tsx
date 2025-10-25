@@ -4,7 +4,7 @@ import type { Address } from 'viem'
 import { useTransactions, useTransactionsBySafe } from '../hooks/index.js'
 import { Header, KeyValue, Spinner } from '../components/index.js'
 import { theme } from '../theme.js'
-import type { Transaction, TransactionStatus } from '../../types/transaction.js'
+import type { StoredTransaction, TransactionStatus } from '../../types/transaction.js'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
@@ -32,7 +32,7 @@ export interface TransactionListScreenProps {
 }
 
 interface TransactionItemProps {
-  transaction: Transaction
+  transaction: StoredTransaction
 }
 
 /**
@@ -48,6 +48,8 @@ function getStatusBadge(status: TransactionStatus): { emoji: string; text: strin
       return { emoji: '✅', text: 'EXECUTED', color: theme.colors.success }
     case 'rejected':
       return { emoji: '❌', text: 'REJECTED', color: theme.colors.error }
+    default:
+      return { emoji: '❓', text: 'UNKNOWN', color: theme.colors.dim }
   }
 }
 
@@ -138,7 +140,7 @@ export function TransactionListScreen({
   // Use appropriate hook based on filtering
   const allTransactionsResult = useTransactions()
   const filteredTransactionsResult = useTransactionsBySafe(
-    safeAddress || '',
+    (safeAddress || '') as Address,
     chainId
   )
 

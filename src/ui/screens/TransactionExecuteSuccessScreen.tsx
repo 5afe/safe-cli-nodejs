@@ -41,7 +41,9 @@ export function TransactionExecuteSuccessScreen({
     }
   }, [onExit])
 
-  const items = [{ key: 'Tx Hash', value: txHash, valueColor: theme.colors.primary }]
+  const items: Array<{ key: string; value: string; valueColor?: string }> = [
+    { key: 'Tx Hash', value: txHash, valueColor: theme.colors.primary },
+  ]
 
   if (explorerUrl) {
     items.push({ key: 'Explorer', value: explorerUrl, valueColor: theme.colors.info })

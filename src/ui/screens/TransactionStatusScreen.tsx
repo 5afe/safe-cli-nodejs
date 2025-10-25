@@ -28,7 +28,7 @@ export interface TransactionStatusScreenProps {
   /**
    * Transaction nonce
    */
-  nonce: number
+  nonce: number | undefined
 
   /**
    * Transaction status
@@ -123,7 +123,7 @@ export function TransactionStatusScreen({
             { key: 'Safe', value: safeEip3770 },
             { key: 'To', value: to },
             { key: 'Value', value: `${value} wei` },
-            { key: 'Nonce', value: nonce.toString() },
+            { key: 'Nonce', value: nonce?.toString() ?? 'N/A' },
             { key: 'Status', value: status, valueColor: theme.colors.info },
           ]}
         />
@@ -163,6 +163,11 @@ export function TransactionStatusScreen({
                 markerColor: isOwner ? theme.colors.success : theme.colors.error,
               }
             })}
+            renderItem={(item) => (
+              <Text>
+                <Text color={item.markerColor}>{item.marker}</Text> {item.label}
+              </Text>
+            )}
           />
         </Box>
       )}
@@ -179,6 +184,11 @@ export function TransactionStatusScreen({
               marker: '○',
               markerColor: theme.colors.dim,
             }))}
+            renderItem={(item) => (
+              <Text>
+                <Text color={item.markerColor}>{item.marker}</Text> {item.label}
+              </Text>
+            )}
           />
         </Box>
       )}

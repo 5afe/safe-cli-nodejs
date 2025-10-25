@@ -174,7 +174,7 @@ export async function pushTransaction(safeTxHash?: string) {
       await renderScreen(TransactionPushSuccessScreen, {
         safeTxHash: selectedSafeTxHash,
         safeEip3770: eip3770,
-        mode: existingTx ? 'updated' : 'proposed',
+        mode: (existingTx ? 'updated' : 'proposed') as 'updated' | 'proposed',
         signers: pushedSigners,
         serviceUrl,
       })
