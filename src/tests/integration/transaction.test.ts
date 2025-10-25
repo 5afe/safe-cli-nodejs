@@ -5,8 +5,6 @@ import { WalletStorageService } from '../../storage/wallet-store.js'
 import { ConfigStore } from '../../storage/config-store.js'
 import { TransactionStatus } from '../../types/transaction.js'
 import {
-  createTempDir,
-  cleanupTempDir,
   TEST_PRIVATE_KEY,
   TEST_PASSWORD,
   TEST_ADDRESS,
@@ -17,25 +15,69 @@ import {
 import type { Address } from 'viem'
 
 describe('Transaction Integration Tests', () => {
-  let tempDir: string
   let transactionStore: TransactionStore
   let safeStorage: SafeAccountStorage
   let walletStorage: WalletStorageService
   let configStore: ConfigStore
 
-  beforeEach(() => {
-    tempDir = createTempDir()
-    transactionStore = new TransactionStore(tempDir)
-    safeStorage = new SafeAccountStorage(tempDir)
-    walletStorage = new WalletStorageService(tempDir)
-    configStore = new ConfigStore(tempDir)
+  beforeEach(async () => {
+    transactionStore = new TransactionStore()
+    safeStorage = new SafeAccountStorage()
+    walletStorage = new WalletStorageService()
+    configStore = new ConfigStore()
+
+    // Clear all existing data first
+    try {
+      const transactions = transactionStore.getAllTransactions()
+      for (const tx of transactions) {
+        try {
+          transactionStore.deleteTransaction(tx.safeTxHash)
+        } catch {
+          // Ignore errors
+        }
+      }
+    } catch {
+      // Ignore if no transactions exist
+    }
+
+    try {
+      const safes = safeStorage.getAllSafes()
+      for (const safe of safes) {
+        try {
+          safeStorage.removeSafe(safe.chainId, safe.address)
+        } catch {
+          // Ignore errors
+        }
+      }
+    } catch {
+      // Ignore if no safes exist
+    }
+
+    try {
+      const wallets = walletStorage.getAllWallets()
+      for (const wallet of wallets) {
+        try {
+          walletStorage.removeWallet(wallet.id)
+        } catch {
+          // Ignore errors
+        }
+      }
+    } catch {
+      // Ignore if no wallets exist
+    }
+
+    try {
+      configStore.deleteChain(TEST_CHAIN.chainId)
+    } catch {
+      // Ignore if chain doesn't exist
+    }
 
     // Setup test data
     walletStorage.setPassword(TEST_PASSWORD)
-    walletStorage.importWallet(TEST_PRIVATE_KEY, 'Test Wallet')
-    walletStorage.setActiveWallet(TEST_ADDRESS)
-    configStore.addChain(TEST_CHAIN)
-    safeStorage.addSafe({
+    const wallet = await walletStorage.importWallet('Test Wallet', TEST_PRIVATE_KEY)
+    walletStorage.setActiveWallet(wallet.id)
+    configStore.setChain(TEST_CHAIN.chainId, TEST_CHAIN)
+    safeStorage.createSafe({
       address: TEST_SAFE_ADDRESS,
       chainId: TEST_CHAIN.chainId,
       owners: [TEST_ADDRESS],
@@ -45,7 +87,51 @@ describe('Transaction Integration Tests', () => {
   })
 
   afterEach(() => {
-    cleanupTempDir(tempDir)
+    // Cleanup
+    try {
+      const transactions = transactionStore.getAllTransactions()
+      for (const tx of transactions) {
+        try {
+          transactionStore.deleteTransaction(tx.safeTxHash)
+        } catch {
+          // Ignore errors
+        }
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+
+    try {
+      const safes = safeStorage.getAllSafes()
+      for (const safe of safes) {
+        try {
+          safeStorage.removeSafe(safe.chainId, safe.address)
+        } catch {
+          // Ignore errors
+        }
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+
+    try {
+      const wallets = walletStorage.getAllWallets()
+      for (const wallet of wallets) {
+        try {
+          walletStorage.removeWallet(wallet.id)
+        } catch {
+          // Ignore errors
+        }
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+
+    try {
+      configStore.deleteChain(TEST_CHAIN.chainId)
+    } catch {
+      // Ignore cleanup errors
+    }
   })
 
   describe('Transaction Creation and Retrieval', () => {
@@ -98,9 +184,9 @@ describe('Transaction Integration Tests', () => {
       expect(transactions).toHaveLength(2)
     })
 
-    it('should return null for non-existent transaction', () => {
+    it('should return undefined for non-existent transaction', () => {
       const tx = transactionStore.getTransaction('0x' + '9'.repeat(64))
-      expect(tx).toBeNull()
+      expect(tx).toBeUndefined()
     })
 
     it('should return empty array when no transactions exist', () => {
@@ -243,14 +329,14 @@ describe('Transaction Integration Tests', () => {
     })
 
     it('should update transaction status', () => {
-      transactionStore.updateTransactionStatus(TEST_SAFE_TX_HASH, TransactionStatus.SIGNED)
+      transactionStore.updateStatus(TEST_SAFE_TX_HASH, TransactionStatus.SIGNED)
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
       expect(tx?.status).toBe(TransactionStatus.SIGNED)
     })
 
     it('should update transaction status to executed', () => {
-      transactionStore.updateTransactionStatus(TEST_SAFE_TX_HASH, TransactionStatus.EXECUTED)
+      transactionStore.updateStatus(TEST_SAFE_TX_HASH, TransactionStatus.EXECUTED)
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
       expect(tx?.status).toBe(TransactionStatus.EXECUTED)
@@ -258,7 +344,7 @@ describe('Transaction Integration Tests', () => {
     })
 
     it('should mark transaction as rejected', () => {
-      transactionStore.updateTransactionStatus(TEST_SAFE_TX_HASH, TransactionStatus.REJECTED)
+      transactionStore.updateStatus(TEST_SAFE_TX_HASH, TransactionStatus.REJECTED)
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
       expect(tx?.status).toBe(TransactionStatus.REJECTED)
@@ -266,10 +352,11 @@ describe('Transaction Integration Tests', () => {
 
     it('should set execution transaction hash', () => {
       const onChainTxHash = '0x' + 'a'.repeat(64)
-      transactionStore.setExecutionTxHash(TEST_SAFE_TX_HASH, onChainTxHash)
+      transactionStore.updateStatus(TEST_SAFE_TX_HASH, TransactionStatus.EXECUTED, onChainTxHash)
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
       expect(tx?.txHash).toBe(onChainTxHash)
+      expect(tx?.status).toBe(TransactionStatus.EXECUTED)
     })
   })
 
@@ -287,15 +374,15 @@ describe('Transaction Integration Tests', () => {
         TEST_ADDRESS
       )
 
-      transactionStore.removeTransaction(TEST_SAFE_TX_HASH)
+      transactionStore.deleteTransaction(TEST_SAFE_TX_HASH)
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
-      expect(tx).toBeNull()
+      expect(tx).toBeUndefined()
     })
 
     it('should not error when removing non-existent transaction', () => {
       expect(() => {
-        transactionStore.removeTransaction('0x' + '9'.repeat(64))
+        transactionStore.deleteTransaction('0x' + '9'.repeat(64))
       }).not.toThrow()
     })
   })
@@ -314,8 +401,8 @@ describe('Transaction Integration Tests', () => {
         TEST_ADDRESS
       )
 
-      // Create new instance with same directory
-      const newTransactionStore = new TransactionStore(tempDir)
+      // Create new instance
+      const newTransactionStore = new TransactionStore()
       const tx = newTransactionStore.getTransaction(TEST_SAFE_TX_HASH)
 
       expect(tx).not.toBeNull()
@@ -341,8 +428,8 @@ describe('Transaction Integration Tests', () => {
         signedAt: new Date(),
       })
 
-      // Create new instance with same directory
-      const newTransactionStore = new TransactionStore(tempDir)
+      // Create new instance
+      const newTransactionStore = new TransactionStore()
       const tx = newTransactionStore.getTransaction(TEST_SAFE_TX_HASH)
 
       expect(tx?.signatures).toHaveLength(1)

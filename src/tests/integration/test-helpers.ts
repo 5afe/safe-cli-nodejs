@@ -1,25 +1,4 @@
-import { mkdtempSync, rmSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
 import type { Address } from 'viem'
-
-/**
- * Creates a temporary directory for test isolation
- */
-export function createTempDir(): string {
-  return mkdtempSync(join(tmpdir(), 'safe-cli-test-'))
-}
-
-/**
- * Cleans up temporary directory
- */
-export function cleanupTempDir(dir: string): void {
-  try {
-    rmSync(dir, { recursive: true, force: true })
-  } catch (error) {
-    // Ignore cleanup errors
-  }
-}
 
 /**
  * Test private key (DO NOT USE IN PRODUCTION)
