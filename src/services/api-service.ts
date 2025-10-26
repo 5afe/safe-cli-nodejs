@@ -86,7 +86,7 @@ export class SafeTransactionServiceAPI {
   /**
    * Get pending transactions for a Safe
    */
-  async getPendingTransactions(safeAddress: Address): Promise<any[]> {
+  async getPendingTransactions(safeAddress: Address): Promise<Array<Record<string, unknown>>> {
     try {
       const result = await this.apiKit.getPendingTransactions(safeAddress)
       return result.results || []
@@ -100,7 +100,7 @@ export class SafeTransactionServiceAPI {
   /**
    * Get all transactions for a Safe
    */
-  async getAllTransactions(safeAddress: Address): Promise<any[]> {
+  async getAllTransactions(safeAddress: Address): Promise<Array<Record<string, unknown>>> {
     try {
       const result = await this.apiKit.getAllTransactions(safeAddress)
       return result.results || []
@@ -114,7 +114,7 @@ export class SafeTransactionServiceAPI {
   /**
    * Get a specific transaction by safeTxHash
    */
-  async getTransaction(safeTxHash: string): Promise<any> {
+  async getTransaction(safeTxHash: string): Promise<Record<string, unknown> | null> {
     try {
       return await this.apiKit.getTransaction(safeTxHash)
     } catch (error) {

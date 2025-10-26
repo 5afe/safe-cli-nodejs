@@ -4,7 +4,7 @@ import { vi } from 'vitest'
  * Mock implementations for storage layers
  */
 
-export function createMockConfigStore(): any {
+export function createMockConfigStore(): Record<string, unknown> {
   return {
     getConfig: vi.fn().mockReturnValue({
       chains: {
@@ -44,7 +44,7 @@ export function createMockConfigStore(): any {
       },
     }),
     getChain: vi.fn().mockImplementation((chainId: string) => {
-      const chains: any = {
+      const chains: Record<string, unknown> = {
         '1': {
           chainId: '1',
           name: 'Ethereum',
@@ -71,7 +71,7 @@ export function createMockConfigStore(): any {
   }
 }
 
-export function createMockWalletStorage(): any {
+export function createMockWalletStorage(): Record<string, unknown> {
   return {
     importWallet: vi.fn(),
     getAllWallets: vi.fn().mockReturnValue([]),
@@ -84,7 +84,7 @@ export function createMockWalletStorage(): any {
   }
 }
 
-export function createMockSafeStorage(): any {
+export function createMockSafeStorage(): Record<string, unknown> {
   return {
     createSafe: vi.fn(),
     getAllSafes: vi.fn().mockReturnValue([]),
@@ -97,7 +97,7 @@ export function createMockSafeStorage(): any {
   }
 }
 
-export function createMockTransactionStore(): any {
+export function createMockTransactionStore(): Record<string, unknown> {
   return {
     createTransaction: vi.fn(),
     getTransaction: vi.fn(),
@@ -145,7 +145,7 @@ export function mockConsole() {
   const logs: string[] = []
   const originalLog = console.log
 
-  console.log = vi.fn((...args: any[]) => {
+  console.log = vi.fn((...args: unknown[]) => {
     logs.push(args.map((a) => String(a)).join(' '))
   })
 

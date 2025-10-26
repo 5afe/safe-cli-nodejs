@@ -18,7 +18,7 @@ export interface TxBuilderTransaction {
     name: string
     payable: boolean
   }
-  contractInputsValues?: Record<string, any>
+  contractInputsValues?: Record<string, unknown>
 }
 
 export interface TxBuilderFormat {
@@ -53,24 +53,25 @@ export class TxBuilderParser {
   /**
    * Check if JSON matches Transaction Builder format
    */
-  static isTxBuilderFormat(data: any): data is TxBuilderFormat {
+  static isTxBuilderFormat(data: unknown): data is TxBuilderFormat {
     return (
-      data &&
+      !!data &&
       typeof data === 'object' &&
       'version' in data &&
       'chainId' in data &&
       'meta' in data &&
       'transactions' in data &&
-      Array.isArray(data.transactions) &&
-      typeof data.meta === 'object' &&
-      'createdFromSafeAddress' in data.meta
+      Array.isArray((data as { transactions: unknown }).transactions) &&
+      typeof (data as { meta: unknown }).meta === 'object' &&
+      (data as { meta: unknown }).meta !== null &&
+      'createdFromSafeAddress' in ((data as { meta: object }).meta)
     )
   }
 
   /**
    * Validate Transaction Builder JSON structure
    */
-  static validate(data: any): asserts data is TxBuilderFormat {
+  static validate(data: unknown): asserts data is TxBuilderFormat {
     if (!this.isTxBuilderFormat(data)) {
       throw new SafeCLIError('Invalid Transaction Builder format: missing required fields')
     }
@@ -133,7 +134,7 @@ export class TxBuilderParser {
    */
   private static encodeContractMethod(
     method: NonNullable<TxBuilderTransaction['contractMethod']>,
-    inputValues: Record<string, any>
+    inputValues: Record<string, unknown>
   ): Hex {
     try {
       // Build ABI for this function
@@ -176,7 +177,7 @@ export class TxBuilderParser {
   /**
    * Parse a value based on its Solidity type
    */
-  private static parseValue(value: any, type: string): any {
+  private static parseValue(value: unknown, type: string): unknown {
     // If value is already the correct type, return it
     if (value === null || value === undefined) {
       throw new Error('Value cannot be null or undefined')

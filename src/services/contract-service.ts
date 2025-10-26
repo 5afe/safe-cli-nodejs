@@ -129,7 +129,7 @@ export class ContractService {
       }
 
       return null
-    } catch (error) {
+    } catch {
       // Not a proxy or error reading storage
       return null
     }

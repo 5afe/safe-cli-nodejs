@@ -26,7 +26,7 @@ class SecureStorage {
 
     const cipher = createCipheriv(this.algorithm, key, iv)
     const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
-    const tag = (cipher as any).getAuthTag()
+    const tag = (cipher as unknown as { getAuthTag: () => Buffer }).getAuthTag()
 
     // Combine salt + iv + tag + encrypted
     const result = Buffer.concat([salt, iv, tag, encrypted])
@@ -46,7 +46,7 @@ class SecureStorage {
 
     const key = this.deriveKey(password, salt)
     const decipher = createDecipheriv(this.algorithm, key, iv)
-    ;(decipher as any).setAuthTag(tag)
+    ;(decipher as unknown as { setAuthTag: (tag: Buffer) => void }).setAuthTag(tag)
 
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
     return decrypted.toString('utf8')
@@ -146,7 +146,7 @@ export class WalletStorageService {
 
     try {
       return this.secureStorage.decrypt(encrypted, pwd)
-    } catch (error) {
+    } catch {
       throw new WalletError('Failed to decrypt private key. Incorrect password?')
     }
   }

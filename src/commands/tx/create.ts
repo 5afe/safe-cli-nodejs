@@ -6,7 +6,7 @@ import { getTransactionStore } from '../../storage/transaction-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { ContractService } from '../../services/contract-service.js'
-import { ABIService } from '../../services/abi-service.js'
+import { ABIService, type ABI, type ABIFunction } from '../../services/abi-service.js'
 import { TransactionBuilder } from '../../services/transaction-builder.js'
 import { getValidationService } from '../../services/validation-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
@@ -129,7 +129,7 @@ export async function createTransaction() {
     try {
       isContract = await contractService.isContract(to)
       spinner2.stop(isContract ? 'Contract detected' : 'EOA (regular address)')
-    } catch (error) {
+    } catch {
       spinner2.stop('Failed to check contract')
       p.log.warning('Could not determine if address is a contract, falling back to manual input')
     }
@@ -149,7 +149,7 @@ export async function createTransaction() {
       }
 
       const abiService = new ABIService(chain, etherscanApiKey)
-      let abi: any = null
+      let abi: ABI | null = null
       let contractName: string | undefined
 
       try {
@@ -193,17 +193,15 @@ export async function createTransaction() {
             // Filter out duplicates by function signature
             const combinedAbi = [...implAbi]
             const existingSignatures = new Set(
-              implAbi
-                .filter((item: any) => item.type === 'function')
-                .map(
-                  (item: any) =>
-                    `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`
-                )
+              (implAbi.filter((item) => item.type === 'function') as ABIFunction[]).map(
+                (item) => `${item.name}(${item.inputs?.map((i) => i.type).join(',') || ''})`
+              )
             )
 
             for (const item of abi) {
               if (item.type === 'function') {
-                const sig = `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`
+                const funcItem = item as ABIFunction
+                const sig = `${funcItem.name}(${funcItem.inputs?.map((i) => i.type).join(',') || ''})`
                 if (!existingSignatures.has(sig)) {
                   combinedAbi.push(item)
                 }
@@ -215,14 +213,14 @@ export async function createTransaction() {
 
             abi = combinedAbi
             console.log(`  Combined: ${abi.length} items total`)
-          } catch (error) {
+          } catch {
             console.log('⚠ Could not fetch implementation ABI, using proxy ABI only')
             console.log(`  Found ${abi.length} items in proxy ABI`)
           }
         } else {
           console.log(`  Found ${abi.length} items in ABI`)
         }
-      } catch (error) {
+      } catch {
         console.log('⚠ Could not fetch ABI')
         console.log('  Contract may not be verified. Falling back to manual input.')
       }
@@ -251,7 +249,7 @@ export async function createTransaction() {
             const selectedFuncSig = await p.select({
               message: 'Select function to call:',
               options: functions.map((func) => {
-                const signature = `${func.name}(${func.inputs?.map((i: any) => i.type).join(',') || ''})`
+                const signature = `${func.name}(${func.inputs?.map((i) => i.type).join(',') || ''})`
                 return {
                   value: signature,
                   label: abiService.formatFunctionSignature(func),
@@ -267,7 +265,7 @@ export async function createTransaction() {
             }
 
             const func = functions.find((f) => {
-              const sig = `${f.name}(${f.inputs?.map((i: any) => i.type).join(',') || ''})`
+              const sig = `${f.name}(${f.inputs?.map((i) => i.type).join(',') || ''})`
               return sig === selectedFuncSig
             })
             if (!func) {
