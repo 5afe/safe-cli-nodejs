@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { TransactionService } from '../../../services/transaction-service.js'
 import { TEST_ADDRESSES, TEST_PRIVATE_KEYS, TEST_CHAINS } from '../../fixtures/index.js'
 import { SafeCLIError } from '../../../utils/errors.js'
-import type { Address } from 'viem'
 import type { TransactionMetadata } from '../../../types/transaction.js'
 
 // Mock Safe SDK init function using vi.hoisted() to ensure it's available during hoisting

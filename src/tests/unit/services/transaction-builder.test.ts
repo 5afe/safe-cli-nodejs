@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { TransactionBuilder } from '../../../services/transaction-builder.js'
 import type { ABI, ABIFunction } from '../../../services/abi-service.js'
-import { SafeCLIError } from '../../../utils/errors.js'
 import * as p from '@clack/prompts'
 
 // Mock @clack/prompts

@@ -235,7 +235,7 @@ describe('eip3770 utils', () => {
       expect(result).toHaveProperty('name')
       expect(result).toHaveProperty('shortName')
       expect(result).toHaveProperty('rpcUrl')
-      expect(result).toHaveProperty('explorerUrl')
+      expect(result).toHaveProperty('currency')
     })
 
     it('should throw for unknown shortName', () => {

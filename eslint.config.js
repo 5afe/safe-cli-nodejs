@@ -12,15 +12,22 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Convert these to warnings to allow CI to pass while still highlighting issues
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      // Enforce no unused vars - should be an error
+      '@typescript-eslint/no-unused-vars': 'error',
+      // Explicit any is an error in production code
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
   {
     // Disable type-aware linting for test files since they're excluded from tsconfig.json
-    files: ['**/*.test.ts', '**/test/**/*.ts'],
+    files: ['**/*.test.ts', '**/test/**/*.ts', '**/tests/**/*.ts', '**/fixtures/**/*.ts', '**/helpers/**/*.ts'],
     ...tseslint.configs.disableTypeChecked,
+    rules: {
+      // Allow 'any' in test files for mocking purposes
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // Still enforce no unused vars in tests
+      '@typescript-eslint/no-unused-vars': 'error',
+    },
   },
   {
     ignores: ['dist/', 'node_modules/', '**/*.js', '**/*.mjs', '**/*.cjs'],

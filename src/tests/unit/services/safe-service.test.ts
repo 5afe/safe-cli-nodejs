@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { SafeService } from '../../../services/safe-service.js'
 import { TEST_ADDRESSES, TEST_PRIVATE_KEYS, TEST_CHAINS } from '../../fixtures/index.js'
 import { SafeCLIError } from '../../../utils/errors.js'
-import type { Address } from 'viem'
 
 // Mock Safe SDK init function using vi.hoisted() to ensure it's available during hoisting
 const { mockSafeInit } = vi.hoisted(() => ({
@@ -35,7 +34,7 @@ vi.mock('viem/accounts', () => ({
 }))
 
 // Import mocked modules for assertions
-import SafeSDK, { predictSafeAddress, SafeProvider } from '@safe-global/protocol-kit'
+import { predictSafeAddress, SafeProvider } from '@safe-global/protocol-kit'
 import { createPublicClient, createWalletClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 

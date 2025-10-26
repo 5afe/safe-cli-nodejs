@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ContractService } from '../../../services/contract-service.js'
 import { TEST_ADDRESSES, TEST_CHAINS } from '../../fixtures/index.js'
 import { SafeCLIError } from '../../../utils/errors.js'
-import type { Address } from 'viem'
 
 // Mock dependencies
 vi.mock('viem', () => ({
