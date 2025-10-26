@@ -216,11 +216,7 @@ export function createEtherscanABIResponse(abi: Abi, contractName = 'TestContrac
 /**
  * Mock Etherscan API response for proxy contract
  */
-export function createEtherscanProxyResponse(
-  proxyAbi: Abi,
-  implementationAddress: string,
-  implementationAbi: Abi
-) {
+export function createEtherscanProxyResponse(proxyAbi: Abi, implementationAddress: string) {
   return {
     status: '1',
     message: 'OK',
@@ -270,7 +266,7 @@ export const EMPTY_ABI: Abi = []
 /**
  * Helper function to get state-changing functions from ABI
  */
-export function getStateChangingFunctions(abi: Abi) {
+export function getStateChangingFunctions(abi: Abi): Abi {
   return abi.filter(
     (item) =>
       item.type === 'function' && item.stateMutability !== 'view' && item.stateMutability !== 'pure'
@@ -280,7 +276,7 @@ export function getStateChangingFunctions(abi: Abi) {
 /**
  * Helper function to get view functions from ABI
  */
-export function getViewFunctions(abi: Abi) {
+export function getViewFunctions(abi: Abi): Abi {
   return abi.filter(
     (item) =>
       item.type === 'function' &&

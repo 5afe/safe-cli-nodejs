@@ -304,7 +304,7 @@ export function createMockWallet(options: MockWalletOptions = {}) {
 /**
  * Create a mock chain config
  */
-export function createMockChainConfig(chainId = '1') {
+export function createMockChainConfig() {
   return TEST_CHAINS.ethereum
 }
 
