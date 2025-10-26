@@ -383,7 +383,7 @@ MIT
 
 ## 🆘 Need Help?
 
-- **Issues**: [GitHub Issues](https://github.com/safe-global/safe-cli/issues)
+- **Issues**: [GitHub Issues](https://github.com/safe-global/safe-cli-nodejs/issues)
 - **Documentation**: [Safe Docs](https://docs.safe.global/)
 - **Community**: [Safe Discord](https://chat.safe.global/)
 
