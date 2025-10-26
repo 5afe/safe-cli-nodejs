@@ -147,7 +147,7 @@ export async function createTransaction() {
     // If contract, try to fetch ABI and use transaction builder
     if (isContract) {
       console.log('')
-      console.log()
+      console.log('Attempting to fetch contract ABI...')
 
       const config = configStore.getConfig()
       const etherscanApiKey = config.preferences?.etherscanApiKey
