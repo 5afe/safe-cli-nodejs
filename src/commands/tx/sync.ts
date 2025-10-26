@@ -179,11 +179,11 @@ export async function syncTransactions(account?: string) {
             (localTx.signatures || []).map((sig) => sig.signer.toLowerCase())
           )
           const newSignatures = (
-            remoteTx.confirmations as Array<{
+            (remoteTx.confirmations as Array<{
               owner: string
               signature: string
               submissionDate: string
-            }> || []
+            }>) || []
           ).filter((conf) => !localSigners.has(conf.owner.toLowerCase()))
 
           if (newSignatures.length > 0) {
@@ -237,7 +237,7 @@ export async function syncTransactions(account?: string) {
 
         if (existingTx) {
           // Push new signatures
-          const remoteSignatures = existingTx.confirmations as Array<{ owner: string }> || []
+          const remoteSignatures = (existingTx.confirmations as Array<{ owner: string }>) || []
           const remoteSigners = new Set(remoteSignatures.map((conf) => conf.owner.toLowerCase()))
 
           const newSignatures = (localTx.signatures || []).filter(

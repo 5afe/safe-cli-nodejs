@@ -64,7 +64,7 @@ export class TxBuilderParser {
       Array.isArray((data as { transactions: unknown }).transactions) &&
       typeof (data as { meta: unknown }).meta === 'object' &&
       (data as { meta: unknown }).meta !== null &&
-      'createdFromSafeAddress' in ((data as { meta: object }).meta)
+      'createdFromSafeAddress' in (data as { meta: object }).meta
     )
   }
 

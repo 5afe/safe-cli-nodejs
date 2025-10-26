@@ -189,11 +189,11 @@ export async function pullTransactions(account?: string) {
           )
 
           const newSignatures = (
-            remoteTx.confirmations as Array<{
+            (remoteTx.confirmations as Array<{
               owner: string
               signature: string
               submissionDate: string
-            }> || []
+            }>) || []
           ).filter((conf) => !localSigners.has(conf.owner.toLowerCase()))
 
           if (newSignatures.length > 0) {
