@@ -309,7 +309,7 @@ export class ValidationService {
    * Asserts JSON is valid and returns parsed object
    * @throws ValidationError if invalid
    */
-  assertJson<T = any>(value: string, fieldName = 'JSON'): T {
+  assertJson<T = unknown>(value: string, fieldName = 'JSON'): T {
     const error = this.validateJson(value)
     if (error) {
       throw new ValidationError(`${fieldName}: ${error}`)
