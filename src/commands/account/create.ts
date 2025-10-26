@@ -67,6 +67,8 @@ export async function createSafe() {
 
   // Add more owners
   let addingOwners = true
+  const validator = getValidationService()
+
   while (addingOwners) {
     const addMore = await p.confirm({
       message: `Add ${owners.length > 0 ? 'another' : 'an'} owner?`,
@@ -83,7 +85,6 @@ export async function createSafe() {
       break
     }
 
-    const validator = getValidationService()
     const ownerAddress = await p.text({
       message: 'Owner address:',
       placeholder: '0x...',
@@ -112,7 +113,6 @@ export async function createSafe() {
   }
 
   // Set threshold
-  const validator = getValidationService()
   const threshold = await p.text({
     message: `Signature threshold (1-${owners.length}):`,
     placeholder: Math.min(2, owners.length).toString(),
