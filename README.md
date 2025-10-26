@@ -140,9 +140,7 @@ Follow the interactive prompts to configure owners and threshold.
 # 1. Create a Safe (gets predicted address)
 safe account create
 
-# 2. Send some ETH to the predicted address for deployment gas
-
-# 3. Deploy it to the blockchain
+# 2. Deploy it to the blockchain
 safe account deploy eth:0x742d35Cc...
 ```
 
