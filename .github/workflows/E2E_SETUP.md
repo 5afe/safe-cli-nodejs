@@ -14,7 +14,7 @@ The E2E test workflow (`e2e.yml`) runs comprehensive end-to-end tests on Sepolia
 2. Navigate to **Settings** → **Secrets and variables** → **Actions**
 3. Click **New repository secret**
 4. Name: `TEST_WALLET_PK`
-5. Value: `0x7ee18f54486d328745863e4ac29c4cdd3a325f7d53dec0324bfd57df4bfdf2a9`
+5. Value: `<your-test-wallet-private-key>`
 6. Click **Add secret**
 
 ### 2. Fund the Test Wallet
