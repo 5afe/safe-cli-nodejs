@@ -7,7 +7,7 @@ import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
-import { TxBuilderParser } from '../../services/tx-builder-parser.js'
+import { TxBuilderParser, type TxBuilderFormat } from '../../services/tx-builder-parser.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { validateAndChecksumAddress } from '../../utils/validation.js'
 import type { TransactionMetadata, TransactionSignature } from '../../types/transaction.js'
@@ -32,7 +32,7 @@ interface ImportData {
 /**
  * Import transactions from Transaction Builder format
  */
-async function importTransactionBuilderFormat(data: any) {
+async function importTransactionBuilderFormat(data: TxBuilderFormat) {
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
   const transactionStore = getTransactionStore()
@@ -231,10 +231,10 @@ export async function importTransaction(input?: string) {
     }
 
     // Parse JSON
-    let parsedData: any
+    let parsedData: unknown
     try {
       parsedData = JSON.parse(jsonData)
-    } catch (error) {
+    } catch {
       throw new SafeCLIError('Invalid JSON format')
     }
 

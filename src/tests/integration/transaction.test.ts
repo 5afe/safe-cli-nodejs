@@ -268,7 +268,7 @@ describe('Transaction Integration Tests', () => {
       transactionStore.addSignature(TEST_SAFE_TX_HASH, {
         signer: TEST_ADDRESS,
         signature: '0x' + '1'.repeat(130),
-        signedAt: new Date(),
+        signedAt: new Date().toISOString(),
       })
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
@@ -280,13 +280,13 @@ describe('Transaction Integration Tests', () => {
       transactionStore.addSignature(TEST_SAFE_TX_HASH, {
         signer: TEST_ADDRESS,
         signature: '0x' + '1'.repeat(130),
-        signedAt: new Date(),
+        signedAt: new Date().toISOString(),
       })
 
       transactionStore.addSignature(TEST_SAFE_TX_HASH, {
         signer: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8' as Address,
         signature: '0x' + '2'.repeat(130),
-        signedAt: new Date(),
+        signedAt: new Date().toISOString(),
       })
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
@@ -297,13 +297,13 @@ describe('Transaction Integration Tests', () => {
       transactionStore.addSignature(TEST_SAFE_TX_HASH, {
         signer: TEST_ADDRESS,
         signature: '0x' + '1'.repeat(130),
-        signedAt: new Date(),
+        signedAt: new Date().toISOString(),
       })
 
       transactionStore.addSignature(TEST_SAFE_TX_HASH, {
         signer: TEST_ADDRESS,
         signature: '0x' + '2'.repeat(130),
-        signedAt: new Date(),
+        signedAt: new Date().toISOString(),
       })
 
       const tx = transactionStore.getTransaction(TEST_SAFE_TX_HASH)
@@ -425,7 +425,7 @@ describe('Transaction Integration Tests', () => {
       transactionStore.addSignature(TEST_SAFE_TX_HASH, {
         signer: TEST_ADDRESS,
         signature: '0x' + '1'.repeat(130),
-        signedAt: new Date(),
+        signedAt: new Date().toISOString(),
       })
 
       // Create new instance

@@ -2,6 +2,33 @@ import type { Address } from 'viem'
 import type { ChainConfig } from '../types/config.js'
 import { SafeCLIError } from '../utils/errors.js'
 
+/**
+ * Fetch with timeout support
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 10000
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return response
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw new SafeCLIError(`Request timeout after ${timeoutMs}ms`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 export interface ABIFunction {
   type: 'function'
   name: string
@@ -16,9 +43,23 @@ export interface ABIFunction {
     internalType?: string
   }>
   stateMutability: 'pure' | 'view' | 'nonpayable' | 'payable'
+  constant?: boolean
+  pure?: boolean
+  view?: boolean
 }
 
-export type ABI = Array<ABIFunction | any>
+export interface ABIItem {
+  type: string
+  name?: string
+  inputs?: Array<{
+    name: string
+    type: string
+    internalType?: string
+  }>
+  [key: string]: unknown
+}
+
+export type ABI = Array<ABIFunction | ABIItem>
 
 export interface ContractInfo {
   abi: ABI
@@ -63,7 +104,7 @@ export class ABIService {
       try {
         const info = await this.fetchFromEtherscan(address)
         if (info) return info
-      } catch (error) {
+      } catch {
         // Silently continue to Sourcify
       }
 
@@ -71,7 +112,7 @@ export class ABIService {
       try {
         const info = await this.fetchFromSourcify(address)
         if (info) return info
-      } catch (error) {
+      } catch {
         // Both failed
       }
     } else {
@@ -79,7 +120,7 @@ export class ABIService {
       try {
         const info = await this.fetchFromSourcify(address)
         if (info) return info
-      } catch (error) {
+      } catch {
         // Silently continue to Etherscan
       }
 
@@ -87,7 +128,7 @@ export class ABIService {
       try {
         const info = await this.fetchFromEtherscan(address)
         if (info) return info
-      } catch (error) {
+      } catch {
         // Both failed
       }
     }
@@ -132,11 +173,19 @@ export class ABIService {
       requestUrl += `&apikey=${this.etherscanApiKey}`
     }
 
-    const response = await fetch(requestUrl)
-    const data = (await response.json()) as any
+    const response = await fetchWithTimeout(requestUrl)
+    const data = (await response.json()) as {
+      status: string
+      result?: Array<{
+        ABI?: string
+        ContractName?: string
+        Proxy?: string
+        Implementation?: string
+      }>
+    }
 
     if (data.status === '1' && data.result && data.result[0]) {
-      const contractData = data.result[0] as any
+      const contractData = data.result[0]
 
       if (contractData.ABI && contractData.ABI !== 'Contract source code not verified') {
         // Check if this is a proxy contract (Etherscan V2 returns Proxy="1" and Implementation address)
@@ -165,19 +214,20 @@ export class ABIService {
     // Try full match first
     try {
       const url = `https://repo.sourcify.dev/contracts/full_match/${chainId}/${address}/metadata.json`
-      const response = await fetch(url)
+      const response = await fetchWithTimeout(url)
 
       if (response.ok) {
-        const metadata = (await response.json()) as any
+        const metadata = (await response.json()) as {
+          output?: { abi?: ABI }
+          settings?: { compilationTarget?: Record<string, string> }
+        }
         if (metadata.output?.abi) {
           // Extract contract name from settings.compilationTarget
           let contractName: string | undefined
           if (metadata.settings?.compilationTarget) {
-            const targets = Object.values(
-              metadata.settings.compilationTarget as Record<string, any>
-            )
+            const targets = Object.values(metadata.settings.compilationTarget)
             if (targets.length > 0) {
-              contractName = targets[0] as string
+              contractName = targets[0]
             }
           }
 
@@ -187,26 +237,27 @@ export class ABIService {
           }
         }
       }
-    } catch (error) {
+    } catch {
       // Try partial match
     }
 
     // Try partial match
     try {
       const url = `https://repo.sourcify.dev/contracts/partial_match/${chainId}/${address}/metadata.json`
-      const response = await fetch(url)
+      const response = await fetchWithTimeout(url)
 
       if (response.ok) {
-        const metadata = (await response.json()) as any
+        const metadata = (await response.json()) as {
+          output?: { abi?: ABI }
+          settings?: { compilationTarget?: Record<string, string> }
+        }
         if (metadata.output?.abi) {
           // Extract contract name from settings.compilationTarget
           let contractName: string | undefined
           if (metadata.settings?.compilationTarget) {
-            const targets = Object.values(
-              metadata.settings.compilationTarget as Record<string, any>
-            )
+            const targets = Object.values(metadata.settings.compilationTarget)
             if (targets.length > 0) {
-              contractName = targets[0] as string
+              contractName = targets[0]
             }
           }
 
@@ -216,7 +267,7 @@ export class ABIService {
           }
         }
       }
-    } catch (error) {
+    } catch {
       // Failed
     }
 

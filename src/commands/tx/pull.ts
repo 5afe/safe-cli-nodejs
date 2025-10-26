@@ -10,6 +10,26 @@ import type { TransactionMetadata } from '../../types/transaction.js'
 import { renderScreen } from '../../ui/render.js'
 import { TransactionPullSuccessScreen, type TransactionPullResult } from '../../ui/screens/index.js'
 
+interface APITransaction {
+  safeTxHash: string
+  to: string
+  value: string
+  data: string
+  operation: 0 | 1
+  safeTxGas?: string
+  baseGas?: string
+  gasPrice?: string
+  gasToken?: string
+  refundReceiver?: string
+  nonce: number
+  proposer?: string
+  confirmations?: Array<{
+    owner: string
+    signature: string
+    submissionDate: string
+  }>
+}
+
 export async function pullTransactions(account?: string) {
   p.intro('Pull Transactions from Safe API')
 
@@ -116,7 +136,8 @@ export async function pullTransactions(account?: string) {
       let skipped = 0
       const results: TransactionPullResult[] = []
 
-      for (const remoteTx of remoteTxs) {
+      for (const remoteTxRaw of remoteTxs) {
+        const remoteTx = remoteTxRaw as unknown as APITransaction
         const safeTxHash = remoteTx.safeTxHash
         const localTx = transactionStore.getTransaction(safeTxHash)
 
@@ -151,7 +172,7 @@ export async function pullTransactions(account?: string) {
             transactionStore.addSignature(safeTxHash, {
               signer: confirmation.owner as Address,
               signature: confirmation.signature,
-              signedAt: new Date(confirmation.submissionDate),
+              signedAt: new Date(confirmation.submissionDate).toISOString(),
             })
           }
 
@@ -167,16 +188,20 @@ export async function pullTransactions(account?: string) {
             (localTx.signatures || []).map((sig) => sig.signer.toLowerCase())
           )
 
-          const newSignatures = (remoteTx.confirmations || []).filter(
-            (conf: any) => !localSigners.has(conf.owner.toLowerCase())
-          )
+          const newSignatures = (
+            remoteTx.confirmations as Array<{
+              owner: string
+              signature: string
+              submissionDate: string
+            }> || []
+          ).filter((conf) => !localSigners.has(conf.owner.toLowerCase()))
 
           if (newSignatures.length > 0) {
             for (const confirmation of newSignatures) {
               transactionStore.addSignature(safeTxHash, {
                 signer: confirmation.owner as Address,
                 signature: confirmation.signature,
-                signedAt: new Date(confirmation.submissionDate),
+                signedAt: new Date(confirmation.submissionDate).toISOString(),
               })
             }
 

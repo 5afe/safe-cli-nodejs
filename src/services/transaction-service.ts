@@ -7,7 +7,7 @@ import { SafeCLIError } from '../utils/errors.js'
 import { normalizePrivateKey } from '../utils/validation.js'
 
 // ESM/CommonJS interop: Access the Safe class from the default export
-const Safe = (SafeSDK as any).default
+const Safe = (SafeSDK as unknown as { default: typeof SafeSDK }).default
 
 export interface SafeTransactionData {
   to: Address
@@ -172,7 +172,7 @@ export class TransactionService {
         safeTransaction.addSignature({
           signer: sig.signer,
           data: sig.signature,
-        } as any)
+        } as unknown as Parameters<typeof safeTransaction.addSignature>[0])
       }
 
       // Execute the transaction
@@ -180,7 +180,7 @@ export class TransactionService {
 
       const client = createPublicClient({
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,

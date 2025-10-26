@@ -22,7 +22,7 @@ export class TransactionBuilder {
    * Build transaction data for a function call
    */
   async buildFunctionCall(func: ABIFunction): Promise<TransactionBuilderResult> {
-    const args: any[] = []
+    const args: unknown[] = []
 
     // Get value if function is payable
     let value = '0'
@@ -81,7 +81,7 @@ export class TransactionBuilder {
   /**
    * Prompt for a single parameter value
    */
-  private async promptForParameter(name: string, type: string): Promise<any> {
+  private async promptForParameter(name: string, type: string): Promise<unknown> {
     const value = await p.text({
       message: `${name} (${type}):`,
       placeholder: this.getPlaceholder(type),
@@ -126,7 +126,7 @@ export class TransactionBuilder {
   /**
    * Parse parameter value based on type
    */
-  private parseParameter(value: string, type: string): any {
+  private parseParameter(value: string, type: string): unknown {
     // Address
     if (type === 'address') {
       if (!/^0x[a-fA-F0-9]{40}$/.test(value)) {

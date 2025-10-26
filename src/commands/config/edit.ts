@@ -7,6 +7,7 @@ import { getConfigStore } from '../../storage/config-store.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { renderScreen } from '../../ui/render.js'
 import { ChainEditSuccessScreen } from '../../ui/screens/index.js'
+import type { ChainConfig } from '../../types/config.js'
 
 export async function editChains() {
   p.intro('Edit Chain Configurations')
@@ -66,10 +67,10 @@ export async function editChains() {
     unlinkSync(tempFile) // Clean up temp file
 
     // Parse and validate
-    let parsedConfig: any
+    let parsedConfig: { chains?: Record<string, unknown> }
     try {
       parsedConfig = JSON.parse(editedContent)
-    } catch (error) {
+    } catch {
       throw new SafeCLIError('Invalid JSON format. Changes not saved.')
     }
 
@@ -81,7 +82,7 @@ export async function editChains() {
 
     // Validate each chain
     for (const [chainId, chain] of Object.entries(newChains)) {
-      const c = chain as any
+      const c = chain as ChainConfig
 
       if (!c.chainId || !c.name || !c.shortName || !c.rpcUrl || !c.currency) {
         throw new SafeCLIError(
@@ -135,9 +136,9 @@ export async function editChains() {
       (id) => oldChainIds.has(id) && JSON.stringify(chains[id]) !== JSON.stringify(newChains[id])
     )
 
-    const addedNames = added.map((id) => newChains[id].name)
+    const addedNames = added.map((id) => (newChains[id] as ChainConfig).name)
     const removedNames = removed.map((id) => chains[id].name)
-    const modifiedNames = modified.map((id) => newChains[id].name)
+    const modifiedNames = modified.map((id) => (newChains[id] as ChainConfig).name)
 
     const confirm = await p.confirm({
       message: 'Apply these changes?',
@@ -160,7 +161,7 @@ export async function editChains() {
 
     // Add/update chains
     for (const [chainId, chain] of Object.entries(newChains)) {
-      const c = chain as any
+      const c = chain as ChainConfig
       configStore.setChain(chainId, {
         chainId: c.chainId,
         name: c.name,

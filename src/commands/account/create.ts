@@ -4,7 +4,7 @@ import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { SafeService } from '../../services/safe-service.js'
-import { isValidAddress } from '../../utils/validation.js'
+import { getValidationService } from '../../services/validation-service.js'
 import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { logError } from '../../ui/messages.js'
@@ -67,6 +67,8 @@ export async function createSafe() {
 
   // Add more owners
   let addingOwners = true
+  const validator = getValidationService()
+
   while (addingOwners) {
     const addMore = await p.confirm({
       message: `Add ${owners.length > 0 ? 'another' : 'an'} owner?`,
@@ -87,9 +89,9 @@ export async function createSafe() {
       message: 'Owner address:',
       placeholder: '0x...',
       validate: (value) => {
-        if (!value) return 'Address is required'
-        if (!isValidAddress(value)) return 'Invalid Ethereum address'
-        const checksummed = checksumAddress(value)
+        const addressError = validator.validateAddress(value)
+        if (addressError) return addressError
+        const checksummed = checksumAddress(value as string)
         if (owners.includes(checksummed as Address)) return 'Owner already added'
         return undefined
       },
@@ -114,14 +116,7 @@ export async function createSafe() {
   const threshold = await p.text({
     message: `Signature threshold (1-${owners.length}):`,
     placeholder: Math.min(2, owners.length).toString(),
-    validate: (value) => {
-      if (!value) return 'Threshold is required'
-      const num = parseInt(value, 10)
-      if (isNaN(num)) return 'Must be a number'
-      if (num < 1) return 'Threshold must be at least 1'
-      if (num > owners.length) return `Threshold cannot exceed ${owners.length} owners`
-      return undefined
-    },
+    validate: (value) => validator.validateThreshold(value, 1, owners.length),
   })
 
   if (p.isCancel(threshold)) {
@@ -135,7 +130,7 @@ export async function createSafe() {
   const name = await p.text({
     message: 'Give this Safe a name:',
     placeholder: 'my-safe',
-    validate: (value) => (!value ? 'Name is required' : undefined),
+    validate: (value) => validator.validateRequired(value, 'Name'),
   })
 
   if (p.isCancel(name)) {

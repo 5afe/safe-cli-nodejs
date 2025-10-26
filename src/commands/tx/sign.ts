@@ -166,7 +166,7 @@ export async function signTransaction(safeTxHash?: string) {
     let privateKey: string
     try {
       privateKey = walletStorage.getPrivateKey(activeWallet.id, password)
-    } catch (error) {
+    } catch {
       spinner2.stop('Failed')
       p.log.error('Invalid password')
       p.outro('Failed')
@@ -182,7 +182,7 @@ export async function signTransaction(safeTxHash?: string) {
     transactionStore.addSignature(selectedSafeTxHash, {
       signer: activeWallet.address as Address,
       signature,
-      signedAt: new Date(),
+      signedAt: new Date().toISOString(),
     })
 
     // Update status to signed if not already

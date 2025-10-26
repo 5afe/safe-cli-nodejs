@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { getConfigStore } from '../../storage/config-store.js'
 import type { ChainConfig } from '../../types/config.js'
-import { isValidChainId, isValidUrl } from '../../utils/validation.js'
+import { getValidationService } from '../../services/validation-service.js'
 import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
 import {
@@ -14,14 +14,15 @@ export async function addChain() {
   p.intro('Add Chain')
 
   const configStore = getConfigStore()
+  const validator = getValidationService()
 
   const chainId = await p.text({
     message: 'Chain ID:',
     placeholder: '1',
     validate: (value) => {
-      if (!value) return 'Chain ID is required'
-      if (!isValidChainId(value)) return 'Invalid chain ID'
-      if (configStore.chainExists(value)) return `Chain ${value} already exists`
+      const error = validator.validateChainId(value)
+      if (error) return error
+      if (configStore.chainExists(value as string)) return `Chain ${value} already exists`
       return undefined
     },
   })
@@ -34,7 +35,7 @@ export async function addChain() {
   const name = await p.text({
     message: 'Chain name:',
     placeholder: 'Ethereum Mainnet',
-    validate: (value) => (!value ? 'Chain name is required' : undefined),
+    validate: (value) => validator.validateRequired(value, 'Chain name'),
   })
 
   if (p.isCancel(name)) {
@@ -45,12 +46,7 @@ export async function addChain() {
   const shortName = await p.text({
     message: 'Short name (EIP-3770):',
     placeholder: 'eth',
-    validate: (value) => {
-      if (!value) return 'Short name is required'
-      if (!/^[a-z0-9-]+$/.test(value))
-        return 'Short name must be lowercase alphanumeric with hyphens'
-      return undefined
-    },
+    validate: (value) => validator.validateShortName(value),
   })
 
   if (p.isCancel(shortName)) {
@@ -61,11 +57,7 @@ export async function addChain() {
   const rpcUrl = await p.text({
     message: 'RPC URL:',
     placeholder: 'https://eth.llamarpc.com',
-    validate: (value) => {
-      if (!value) return 'RPC URL is required'
-      if (!isValidUrl(value)) return 'Invalid URL'
-      return undefined
-    },
+    validate: (value) => validator.validateUrl(value, true),
   })
 
   if (p.isCancel(rpcUrl)) {
@@ -86,7 +78,7 @@ export async function addChain() {
   const currency = await p.text({
     message: 'Native currency symbol:',
     placeholder: 'ETH',
-    validate: (value) => (!value ? 'Currency symbol is required' : undefined),
+    validate: (value) => validator.validateRequired(value, 'Currency symbol'),
   })
 
   if (p.isCancel(currency)) {
@@ -97,10 +89,7 @@ export async function addChain() {
   const transactionServiceUrl = await p.text({
     message: 'Safe Transaction Service URL (optional):',
     placeholder: 'https://safe-transaction-mainnet.safe.global',
-    validate: (value) => {
-      if (value && !isValidUrl(value)) return 'Invalid URL'
-      return undefined
-    },
+    validate: (value) => validator.validateUrl(value, false),
   })
 
   if (p.isCancel(transactionServiceUrl)) {

@@ -1,16 +1,16 @@
 import * as p from '@clack/prompts'
-import { isAddress, type Address } from 'viem'
+import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { ContractService } from '../../services/contract-service.js'
-import { ABIService } from '../../services/abi-service.js'
+import { ABIService, type ABI, type ABIFunction } from '../../services/abi-service.js'
 import { TransactionBuilder } from '../../services/transaction-builder.js'
+import { getValidationService } from '../../services/validation-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
-import { validateAndChecksumAddress } from '../../utils/validation.js'
 import { renderScreen } from '../../ui/render.js'
 import { TransactionCreateSuccessScreen } from '../../ui/screens/index.js'
 
@@ -22,6 +22,7 @@ export async function createTransaction() {
     const configStore = getConfigStore()
     const walletStorage = getWalletStorage()
     const transactionStore = getTransactionStore()
+    const validator = getValidationService()
 
     const activeWallet = walletStorage.getActiveWallet()
     if (!activeWallet) {
@@ -105,11 +106,7 @@ export async function createTransaction() {
     const toInput = await p.text({
       message: 'To address',
       placeholder: '0x...',
-      validate: (value) => {
-        if (!value) return 'Address is required'
-        if (!isAddress(value)) return 'Invalid Ethereum address'
-        return undefined
-      },
+      validate: (value) => validator.validateAddress(value),
     })
 
     if (p.isCancel(toInput)) {
@@ -117,15 +114,8 @@ export async function createTransaction() {
       return
     }
 
-    // Checksum the address immediately
-    let to: Address
-    try {
-      to = validateAndChecksumAddress(toInput as string)
-    } catch (error) {
-      p.log.error(error instanceof Error ? error.message : 'Invalid address')
-      p.outro('Failed')
-      return
-    }
+    // Checksum the address
+    const to = validator.assertAddress(toInput as string, 'To address')
 
     // Check if address is a contract
     const contractService = new ContractService(chain)
@@ -139,7 +129,7 @@ export async function createTransaction() {
     try {
       isContract = await contractService.isContract(to)
       spinner2.stop(isContract ? 'Contract detected' : 'EOA (regular address)')
-    } catch (error) {
+    } catch {
       spinner2.stop('Failed to check contract')
       p.log.warning('Could not determine if address is a contract, falling back to manual input')
     }
@@ -159,7 +149,7 @@ export async function createTransaction() {
       }
 
       const abiService = new ABIService(chain, etherscanApiKey)
-      let abi: any = null
+      let abi: ABI | null = null
       let contractName: string | undefined
 
       try {
@@ -203,17 +193,15 @@ export async function createTransaction() {
             // Filter out duplicates by function signature
             const combinedAbi = [...implAbi]
             const existingSignatures = new Set(
-              implAbi
-                .filter((item: any) => item.type === 'function')
-                .map(
-                  (item: any) =>
-                    `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`
-                )
+              (implAbi.filter((item) => item.type === 'function') as ABIFunction[]).map(
+                (item) => `${item.name}(${item.inputs?.map((i) => i.type).join(',') || ''})`
+              )
             )
 
             for (const item of abi) {
               if (item.type === 'function') {
-                const sig = `${item.name}(${item.inputs?.map((i: any) => i.type).join(',') || ''})`
+                const funcItem = item as ABIFunction
+                const sig = `${funcItem.name}(${funcItem.inputs?.map((i) => i.type).join(',') || ''})`
                 if (!existingSignatures.has(sig)) {
                   combinedAbi.push(item)
                 }
@@ -225,14 +213,14 @@ export async function createTransaction() {
 
             abi = combinedAbi
             console.log(`  Combined: ${abi.length} items total`)
-          } catch (error) {
+          } catch {
             console.log('⚠ Could not fetch implementation ABI, using proxy ABI only')
             console.log(`  Found ${abi.length} items in proxy ABI`)
           }
         } else {
           console.log(`  Found ${abi.length} items in ABI`)
         }
-      } catch (error) {
+      } catch {
         console.log('⚠ Could not fetch ABI')
         console.log('  Contract may not be verified. Falling back to manual input.')
       }
@@ -261,7 +249,7 @@ export async function createTransaction() {
             const selectedFuncSig = await p.select({
               message: 'Select function to call:',
               options: functions.map((func) => {
-                const signature = `${func.name}(${func.inputs?.map((i: any) => i.type).join(',') || ''})`
+                const signature = `${func.name}(${func.inputs?.map((i) => i.type).join(',') || ''})`
                 return {
                   value: signature,
                   label: abiService.formatFunctionSignature(func),
@@ -277,7 +265,7 @@ export async function createTransaction() {
             }
 
             const func = functions.find((f) => {
-              const sig = `${f.name}(${f.inputs?.map((i: any) => i.type).join(',') || ''})`
+              const sig = `${f.name}(${f.inputs?.map((i) => i.type).join(',') || ''})`
               return sig === selectedFuncSig
             })
             if (!func) {
@@ -307,15 +295,7 @@ export async function createTransaction() {
         message: 'Value in wei (0 for token transfer)',
         placeholder: '0',
         initialValue: '0',
-        validate: (val) => {
-          if (!val) return 'Value is required'
-          try {
-            BigInt(val)
-            return undefined
-          } catch {
-            return 'Invalid number'
-          }
-        },
+        validate: (val) => validator.validateWeiValue(val),
       })) as string
 
       if (p.isCancel(value)) {
@@ -327,14 +307,7 @@ export async function createTransaction() {
         message: 'Transaction data (hex)',
         placeholder: '0x',
         initialValue: '0x',
-        validate: (val) => {
-          if (!val) return 'Data is required (use 0x for empty)'
-          if (!val.startsWith('0x')) return 'Data must start with 0x'
-          if (val.length > 2 && !/^0x[0-9a-fA-F]*$/.test(val)) {
-            return 'Data must be valid hex'
-          }
-          return undefined
-        },
+        validate: (val) => validator.validateHexData(val),
       })) as `0x${string}`
 
       if (p.isCancel(data)) {
@@ -374,14 +347,7 @@ export async function createTransaction() {
     const nonceInput = (await p.text({
       message: 'Transaction nonce (leave empty for default)',
       placeholder: `${currentNonce} (recommended: current nonce)`,
-      validate: (value) => {
-        if (!value) return undefined // Empty is OK (will use default)
-        const num = parseInt(value, 10)
-        if (isNaN(num) || num < 0) return 'Nonce must be a non-negative number'
-        if (num < currentNonce)
-          return `Nonce cannot be lower than current Safe nonce (${currentNonce})`
-        return undefined
-      },
+      validate: (value) => validator.validateNonce(value, currentNonce),
     })) as string
 
     if (p.isCancel(nonceInput)) {

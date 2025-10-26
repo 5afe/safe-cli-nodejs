@@ -10,7 +10,7 @@ import { SafeCLIError } from '../utils/errors.js'
 import { normalizePrivateKey } from '../utils/validation.js'
 
 // ESM/CommonJS interop: Access the Safe class from the default export
-const Safe = (SafeSDK as any).default
+const Safe = (SafeSDK as unknown as { default: typeof SafeSDK }).default
 
 export interface SafeCreationConfig {
   owners: Address[]
@@ -112,7 +112,7 @@ export class SafeService {
       const client = createWalletClient({
         account,
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,
@@ -136,7 +136,7 @@ export class SafeService {
       // Wait for confirmation
       const publicClient = createPublicClient({
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,
@@ -168,7 +168,7 @@ export class SafeService {
       // Check if Safe is deployed
       const publicClient = createPublicClient({
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,
