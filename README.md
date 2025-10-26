@@ -389,4 +389,4 @@ MIT
 
 ---
 
-Made with ❤️ by the Safe community
+Made with ❤️ for the Safe community
