@@ -4,8 +4,6 @@
 
 Built on top of the [Safe Core SDK](https://github.com/safe-global/safe-core-sdk), Safe CLI makes it easy to create, manage, and interact with Safe multi-signature wallets directly from your terminal.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/5afe/safe-cli-nodejs?view=terminal&hideNavigation=1&hideDevTools=1&terminalHeight=100)
-
 ---
 
 ## Why Safe CLI?
@@ -294,8 +292,8 @@ These are optional but recommended for enhanced functionality:
 
 ```bash
 # Clone the repository
-git clone https://github.com/safe-global/safe-cli.git
-cd safe-cli
+git clone https://github.com/5afe/safe-cli-nodejs.git
+cd safe-cli-nodejs
 
 # Install dependencies
 npm install
