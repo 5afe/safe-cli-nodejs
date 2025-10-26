@@ -121,7 +121,7 @@ export async function pushTransaction(safeTxHash?: string) {
         spinner.stop('Transaction already exists on service')
 
         // Add new signatures
-        const remoteSignatures = existingTx.confirmations as Array<{ owner: string }> || []
+        const remoteSignatures = (existingTx.confirmations as Array<{ owner: string }>) || []
         const remoteSigners = new Set(remoteSignatures.map((conf) => conf.owner.toLowerCase()))
 
         const newSignatures = (transaction.signatures || []).filter(
