@@ -65,7 +65,7 @@ export function WelcomeScreen({ onExit }: WelcomeScreenProps): React.ReactElemen
       {/* Footer */}
       <Box>
         <Text color={theme.colors.dim}>
-          For more information, visit: https://github.com/safe-global/safe-cli
+          For more information, visit: https://github.com/5afe/safe-cli-nodejs
         </Text>
       </Box>
     </Box>
