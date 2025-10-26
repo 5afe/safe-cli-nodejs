@@ -42,8 +42,10 @@ jobs:
       - name: Run E2E Tests
         env:
           TEST_WALLET_PK: ${{ secrets.TEST_WALLET_PK }}
-        run: npm test -- e2e-flow.test.ts --run
-        timeout-minutes: 10
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          TX_SERVICE_API_KEY: ${{ secrets.TX_SERVICE_API_KEY }}
+        run: npm test -- e2e-*.test.ts --run
+        timeout-minutes: 15
 
       - name: Upload test artifacts on failure
         if: failure()

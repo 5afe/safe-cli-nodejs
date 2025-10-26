@@ -2,9 +2,10 @@
 
 This comprehensive end-to-end test validates the complete Safe CLI workflow on Sepolia testnet.
 
-## Test Flow
+## Test Suites
 
-The test performs the following steps:
+### 1. Full Workflow Test (`e2e-flow.test.ts`)
+Complete end-to-end workflow covering all CLI operations:
 
 1. **Initialize Config** - Set up Sepolia chain configuration
 2. **Import Wallet** - Import the test wallet with private key
@@ -16,27 +17,71 @@ The test performs the following steps:
 8. **Import Transaction** - Clear and re-import the transaction from the JSON file
 9. **Execute Transaction** - Execute the signed transaction on-chain
 
+### 2. Transaction Builder Test (`e2e-transaction-builder.test.ts`)
+Tests ABI fetching and contract interaction:
+
+1. **Setup** - Configure chain and wallet
+2. **Deploy Safe** - Create and deploy a Safe
+3. **Fetch ABI** - Retrieve contract ABI from Etherscan
+4. **Parse ABI** - Find and validate contract functions
+5. **Build Transaction** - Create ERC20 approval transaction for DAI
+6. **Create Safe Transaction** - Package as Safe transaction
+7. **Sign Transaction** - Sign the approval transaction
+
+### 3. Transaction Service Test (`e2e-transaction-service.test.ts`)
+Tests Safe Transaction Service push/pull/sync:
+
+1. **Setup** - Configure chain and wallet
+2. **Deploy Safe** - Create and deploy a Safe
+3. **Create Transaction** - Build a test transaction
+4. **Sign Transaction** - Sign locally
+5. **Push to Service** - Upload to Safe Transaction Service
+6. **Clear Local** - Remove from local storage
+7. **Pull from Service** - Retrieve from Safe Transaction Service
+8. **Verify Sync** - Confirm transaction restored correctly
+
 ## Prerequisites
 
+### Required for All Tests
 - **Sepolia ETH**: The test wallet must be funded with Sepolia ETH
 - **Test Wallet**:
   - Expected Address: `0x2d5961897847A30559a26Db99789BEEc7AeEd75e` (derived from private key)
   - Private Key: **MUST** be provided via `TEST_WALLET_PK` environment variable
-  - ⚠️ The test will be **skipped** if `TEST_WALLET_PK` is not set
+  - ⚠️ Tests will be **skipped** if `TEST_WALLET_PK` is not set
+
+### Additional Requirements by Test Suite
+- **Transaction Builder Test** (`e2e-transaction-builder.test.ts`):
+  - `ETHERSCAN_API_KEY` - Required for fetching contract ABIs
+  - Get free key from https://etherscan.io/myapikey
+
+- **Transaction Service Test** (`e2e-transaction-service.test.ts`):
+  - `TX_SERVICE_API_KEY` - Required for Safe Transaction Service API
+  - Get key from https://dashboard.safe.global/
 
 ## Running the Test
 
 ### Local Development
 
 ```bash
-# Set the private key environment variable (use the actual funded wallet)
-export TEST_WALLET_PK="0x..."
+# Set required environment variables
+export TEST_WALLET_PK="0x..."  # Required for all tests
 
-# Run the e2e test
-npm test -- e2e-flow.test.ts
+# Optional: For transaction builder test
+export ETHERSCAN_API_KEY="ABC123..."
+
+# Optional: For transaction service test
+export TX_SERVICE_API_KEY="sk_..."
+
+# Run all E2E tests
+npm test -- e2e-*.test.ts
+
+# Or run individual test suites
+npm test -- e2e-flow.test.ts              # Full workflow
+npm test -- e2e-transaction-builder.test.ts  # ABI/contract interaction
+npm test -- e2e-transaction-service.test.ts  # Push/pull/sync
 ```
 
-**Note:** The test will be automatically skipped if `TEST_WALLET_PK` is not set.
+**Note:** Tests will be automatically skipped if required environment variables are not set.
 
 ### CI/CD (GitHub Actions)
 
@@ -45,7 +90,10 @@ A dedicated workflow is configured at `.github/workflows/e2e.yml`.
 **Setup Instructions:** See [`.github/workflows/E2E_SETUP.md`](../../../.github/workflows/E2E_SETUP.md)
 
 **Quick Setup:**
-1. Add `TEST_WALLET_PK` secret in GitHub repository settings
+1. Add secrets in GitHub repository settings:
+   - `TEST_WALLET_PK` (required for all tests)
+   - `ETHERSCAN_API_KEY` (for transaction builder test)
+   - `TX_SERVICE_API_KEY` (for transaction service test)
 2. Fund the test wallet with Sepolia ETH
 3. Manually trigger via Actions tab or enable scheduled runs
 
