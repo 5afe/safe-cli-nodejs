@@ -9,8 +9,9 @@ export default defineConfig({
       'node_modules/',
       'dist/',
       '**/*.d.ts',
-      // Exclude E2E tests from default test runs
-      // E2E tests should be run separately with explicit file path
+      // Exclude integration tests from default test runs (require blockchain/API access)
+      // Integration tests should be run separately with explicit file path
+      '**/integration-*.test.ts',
       '**/e2e-*.test.ts',
     ],
     // Disable parallel test execution for integration tests

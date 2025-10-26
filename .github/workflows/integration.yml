@@ -1,4 +1,4 @@
-name: E2E Tests
+name: Integration Tests
 
 on:
   # Allow manual trigger
@@ -13,12 +13,12 @@ on:
   #   branches: [main]
 
 jobs:
-  e2e-sepolia:
-    name: E2E Tests on Sepolia
+  integration-sepolia:
+    name: Integration Tests on Sepolia
     runs-on: ubuntu-latest
 
     # Only run if the secret is available
-    if: ${{ vars.E2E_TESTS_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ vars.INTEGRATION_TESTS_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout code
@@ -39,20 +39,25 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run E2E Tests
+      - name: Run Integration Tests
         env:
           TEST_WALLET_PK: ${{ secrets.TEST_WALLET_PK }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           TX_SERVICE_API_KEY: ${{ secrets.TX_SERVICE_API_KEY }}
-        run: npm test -- e2e-*.test.ts --run
+        run: npm test -- integration-*.test.ts --run
         timeout-minutes: 15
+
+      - name: Run E2E CLI Tests
+        run: npm test -- e2e-cli.test.ts --run
+        timeout-minutes: 5
 
       - name: Upload test artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-artifacts
+          name: integration-test-artifacts
           path: |
+            **/integration-*.log
             **/e2e-*.log
             **/exported-*.json
           retention-days: 7
