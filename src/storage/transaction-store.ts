@@ -17,7 +17,7 @@ export class TransactionStore {
 
   constructor() {
     this.store = new Conf<TransactionStoreSchema>({
-      projectName: 'safe-cli-nodejs',
+      projectName: 'safe-cli',
       configName: 'transactions',
       defaults: {
         transactions: {},
@@ -40,7 +40,7 @@ export class TransactionStore {
       metadata,
       signatures: [],
       createdBy,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     }
 
     const transactions = this.store.get('transactions')
@@ -120,7 +120,7 @@ export class TransactionStore {
 
     transaction.status = status
     if (status === 'executed') {
-      transaction.executedAt = new Date()
+      transaction.executedAt = new Date().toISOString()
       if (txHash) {
         transaction.txHash = txHash
       }

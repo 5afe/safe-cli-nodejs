@@ -1,5 +1,5 @@
 import * as p from '@clack/prompts'
-import { isAddress, type Address } from 'viem'
+import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
@@ -8,9 +8,9 @@ import { TransactionService } from '../../services/transaction-service.js'
 import { ContractService } from '../../services/contract-service.js'
 import { ABIService } from '../../services/abi-service.js'
 import { TransactionBuilder } from '../../services/transaction-builder.js'
+import { getValidationService } from '../../services/validation-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
-import { validateAndChecksumAddress } from '../../utils/validation.js'
 import { renderScreen } from '../../ui/render.js'
 import { TransactionCreateSuccessScreen } from '../../ui/screens/index.js'
 
@@ -22,6 +22,7 @@ export async function createTransaction() {
     const configStore = getConfigStore()
     const walletStorage = getWalletStorage()
     const transactionStore = getTransactionStore()
+    const validator = getValidationService()
 
     const activeWallet = walletStorage.getActiveWallet()
     if (!activeWallet) {
@@ -105,11 +106,7 @@ export async function createTransaction() {
     const toInput = await p.text({
       message: 'To address',
       placeholder: '0x...',
-      validate: (value) => {
-        if (!value) return 'Address is required'
-        if (!isAddress(value)) return 'Invalid Ethereum address'
-        return undefined
-      },
+      validate: (value) => validator.validateAddress(value),
     })
 
     if (p.isCancel(toInput)) {
@@ -117,15 +114,8 @@ export async function createTransaction() {
       return
     }
 
-    // Checksum the address immediately
-    let to: Address
-    try {
-      to = validateAndChecksumAddress(toInput as string)
-    } catch (error) {
-      p.log.error(error instanceof Error ? error.message : 'Invalid address')
-      p.outro('Failed')
-      return
-    }
+    // Checksum the address
+    const to = validator.assertAddress(toInput as string, 'To address')
 
     // Check if address is a contract
     const contractService = new ContractService(chain)
@@ -307,15 +297,7 @@ export async function createTransaction() {
         message: 'Value in wei (0 for token transfer)',
         placeholder: '0',
         initialValue: '0',
-        validate: (val) => {
-          if (!val) return 'Value is required'
-          try {
-            BigInt(val)
-            return undefined
-          } catch {
-            return 'Invalid number'
-          }
-        },
+        validate: (val) => validator.validateWeiValue(val),
       })) as string
 
       if (p.isCancel(value)) {
@@ -327,14 +309,7 @@ export async function createTransaction() {
         message: 'Transaction data (hex)',
         placeholder: '0x',
         initialValue: '0x',
-        validate: (val) => {
-          if (!val) return 'Data is required (use 0x for empty)'
-          if (!val.startsWith('0x')) return 'Data must start with 0x'
-          if (val.length > 2 && !/^0x[0-9a-fA-F]*$/.test(val)) {
-            return 'Data must be valid hex'
-          }
-          return undefined
-        },
+        validate: (val) => validator.validateHexData(val),
       })) as `0x${string}`
 
       if (p.isCancel(data)) {
@@ -374,14 +349,7 @@ export async function createTransaction() {
     const nonceInput = (await p.text({
       message: 'Transaction nonce (leave empty for default)',
       placeholder: `${currentNonce} (recommended: current nonce)`,
-      validate: (value) => {
-        if (!value) return undefined // Empty is OK (will use default)
-        const num = parseInt(value, 10)
-        if (isNaN(num) || num < 0) return 'Nonce must be a non-negative number'
-        if (num < currentNonce)
-          return `Nonce cannot be lower than current Safe nonce (${currentNonce})`
-        return undefined
-      },
+      validate: (value) => validator.validateNonce(value, currentNonce),
     })) as string
 
     if (p.isCancel(nonceInput)) {

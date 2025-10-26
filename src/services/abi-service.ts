@@ -2,6 +2,33 @@ import type { Address } from 'viem'
 import type { ChainConfig } from '../types/config.js'
 import { SafeCLIError } from '../utils/errors.js'
 
+/**
+ * Fetch with timeout support
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 10000
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return response
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw new SafeCLIError(`Request timeout after ${timeoutMs}ms`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 export interface ABIFunction {
   type: 'function'
   name: string
@@ -132,7 +159,7 @@ export class ABIService {
       requestUrl += `&apikey=${this.etherscanApiKey}`
     }
 
-    const response = await fetch(requestUrl)
+    const response = await fetchWithTimeout(requestUrl)
     const data = (await response.json()) as any
 
     if (data.status === '1' && data.result && data.result[0]) {
@@ -165,7 +192,7 @@ export class ABIService {
     // Try full match first
     try {
       const url = `https://repo.sourcify.dev/contracts/full_match/${chainId}/${address}/metadata.json`
-      const response = await fetch(url)
+      const response = await fetchWithTimeout(url)
 
       if (response.ok) {
         const metadata = (await response.json()) as any
@@ -194,7 +221,7 @@ export class ABIService {
     // Try partial match
     try {
       const url = `https://repo.sourcify.dev/contracts/partial_match/${chainId}/${address}/metadata.json`
-      const response = await fetch(url)
+      const response = await fetchWithTimeout(url)
 
       if (response.ok) {
         const metadata = (await response.json()) as any

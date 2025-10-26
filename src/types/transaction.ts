@@ -23,7 +23,7 @@ export interface TransactionMetadata {
 export interface TransactionSignature {
   signer: Address
   signature: string
-  signedAt: Date
+  signedAt: string // ISO 8601 format
 }
 
 export interface StoredTransaction {
@@ -34,8 +34,8 @@ export interface StoredTransaction {
   metadata: TransactionMetadata
   signatures: TransactionSignature[]
   createdBy: Address
-  createdAt: Date
-  executedAt?: Date
+  createdAt: string // ISO 8601 format
+  executedAt?: string // ISO 8601 format
   txHash?: string // On-chain transaction hash after execution
 }
 

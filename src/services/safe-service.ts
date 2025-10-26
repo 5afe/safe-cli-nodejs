@@ -112,7 +112,7 @@ export class SafeService {
       const client = createWalletClient({
         account,
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,
@@ -136,7 +136,7 @@ export class SafeService {
       // Wait for confirmation
       const publicClient = createPublicClient({
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,
@@ -168,7 +168,7 @@ export class SafeService {
       // Check if Safe is deployed
       const publicClient = createPublicClient({
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,

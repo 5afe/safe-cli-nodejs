@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import { type Address } from 'viem'
 import { getWalletStorage } from '../../storage/wallet-store.js'
-import { isValidPrivateKey } from '../../utils/validation.js'
+import { getValidationService } from '../../services/validation-service.js'
 import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
 import { WalletImportSuccessScreen } from '../../ui/screens/index.js'
@@ -10,15 +10,12 @@ export async function importWallet() {
   p.intro('Import Wallet')
 
   const walletStorage = getWalletStorage()
+  const validator = getValidationService()
 
   // Get password for encryption
   const password = await p.password({
     message: 'Create a password to encrypt your wallet:',
-    validate: (value) => {
-      if (!value) return 'Password is required'
-      if (value.length < 8) return 'Password must be at least 8 characters'
-      return undefined
-    },
+    validate: (value) => validator.validatePassword(value, 8),
   })
 
   if (p.isCancel(password)) {
@@ -28,10 +25,7 @@ export async function importWallet() {
 
   const confirmPassword = await p.password({
     message: 'Confirm password:',
-    validate: (value) => {
-      if (value !== password) return 'Passwords do not match'
-      return undefined
-    },
+    validate: (value) => validator.validatePasswordConfirmation(value, password as string),
   })
 
   if (p.isCancel(confirmPassword)) {
@@ -44,13 +38,7 @@ export async function importWallet() {
   // Get private key
   const privateKey = await p.password({
     message: 'Enter your private key:',
-    validate: (value) => {
-      if (!value) return 'Private key is required'
-      if (!isValidPrivateKey(value)) {
-        return 'Invalid private key format. Must be a 64-character hex string (with or without 0x prefix)'
-      }
-      return undefined
-    },
+    validate: (value) => validator.validatePrivateKey(value),
   })
 
   if (p.isCancel(privateKey)) {
@@ -62,7 +50,7 @@ export async function importWallet() {
   const name = await p.text({
     message: 'Give this wallet a name:',
     placeholder: 'my-wallet',
-    validate: (value) => (!value ? 'Wallet name is required' : undefined),
+    validate: (value) => validator.validateRequired(value, 'Wallet name'),
   })
 
   if (p.isCancel(name)) {

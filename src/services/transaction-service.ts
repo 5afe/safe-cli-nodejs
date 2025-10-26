@@ -180,7 +180,7 @@ export class TransactionService {
 
       const client = createPublicClient({
         chain: {
-          id: parseInt(this.chain.chainId),
+          id: parseInt(this.chain.chainId, 10),
           name: this.chain.name,
           nativeCurrency: {
             name: this.chain.currency,

@@ -148,7 +148,7 @@ export async function syncTransactions(account?: string) {
             transactionStore.addSignature(safeTxHash, {
               signer: confirmation.owner as Address,
               signature: confirmation.signature,
-              signedAt: new Date(confirmation.submissionDate),
+              signedAt: new Date(confirmation.submissionDate).toISOString(),
             })
           }
 
@@ -166,7 +166,7 @@ export async function syncTransactions(account?: string) {
               transactionStore.addSignature(safeTxHash, {
                 signer: confirmation.owner as Address,
                 signature: confirmation.signature,
-                signedAt: new Date(confirmation.submissionDate),
+                signedAt: new Date(confirmation.submissionDate).toISOString(),
               })
             }
 
