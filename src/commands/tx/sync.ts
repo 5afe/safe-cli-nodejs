@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import type { Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
@@ -13,7 +12,7 @@ import { renderScreen } from '../../ui/render.js'
 import { TransactionSyncSuccessScreen } from '../../ui/screens/index.js'
 
 export async function syncTransactions(account?: string) {
-  p.intro(pc.bgCyan(pc.black(' Sync Transactions with Safe API ')))
+  p.intro('Sync Transactions with Safe API')
 
   try {
     const configStore = getConfigStore()

@@ -1,5 +1,4 @@
 import * as p from '@clack/prompts'
-import pc from 'picocolors'
 import { getConfigStore } from '../../storage/config-store.js'
 import type { ChainConfig } from '../../types/config.js'
 import { isValidChainId, isValidUrl } from '../../utils/validation.js'
@@ -12,7 +11,7 @@ import {
 } from '../../ui/screens/index.js'
 
 export async function addChain() {
-  p.intro(pc.bgCyan(pc.black(' Add Chain ')))
+  p.intro('Add Chain')
 
   const configStore = getConfigStore()
 
@@ -138,7 +137,7 @@ export async function addChain() {
 }
 
 export async function listChains() {
-  p.intro(pc.bgCyan(pc.black(' Configured Chains ')))
+  p.intro('Configured Chains')
 
   const configStore = getConfigStore()
   const chains = Object.values(configStore.getAllChains())
@@ -149,7 +148,7 @@ export async function listChains() {
 }
 
 export async function removeChain() {
-  p.intro(pc.bgCyan(pc.black(' Remove Chain ')))
+  p.intro('Remove Chain')
 
   const configStore = getConfigStore()
   const chains = configStore.getAllChains()
