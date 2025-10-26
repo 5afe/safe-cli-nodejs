@@ -1,0 +1,7 @@
+# Run typecheck on all files (required for type safety)
+echo "🔍 Running type check..."
+npm run typecheck
+
+# Run lint-staged for prettier and eslint on staged files
+echo "🎨 Running lint-staged..."
+npx lint-staged
