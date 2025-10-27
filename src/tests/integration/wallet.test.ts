@@ -178,4 +178,112 @@ describe('Wallet Integration Tests', () => {
       newWalletStorage.removeWallet(wallet.id)
     })
   })
+
+  describe('importLedgerWallet', () => {
+    it('should import a Ledger wallet', async () => {
+      const address = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8' // Valid checksum address
+      const derivationPath = "44'/60'/0'/0/0"
+
+      const wallet = await walletStorage.importLedgerWallet('Ledger 1', address, derivationPath)
+
+      expect(wallet).toBeDefined()
+      expect(wallet.type).toBe('ledger')
+      expect(wallet.name).toBe('Ledger 1')
+      expect(wallet.address).toBe('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
+      expect(wallet.derivationPath).toBe(derivationPath)
+      expect(wallet.id).toBeDefined()
+      expect(wallet.createdAt).toBeDefined()
+    })
+
+    it('should checksum the address', async () => {
+      const address = '0x70997970c51812dc3a010c7d01b50e0d17dc79c8' // lowercase
+      const derivationPath = "44'/60'/0'/0/0"
+
+      const wallet = await walletStorage.importLedgerWallet('Ledger 2', address, derivationPath)
+
+      expect(wallet.address).toBe('0x70997970C51812dc3A010C7d01b50e0d17dc79C8') // checksummed
+    })
+
+    it('should throw error for invalid address', async () => {
+      const invalidAddress = 'invalid-address'
+      const derivationPath = "44'/60'/0'/0/0"
+
+      await expect(
+        walletStorage.importLedgerWallet('Ledger 3', invalidAddress, derivationPath)
+      ).rejects.toThrow()
+    })
+
+    it('should prevent importing duplicate Ledger wallet', async () => {
+      const address = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
+      const derivationPath = "44'/60'/0'/0/0"
+
+      await walletStorage.importLedgerWallet('Ledger 1', address, derivationPath)
+
+      await expect(
+        walletStorage.importLedgerWallet('Ledger Duplicate', address, derivationPath)
+      ).rejects.toThrow('already exists')
+    })
+
+    it('should not store private key for Ledger wallet', async () => {
+      const address = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
+      const derivationPath = "44'/60'/0'/0/0"
+
+      const wallet = await walletStorage.importLedgerWallet('Ledger 1', address, derivationPath)
+
+      // Attempt to get private key should throw
+      expect(() => walletStorage.getPrivateKey(wallet.id)).toThrow(
+        'Cannot get private key for Ledger wallet'
+      )
+    })
+
+    it('should set Ledger wallet as active', async () => {
+      const address = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
+      const derivationPath = "44'/60'/0'/0/0"
+
+      const wallet = await walletStorage.importLedgerWallet('Ledger 1', address, derivationPath)
+
+      const activeWallet = walletStorage.getActiveWallet()
+      expect(activeWallet).toBeDefined()
+      expect(activeWallet?.id).toBe(wallet.id)
+    })
+  })
+
+  describe('Mixed wallet types', () => {
+    it('should handle both private-key and Ledger wallets', async () => {
+      const pkWallet = await walletStorage.importWallet('PK Wallet', TEST_PRIVATE_KEY)
+      const ledgerWallet = await walletStorage.importLedgerWallet(
+        'Ledger Wallet',
+        '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+        "44'/60'/0'/0/0"
+      )
+
+      const wallets = walletStorage.getAllWallets()
+
+      expect(wallets).toHaveLength(2)
+
+      const pkFound = wallets.find((w) => w.id === pkWallet.id)
+      const ledgerFound = wallets.find((w) => w.id === ledgerWallet.id)
+
+      expect(pkFound?.type).toBe('private-key')
+      expect(ledgerFound?.type).toBe('ledger')
+    })
+
+    it('should get private key only for private-key wallets', async () => {
+      const pkWallet = await walletStorage.importWallet('PK Wallet', TEST_PRIVATE_KEY)
+      const ledgerWallet = await walletStorage.importLedgerWallet(
+        'Ledger Wallet',
+        '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+        "44'/60'/0'/0/0"
+      )
+
+      // Should work for private-key wallet
+      const privateKey = walletStorage.getPrivateKey(pkWallet.id)
+      expect(privateKey).toBeDefined()
+
+      // Should throw for Ledger wallet
+      expect(() => walletStorage.getPrivateKey(ledgerWallet.id)).toThrow(
+        'Cannot get private key for Ledger wallet'
+      )
+    })
+  })
 })
