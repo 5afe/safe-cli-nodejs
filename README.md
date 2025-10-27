@@ -14,6 +14,7 @@ Safe CLI provides a powerful command-line interface for:
 - **Interacting with smart contracts** through an intuitive transaction builder
 - **Automating Safe operations** in scripts and workflows
 - **Managing multiple Safes across different chains** from one place
+- **Hardware wallet support** - Use Ledger devices for maximum security
 
 Perfect for developers, power users, and teams who prefer working in the terminal.
 
@@ -22,7 +23,7 @@ Perfect for developers, power users, and teams who prefer working in the termina
 ## ✨ Features
 
 ### Core Functionality
-- 🔐 **Secure wallet management** - Encrypted private key storage with AES-256-GCM
+- 🔐 **Secure wallet management** - Encrypted private key storage with AES-256-GCM + Ledger hardware wallet support
 - ⛓️ **Multi-chain support** - Works with Ethereum, Polygon, Arbitrum, Optimism, Base, and more
 - 🎨 **Beautiful interface** - Modern terminal UI with interactive prompts
 - 📦 **Safe lifecycle** - Create, deploy, and manage Safe accounts
@@ -59,9 +60,13 @@ This sets up your chain configurations and optional API keys.
 
 **2. Import a wallet**
 ```bash
+# Option A: Import from private key
 safe wallet import
+
+# Option B: Import Ledger hardware wallet (recommended)
+safe wallet import-ledger
 ```
-Your private key will be encrypted with a password you choose.
+Private keys are encrypted with a password. Ledger wallets use your hardware device for signing.
 
 **3. Create your first Safe**
 ```bash
@@ -91,7 +96,8 @@ Follow the interactive prompts to configure owners and threshold.
 | Command | Description |
 |---------|-------------|
 | `safe wallet import` | Import a wallet with your private key |
-| `safe wallet list` | View all your wallets |
+| `safe wallet import-ledger` | Import a Ledger hardware wallet |
+| `safe wallet list` | View all your wallets (shows wallet types) |
 | `safe wallet use` | Switch to a different wallet |
 | `safe wallet remove` | Delete a wallet |
 
@@ -129,6 +135,146 @@ Follow the interactive prompts to configure owners and threshold.
 | `safe tx push [txHash]` | Upload to Safe Transaction Service |
 | `safe tx pull` | Download pending transactions |
 | `safe tx sync` | Sync local and remote transactions |
+
+---
+
+## 🔐 Hardware Wallet Support
+
+Safe CLI supports **Ledger hardware wallets** for enhanced security. Your private keys never leave the device.
+
+### Prerequisites
+
+1. **Ledger device** (Nano S, Nano S Plus, or Nano X)
+2. **Ethereum app installed** on your Ledger
+3. **Device firmware** up to date
+
+### Importing a Ledger Wallet
+
+```bash
+safe wallet import-ledger
+```
+
+The CLI will guide you through:
+
+1. **Device detection** - Connects to your Ledger automatically
+2. **Derivation path selection** - Choose your address path:
+   - **Ledger Live** (recommended): `m/44'/60'/0'/0/0`
+   - **Legacy MEW**: `m/44'/60'/0'/0` (for MyEtherWallet compatibility)
+   - **Custom path**: Advanced users can specify their own BIP44 path
+3. **Account index** - Select which account to use (0, 1, 2, etc.)
+4. **Address verification** - Confirm the address matches your device screen
+5. **Wallet naming** - Give your wallet a friendly name
+
+**Example:**
+```bash
+$ safe wallet import-ledger
+
+┌  Import Ledger Hardware Wallet
+│
+◇  Device detected!
+│
+◆  Select derivation path
+│  ● Ledger Live (m/44'/60'/0'/0/0) - Default for Ledger Live (recommended)
+│  ○ Legacy MEW (m/44'/60'/0'/0) - Compatible with MyEtherWallet/MyCrypto
+│  ○ Custom path - Advanced: specify your own BIP44 path
+└
+◆  Enter account index
+│  0
+└
+◇  Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+│  Derivation path: m/44'/60'/0'/0/0
+│
+◆  Does this address match what is shown on your Ledger device?
+│  Yes
+└
+◆  Enter a name for this wallet
+│  My Ledger
+└
+◇  Wallet imported successfully!
+│  ID: a3f5e8c92d1b...
+│  Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+│  Path: m/44'/60'/0'/0/0
+│
+└  Done!
+```
+
+### Using Your Ledger Wallet
+
+Once imported, your Ledger wallet works seamlessly with all Safe CLI commands:
+
+**Signing Transactions:**
+```bash
+safe tx sign
+
+# The CLI automatically detects your Ledger wallet
+# → Connecting to Ledger device...
+# → Please confirm transaction on your Ledger device...
+# → Transaction signed ✓
+```
+
+**Switching Wallets:**
+```bash
+safe wallet list  # Shows: 🔐 Ledger or 🔑 Private Key
+safe wallet use   # Switch between wallets
+```
+
+### Multiple Ledger Accounts
+
+You can import multiple accounts from the same Ledger:
+
+```bash
+# Import account 0
+safe wallet import-ledger
+# → Account index: 0
+# → Name: "Ledger Account 0"
+
+# Import account 1
+safe wallet import-ledger
+# → Account index: 1
+# → Name: "Ledger Account 1"
+```
+
+Each account is tracked separately with its own derivation path.
+
+### Troubleshooting
+
+**"No Ledger device found"**
+- Ensure device is connected via USB
+- Unlock your Ledger
+- Open the **Ethereum app** on the device
+
+**"Failed to connect to Ledger"**
+- Close Ledger Live (it locks the device)
+- Try a different USB cable/port
+- Update Ledger firmware to latest version
+
+**"Transaction signing failed"**
+- Make sure you approved the transaction on device
+- Check that **Contract data** is enabled in Ethereum app settings
+- Verify the device didn't time out (screen went dark)
+
+**Contract Data Setting (Required for Safe):**
+1. Open Ethereum app on Ledger
+2. Navigate to Settings
+3. Enable "Contract data"
+4. Exit back to main Ethereum app
+
+### Security Notes
+
+✅ **What's stored locally:**
+- Wallet address
+- Derivation path
+- Wallet name and metadata
+
+❌ **What's NOT stored:**
+- Private keys (always on device)
+- PIN code
+- Recovery phrase
+
+🔒 **Transaction signing:**
+- All signatures happen on the device
+- You must physically approve each transaction
+- Address and transaction details shown on device screen
 
 ---
 
@@ -272,10 +418,19 @@ These are optional but recommended for enhanced functionality:
 
 ## 🔐 Security
 
+### Private Key Wallets
 - **Encryption**: Private keys encrypted with AES-256-GCM
 - **Key derivation**: PBKDF2 with 100,000 iterations
 - **Local storage**: All data stored locally on your machine
 - **No exposure**: Keys never logged or transmitted in plain text
+
+### Hardware Wallets (Ledger)
+- **Maximum security**: Private keys never leave the device
+- **Physical confirmation**: All transactions require on-device approval
+- **Industry standard**: BIP44 derivation paths
+- **Secure Element**: Military-grade chip protection
+
+**Recommendation**: Use Ledger hardware wallets for production Safe accounts with significant funds.
 
 ---
 
@@ -315,12 +470,13 @@ npm run build
 src/
 ├── commands/           # Command implementations
 │   ├── config/        # Configuration commands
-│   ├── wallet/        # Wallet management
+│   ├── wallet/        # Wallet management (incl. Ledger)
 │   ├── account/       # Safe account operations
 │   └── tx/            # Transaction commands
 ├── services/          # Business logic
 │   ├── safe-service.ts
 │   ├── transaction-service.ts
+│   ├── ledger-service.ts      # Ledger hardware wallet integration
 │   ├── abi-service.ts
 │   └── validation-service.ts
 ├── storage/           # Persistent storage
@@ -340,6 +496,7 @@ src/
 - **@clack/prompts** - Interactive prompts
 - **Viem** - Ethereum utilities
 - **Safe Core SDK** - Safe protocol integration
+- **LedgerJS** - Hardware wallet integration
 - **Zod** - Runtime validation
 
 ---

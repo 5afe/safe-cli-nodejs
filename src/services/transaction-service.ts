@@ -5,6 +5,7 @@ import type { ChainConfig } from '../types/config.js'
 import type { TransactionMetadata } from '../types/transaction.js'
 import { SafeCLIError } from '../utils/errors.js'
 import { normalizePrivateKey } from '../utils/validation.js'
+import type { LedgerService } from './ledger-service.js'
 
 // ESM/CommonJS interop: Access the Safe class from the default export
 const Safe = (SafeSDK as unknown as { default: typeof SafeSDK }).default
@@ -86,7 +87,7 @@ export class TransactionService {
     }
   }
 
-  // Sign a transaction
+  // Sign a transaction with a private key
   async signTransaction(safeAddress: Address, metadata: TransactionMetadata): Promise<string> {
     if (!this.privateKey) {
       throw new SafeCLIError('Private key required to sign transaction')
@@ -130,6 +131,80 @@ export class TransactionService {
     } catch (error) {
       throw new SafeCLIError(
         `Failed to sign transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
+
+  // Sign a transaction with Ledger hardware wallet
+  async signTransactionWithLedger(
+    safeAddress: Address,
+    metadata: TransactionMetadata,
+    ledgerService: LedgerService,
+    derivationPath: string
+  ): Promise<string> {
+    try {
+      // Import viem utilities
+      const { keccak256, encodeAbiParameters, parseAbiParameters, toHex } = await import('viem')
+
+      const chainId = BigInt(this.chain.chainId)
+
+      // Compute Safe's EIP-712 domain separator
+      const domainTypeHash = keccak256(
+        toHex('EIP712Domain(uint256 chainId,address verifyingContract)')
+      )
+
+      const domainSeparator = keccak256(
+        encodeAbiParameters(parseAbiParameters('bytes32, uint256, address'), [
+          domainTypeHash,
+          chainId,
+          safeAddress,
+        ])
+      )
+
+      // Compute Safe transaction struct hash
+      // SafeTx type hash from Safe contracts
+      const safeTxTypeHash = keccak256(
+        toHex(
+          'SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)'
+        )
+      )
+
+      // Compute struct hash
+      const structHash = keccak256(
+        encodeAbiParameters(
+          parseAbiParameters(
+            'bytes32, address, uint256, bytes32, uint8, uint256, uint256, uint256, address, address, uint256'
+          ),
+          [
+            safeTxTypeHash,
+            metadata.to,
+            BigInt(metadata.value || '0'),
+            keccak256(metadata.data || '0x'),
+            metadata.operation || 0,
+            BigInt(metadata.safeTxGas || '0'),
+            BigInt(metadata.baseGas || '0'),
+            BigInt(metadata.gasPrice || '0'),
+            metadata.gasToken || '0x0000000000000000000000000000000000000000',
+            metadata.refundReceiver || '0x0000000000000000000000000000000000000000',
+            BigInt(metadata.nonce ?? 0),
+          ]
+        )
+      )
+
+      // Display hashes for Ledger verification
+      console.log('')
+      console.log('Domain hash:', domainSeparator)
+      console.log('Message hash:', structHash)
+      console.log('')
+
+      // Sign with Ledger using the struct hash (not the full EIP-712 hash)
+      // Ledger will internally compute keccak256("\x19\x01" || domainSeparator || structHash)
+      const signature = await ledgerService.signHash(derivationPath, structHash, domainSeparator)
+
+      return signature
+    } catch (error) {
+      throw new SafeCLIError(
+        `Failed to sign transaction with Ledger: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
   }

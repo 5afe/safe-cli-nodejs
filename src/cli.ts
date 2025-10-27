@@ -4,6 +4,7 @@ import { showConfig } from './commands/config/show.js'
 import { addChain, listChains, removeChain } from './commands/config/chains.js'
 import { editChains } from './commands/config/edit.js'
 import { importWallet } from './commands/wallet/import.js'
+import { importLedgerWallet } from './commands/wallet/import-ledger.js'
 import { listWallets } from './commands/wallet/list.js'
 import { useWallet } from './commands/wallet/use.js'
 import { removeWallet } from './commands/wallet/remove.js'
@@ -112,6 +113,17 @@ wallet
   .action(async () => {
     try {
       await importWallet()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+wallet
+  .command('import-ledger')
+  .description('Import a Ledger hardware wallet')
+  .action(async () => {
+    try {
+      await importLedgerWallet()
     } catch (error) {
       handleError(error)
     }

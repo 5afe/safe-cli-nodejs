@@ -1,6 +1,7 @@
 import * as p from '@clack/prompts'
 import { type Address } from 'viem'
 import { getWalletStorage } from '../../storage/wallet-store.js'
+import { getConfigStore } from '../../storage/config-store.js'
 import { getValidationService } from '../../services/validation-service.js'
 import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
@@ -69,9 +70,14 @@ export async function importWallet() {
     )
     spinner.stop('Wallet imported successfully')
 
+    // Get default chain for balance check
+    const configStore = getConfigStore()
+    const defaultChain = configStore.getDefaultChain()
+
     await renderScreen(WalletImportSuccessScreen, {
       name: wallet.name,
       address: wallet.address as Address,
+      chain: defaultChain,
     })
   } catch (error) {
     spinner.stop('Failed to import wallet')
