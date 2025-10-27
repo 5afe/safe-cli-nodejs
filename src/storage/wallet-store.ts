@@ -237,12 +237,14 @@ export class WalletStorageService {
 
   // Remove wallet
   removeWallet(walletId: string): void {
-    const wallet = this.getWallet(walletId)
+    const wallets = this.store.get('wallets', {})
+    const wallet = wallets[walletId]
+
+    // If wallet doesn't exist, silently return (idempotent operation)
     if (!wallet) {
-      throw new WalletError(`Wallet ${walletId} not found`)
+      return
     }
 
-    const wallets = this.store.get('wallets', {})
     delete wallets[walletId]
     this.store.set('wallets', wallets)
 
