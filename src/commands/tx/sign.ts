@@ -5,6 +5,7 @@ import { getSafeStorage } from '../../storage/safe-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
+import { LedgerService } from '../../services/ledger-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { TransactionStatus } from '../../types/transaction.js'
@@ -145,38 +146,89 @@ export async function signTransaction(safeTxHash?: string) {
       }
     }
 
-    // Request password
-    const password = (await p.password({
-      message: 'Enter wallet password',
-      validate: (value) => {
-        if (!value) return 'Password is required'
-        return undefined
-      },
-    })) as string
-
-    if (p.isCancel(password)) {
-      p.cancel('Operation cancelled')
-      return
-    }
-
-    // Get private key
+    // Sign transaction based on wallet type
     const spinner2 = p.spinner()
-    spinner2.start('Signing transaction')
+    let signature: string
 
-    let privateKey: string
-    try {
-      privateKey = walletStorage.getPrivateKey(activeWallet.id, password)
-    } catch {
-      spinner2.stop('Failed')
-      p.log.error('Invalid password')
-      p.outro('Failed')
-      return
+    if (activeWallet.type === 'ledger') {
+      // Ledger wallet signing
+      spinner2.start('Connecting to Ledger device...')
+
+      try {
+        // Check if device is connected
+        if (!(await LedgerService.isDeviceConnected())) {
+          spinner2.stop('No Ledger device found')
+          p.log.warn('Please connect your Ledger device and try again')
+          p.outro('Failed')
+          return
+        }
+
+        // Connect to Ledger
+        const ledgerService = new LedgerService()
+        await ledgerService.connect()
+
+        spinner2.message('Please confirm transaction on your Ledger device...')
+
+        // Sign with Ledger
+        const txService = new TransactionService(chain)
+        signature = await txService.signTransactionWithLedger(
+          transaction.safeAddress,
+          transaction.metadata,
+          ledgerService,
+          activeWallet.derivationPath
+        )
+
+        // Disconnect
+        await ledgerService.disconnect()
+
+        spinner2.stop('Transaction signed')
+      } catch (error) {
+        spinner2.stop('Failed')
+        if (error instanceof SafeCLIError) {
+          p.log.error(error.message)
+        } else {
+          p.log.error(
+            `Failed to sign with Ledger: ${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+          p.log.warn('Make sure your Ledger is connected, unlocked, and the Ethereum app is open')
+        }
+        p.outro('Failed')
+        return
+      }
+    } else {
+      // Private key wallet signing
+      // Request password
+      const password = (await p.password({
+        message: 'Enter wallet password',
+        validate: (value) => {
+          if (!value) return 'Password is required'
+          return undefined
+        },
+      })) as string
+
+      if (p.isCancel(password)) {
+        p.cancel('Operation cancelled')
+        return
+      }
+
+      spinner2.start('Signing transaction')
+
+      let privateKey: string
+      try {
+        privateKey = walletStorage.getPrivateKey(activeWallet.id, password)
+      } catch {
+        spinner2.stop('Failed')
+        p.log.error('Invalid password')
+        p.outro('Failed')
+        return
+      }
+
+      // Sign transaction
+      const txService = new TransactionService(chain, privateKey)
+      signature = await txService.signTransaction(transaction.safeAddress, transaction.metadata)
+
+      spinner2.stop('Transaction signed')
     }
-
-    // Sign transaction
-    const txService = new TransactionService(chain, privateKey)
-
-    const signature = await txService.signTransaction(transaction.safeAddress, transaction.metadata)
 
     // Store signature
     transactionStore.addSignature(selectedSafeTxHash, {
@@ -189,8 +241,6 @@ export async function signTransaction(safeTxHash?: string) {
     if (transaction.status === TransactionStatus.PENDING) {
       transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.SIGNED)
     }
-
-    spinner2.stop()
 
     // Check if we have enough signatures
     const updatedTx = transactionStore.getTransaction(selectedSafeTxHash)!

@@ -1,9 +1,12 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Box, Text } from 'ink'
+import type { Address } from 'viem'
 import { useWallets } from '../hooks/index.js'
 import { Header, List, Spinner, KeyValue } from '../components/index.js'
 import { theme } from '../theme.js'
 import { shortenAddress } from '../../utils/ethereum.js'
+import { getBalances, formatBalance } from '../../utils/balance.js'
+import { getConfigStore } from '../../storage/config-store.js'
 
 export interface WalletListScreenProps {
   /**
@@ -24,13 +27,35 @@ export interface WalletListScreenProps {
  */
 export function WalletListScreen({ onExit }: WalletListScreenProps): React.ReactElement {
   const { wallets, activeWallet, loading, error } = useWallets()
+  const [balances, setBalances] = useState<Map<Address, string>>(new Map())
+  const [balancesLoading, setBalancesLoading] = useState(true)
 
-  // Auto-exit after rendering
+  // Fetch balances for all wallets
   useEffect(() => {
-    if (!loading && onExit) {
+    if (!loading && wallets.length > 0) {
+      const configStore = getConfigStore()
+      const defaultChain = configStore.getDefaultChain()
+      const addresses = wallets.map((w) => w.address as Address)
+
+      getBalances(addresses, defaultChain)
+        .then((balanceMap) => {
+          setBalances(balanceMap)
+          setBalancesLoading(false)
+        })
+        .catch(() => {
+          setBalancesLoading(false)
+        })
+    } else if (!loading) {
+      setBalancesLoading(false)
+    }
+  }, [wallets, loading])
+
+  // Auto-exit after rendering and balances loaded
+  useEffect(() => {
+    if (!loading && !balancesLoading && onExit) {
       onExit()
     }
-  }, [loading, onExit])
+  }, [loading, balancesLoading, onExit])
 
   // Loading state
   if (loading) {
@@ -54,9 +79,12 @@ export function WalletListScreen({ onExit }: WalletListScreenProps): React.React
         <Box marginBottom={1}>
           <Text color={theme.colors.dim}>No wallets found</Text>
         </Box>
-        <Box>
+        <Box flexDirection="column">
           <Text color={theme.colors.info}>
-            Use "safe wallet import" to import a wallet
+            Use "safe wallet import" to import a wallet from private key
+          </Text>
+          <Text color={theme.colors.info}>
+            Use "safe wallet import-ledger" to import a Ledger hardware wallet
           </Text>
         </Box>
       </Box>
@@ -64,9 +92,18 @@ export function WalletListScreen({ onExit }: WalletListScreenProps): React.React
   }
 
   // Wallet list
+  const configStore = getConfigStore()
+  const defaultChain = configStore.getDefaultChain()
+
   return (
     <Box flexDirection="column" paddingY={1}>
       <Header title="Wallets" />
+
+      {balancesLoading && !loading ? (
+        <Box marginBottom={1}>
+          <Text color={theme.colors.dim}>Fetching balances...</Text>
+        </Box>
+      ) : null}
 
       <Box marginBottom={1}>
         <List
@@ -75,9 +112,32 @@ export function WalletListScreen({ onExit }: WalletListScreenProps): React.React
           getId={(wallet) => wallet.id}
           renderItem={(wallet, _index, isActive) => {
             const items = [
+              {
+                key: 'Type',
+                value: wallet.type === 'ledger' ? '🔐 Ledger' : '🔑 Private Key',
+              },
               { key: 'Address', value: wallet.address },
               { key: 'Short', value: shortenAddress(wallet.address) },
             ]
+
+            // Add balance if loaded
+            if (!balancesLoading) {
+              const balance = balances.get(wallet.address as Address)
+              if (balance !== undefined) {
+                items.push({
+                  key: 'Balance',
+                  value: formatBalance(balance, defaultChain.currency),
+                })
+              }
+            }
+
+            // Add derivation path for Ledger wallets
+            if (wallet.type === 'ledger') {
+              items.push({
+                key: 'Path',
+                value: wallet.derivationPath,
+              })
+            }
 
             if (wallet.lastUsed) {
               items.push({
@@ -88,10 +148,7 @@ export function WalletListScreen({ onExit }: WalletListScreenProps): React.React
 
             return (
               <Box flexDirection="column">
-                <Text
-                  bold={isActive}
-                  color={isActive ? theme.colors.success : undefined}
-                >
+                <Text bold={isActive} color={isActive ? theme.colors.success : undefined}>
                   {wallet.name}
                 </Text>
                 <Box marginLeft={2}>
@@ -107,16 +164,17 @@ export function WalletListScreen({ onExit }: WalletListScreenProps): React.React
       <Box flexDirection="column">
         {activeWallet && (
           <Box marginBottom={1}>
-            <Text color={theme.colors.dim}>
-              Active wallet: {activeWallet.name}
-            </Text>
+            <Text color={theme.colors.dim}>Active wallet: {activeWallet.name}</Text>
           </Box>
         )}
         <Box>
-          <Text color={theme.colors.success}>
-            Total: {wallets.length} wallet(s)
-          </Text>
+          <Text color={theme.colors.success}>Total: {wallets.length} wallet(s)</Text>
         </Box>
+        {!balancesLoading && (
+          <Box marginTop={1}>
+            <Text color={theme.colors.dim}>Balances shown on {defaultChain.name}</Text>
+          </Box>
+        )}
       </Box>
     </Box>
   )

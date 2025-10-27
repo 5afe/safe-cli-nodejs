@@ -49,6 +49,28 @@ export class ConfigStore {
     return this.getChain(chainId) !== undefined
   }
 
+  /**
+   * Get default chain for balance checks and other operations
+   * Returns Ethereum mainnet (chainId: '1') by default, or first available chain
+   */
+  getDefaultChain(): ChainConfig {
+    // Try to get Ethereum mainnet first
+    const ethMainnet = this.getChain('1')
+    if (ethMainnet) {
+      return ethMainnet
+    }
+
+    // Fallback to first available chain
+    const chains = this.getAllChains()
+    const firstChainId = Object.keys(chains)[0]
+    if (firstChainId) {
+      return chains[firstChainId]
+    }
+
+    // If no chains configured (shouldn't happen), return a default
+    return DEFAULT_CHAINS['1']
+  }
+
   // Defaults
   getDefaults() {
     return this.store.get('defaults')

@@ -1,7 +1,7 @@
 import Conf from 'conf'
 import { randomBytes, createCipheriv, createDecipheriv, pbkdf2Sync } from 'crypto'
 import { privateKeyToAccount } from 'viem/accounts'
-import type { Wallet, WalletStore } from '../types/wallet.js'
+import type { Wallet, WalletStore, PrivateKeyWallet, LedgerWallet } from '../types/wallet.js'
 import { WalletError } from '../utils/errors.js'
 import { isValidPrivateKey, normalizePrivateKey } from '../utils/validation.js'
 import { checksumAddress } from '../utils/ethereum.js'
@@ -90,8 +90,12 @@ export class WalletStorageService {
     return this.password
   }
 
-  // Import a wallet
-  async importWallet(name: string, privateKey: string, password?: string): Promise<Wallet> {
+  // Import a private key wallet
+  async importWallet(
+    name: string,
+    privateKey: string,
+    password?: string
+  ): Promise<PrivateKeyWallet> {
     const pwd = password || this.ensurePassword()
 
     // Validate private key
@@ -113,7 +117,8 @@ export class WalletStorageService {
 
     // Create wallet metadata
     const walletId = randomBytes(16).toString('hex')
-    const wallet: Wallet = {
+    const wallet: PrivateKeyWallet = {
+      type: 'private-key',
       id: walletId,
       name,
       address,
@@ -135,8 +140,59 @@ export class WalletStorageService {
     return wallet
   }
 
-  // Get wallet private key
+  // Import a Ledger hardware wallet
+  async importLedgerWallet(
+    name: string,
+    address: string,
+    derivationPath: string
+  ): Promise<LedgerWallet> {
+    // Checksum the address
+    const checksummedAddress = checksumAddress(address)
+
+    // Check if wallet already exists
+    const existingWallets = this.store.get('wallets', {})
+    const duplicate = Object.values(existingWallets).find((w) => w.address === checksummedAddress)
+    if (duplicate) {
+      throw new WalletError(
+        `Wallet with address ${checksummedAddress} already exists as "${duplicate.name}"`
+      )
+    }
+
+    // Create wallet metadata
+    const walletId = randomBytes(16).toString('hex')
+    const wallet: LedgerWallet = {
+      type: 'ledger',
+      id: walletId,
+      name,
+      address: checksummedAddress,
+      derivationPath,
+      createdAt: new Date().toISOString(),
+    }
+
+    // Store wallet metadata (no private key for Ledger)
+    this.store.set(`wallets.${walletId}`, wallet)
+
+    // Set as active if it's the first wallet
+    if (Object.keys(existingWallets).length === 0) {
+      this.store.set('activeWallet', walletId)
+    }
+
+    return wallet
+  }
+
+  // Get wallet private key (only for private-key wallets)
   getPrivateKey(walletId: string, password?: string): string {
+    const wallet = this.getWallet(walletId)
+    if (!wallet) {
+      throw new WalletError(`Wallet ${walletId} not found`)
+    }
+
+    if (wallet.type === 'ledger') {
+      throw new WalletError(
+        'Cannot get private key for Ledger wallet. Use Ledger device for signing.'
+      )
+    }
+
     const pwd = password || this.ensurePassword()
 
     const encrypted = this.secureStore.get(walletId)
@@ -182,11 +238,20 @@ export class WalletStorageService {
   // Remove wallet
   removeWallet(walletId: string): void {
     const wallets = this.store.get('wallets', {})
+    const wallet = wallets[walletId]
+
+    // If wallet doesn't exist, silently return (idempotent operation)
+    if (!wallet) {
+      return
+    }
+
     delete wallets[walletId]
     this.store.set('wallets', wallets)
 
-    // Remove encrypted private key
-    this.secureStore.delete(walletId)
+    // Remove encrypted private key (only for private-key wallets)
+    if (wallet.type === 'private-key') {
+      this.secureStore.delete(walletId)
+    }
 
     // Update active wallet if necessary
     const activeId = this.store.get('activeWallet')
