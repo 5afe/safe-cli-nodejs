@@ -58,12 +58,15 @@ safe config init
 ```
 This sets up your chain configurations and optional API keys.
 
-**2. Import a wallet**
+**2. Set up a wallet**
 ```bash
-# Option A: Import from private key
+# Option A: Create a new wallet (generates private key)
+safe wallet create
+
+# Option B: Import existing private key
 safe wallet import
 
-# Option B: Import Ledger hardware wallet (recommended)
+# Option C: Import Ledger hardware wallet (recommended for production)
 safe wallet import-ledger
 ```
 Private keys are encrypted with a password. Ledger wallets use your hardware device for signing.
@@ -95,7 +98,8 @@ Follow the interactive prompts to configure owners and threshold.
 
 | Command | Description |
 |---------|-------------|
-| `safe wallet import` | Import a wallet with your private key |
+| `safe wallet create` | Create a new wallet with a generated private key |
+| `safe wallet import` | Import a wallet with your existing private key |
 | `safe wallet import-ledger` | Import a Ledger hardware wallet |
 | `safe wallet list` | View all your wallets (shows wallet types) |
 | `safe wallet use` | Switch to a different wallet |
@@ -135,6 +139,99 @@ Follow the interactive prompts to configure owners and threshold.
 | `safe tx push [txHash]` | Upload to Safe Transaction Service |
 | `safe tx pull` | Download pending transactions |
 | `safe tx sync` | Sync local and remote transactions |
+
+---
+
+## 🔑 Wallet Management
+
+### Creating a New Wallet
+
+If you don't have an existing private key, you can generate a new wallet:
+
+```bash
+safe wallet create
+```
+
+**Security Flow:**
+
+The CLI will guide you through a secure wallet creation process:
+
+1. **Security warnings** - Read and acknowledge the risks
+2. **Password setup** - Create a strong password for encryption
+3. **Wallet naming** - Give your wallet a memorable name
+4. **Key generation** - A cryptographically secure private key is generated
+5. **Private key display** - Your key is shown **once** - back it up safely!
+6. **Backup verification** - Confirm you've saved it by re-entering the last 8 characters
+7. **Encryption** - The key is encrypted and stored locally
+
+**Example:**
+```bash
+$ safe wallet create
+
+┌  Create New Wallet
+│
+◆  🔐 Security Warning
+│  ⚠️  This command will generate a NEW private key
+│  ⚠️  You are SOLELY responsible for backing it up securely
+│  ⚠️  Loss of your private key = permanent loss of funds
+│  ⚠️  NEVER share your private key with anyone
+│  ⚠️  This CLI stores keys encrypted locally with your password
+│
+◆  Do you understand these risks and wish to continue?
+│  Yes
+│
+◆  Create a password to encrypt your wallets
+│  ********
+│
+◆  Confirm password
+│  ********
+│
+◆  Give this wallet a name
+│  My New Wallet
+│
+◇  Private key generated successfully
+│
+◆  🔑 Your Private Key
+│  0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+│
+│  ⚠️  Write this down and store it in a secure location.
+│  ⚠️  This is the ONLY time it will be displayed in plain text.
+│  ⚠️  Anyone with this key has FULL control of your wallet.
+│
+◆  To confirm you have saved it, enter the last 8 characters:
+│  90abcdef
+│
+◇  Wallet created successfully
+│  Name: My New Wallet
+│  Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+│
+└  Done!
+```
+
+**🔒 Security Best Practices:**
+
+- **Write it down** - Store your private key on paper in a secure location
+- **Multiple copies** - Keep backups in different safe locations
+- **Never digital** - Don't store in cloud storage, email, or screenshots
+- **Use hardware wallets** - For significant funds, use `safe wallet import-ledger` instead
+- **Test first** - Try creating a test wallet on testnet (Sepolia) before mainnet
+
+**⚠️ Important Notes:**
+
+- Your private key is encrypted with your password and stored locally
+- Without your password, the encrypted key cannot be decrypted
+- If you lose your private key, you lose access to your funds permanently
+- The CLI cannot recover your private key if lost
+
+### Importing an Existing Wallet
+
+If you already have a private key:
+
+```bash
+safe wallet import
+```
+
+Follow the prompts to securely import your existing key. It will be encrypted with your password.
 
 ---
 
@@ -419,10 +516,12 @@ These are optional but recommended for enhanced functionality:
 ## 🔐 Security
 
 ### Private Key Wallets
+- **Key generation**: Uses Node.js crypto.randomBytes() for cryptographically secure random generation
 - **Encryption**: Private keys encrypted with AES-256-GCM
 - **Key derivation**: PBKDF2 with 100,000 iterations
 - **Local storage**: All data stored locally on your machine
 - **No exposure**: Keys never logged or transmitted in plain text
+- **Backup verification**: Confirmation required when creating new wallets
 
 ### Hardware Wallets (Ledger)
 - **Maximum security**: Private keys never leave the device
