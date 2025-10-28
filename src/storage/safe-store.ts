@@ -13,10 +13,11 @@ function getSafeKey(chainId: string, address: string): string {
 export class SafeAccountStorage {
   private store: Conf<SafeStore>
 
-  constructor() {
+  constructor(options?: { cwd?: string; projectName?: string }) {
     this.store = new Conf<SafeStore>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
       configName: 'safes',
+      cwd: options?.cwd,
       defaults: {
         safes: {},
       },

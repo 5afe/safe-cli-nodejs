@@ -2,34 +2,21 @@ import { beforeEach, afterEach, describe, it, expect } from 'vitest'
 import { SafeAccountStorage } from '../../storage/safe-store.js'
 import { TEST_ADDRESS, TEST_SAFE_ADDRESS, TEST_CHAIN } from './test-helpers.js'
 import type { Address } from 'viem'
+import { createTestStorage } from '../helpers/test-storage.js'
 
 describe('Account Integration Tests', () => {
   let safeStorage: SafeAccountStorage
+  let testStorage: ReturnType<typeof createTestStorage>
 
   beforeEach(() => {
-    safeStorage = new SafeAccountStorage()
-
-    // Clear all existing safes
-    const safes = safeStorage.getAllSafes()
-    safes.forEach((safe) => {
-      try {
-        safeStorage.removeSafe(safe.chainId, safe.address)
-      } catch {
-        // Ignore errors
-      }
-    })
+    // Create isolated test storage - NEVER touches user's actual config!
+    testStorage = createTestStorage('account-integration')
+    safeStorage = new SafeAccountStorage({ cwd: testStorage.configDir })
   })
 
   afterEach(() => {
-    // Cleanup
-    const safes = safeStorage.getAllSafes()
-    safes.forEach((safe) => {
-      try {
-        safeStorage.removeSafe(safe.chainId, safe.address)
-      } catch {
-        // Ignore errors
-      }
-    })
+    // Cleanup test directories
+    testStorage.cleanup()
   })
 
   describe('Safe Storage Operations', () => {
@@ -203,8 +190,8 @@ describe('Account Integration Tests', () => {
         name: 'Test Safe',
       })
 
-      // Create new instance
-      const newSafeStorage = new SafeAccountStorage()
+      // Create new instance pointing to same test directory
+      const newSafeStorage = new SafeAccountStorage({ cwd: testStorage.configDir })
       const safe = newSafeStorage.getSafe(TEST_CHAIN.chainId, TEST_SAFE_ADDRESS)
 
       expect(safe).toBeDefined()

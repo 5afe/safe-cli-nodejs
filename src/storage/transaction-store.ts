@@ -15,10 +15,11 @@ interface TransactionStoreSchema {
 export class TransactionStore {
   private store: Conf<TransactionStoreSchema>
 
-  constructor() {
+  constructor(options?: { cwd?: string; projectName?: string }) {
     this.store = new Conf<TransactionStoreSchema>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
       configName: 'transactions',
+      cwd: options?.cwd,
       defaults: {
         transactions: {},
       },

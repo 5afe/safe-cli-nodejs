@@ -13,58 +13,23 @@ import {
   TEST_SAFE_TX_HASH,
 } from './test-helpers.js'
 import type { Address } from 'viem'
+import { createTestStorage } from '../helpers/test-storage.js'
 
 describe('Transaction Integration Tests', () => {
   let transactionStore: TransactionStore
   let safeStorage: SafeAccountStorage
   let walletStorage: WalletStorageService
   let configStore: ConfigStore
+  let testStorage: ReturnType<typeof createTestStorage>
 
   beforeEach(async () => {
-    transactionStore = new TransactionStore()
-    safeStorage = new SafeAccountStorage()
-    walletStorage = new WalletStorageService()
-    configStore = new ConfigStore()
+    // Create isolated test storage - NEVER touches user's actual config!
+    testStorage = createTestStorage('transaction-integration')
 
-    // Clear all existing data first
-    try {
-      const transactions = transactionStore.getAllTransactions()
-      for (const tx of transactions) {
-        try {
-          transactionStore.deleteTransaction(tx.safeTxHash)
-        } catch {
-          // Ignore errors
-        }
-      }
-    } catch {
-      // Ignore if no transactions exist
-    }
-
-    try {
-      const safes = safeStorage.getAllSafes()
-      for (const safe of safes) {
-        try {
-          safeStorage.removeSafe(safe.chainId, safe.address)
-        } catch {
-          // Ignore errors
-        }
-      }
-    } catch {
-      // Ignore if no safes exist
-    }
-
-    try {
-      const wallets = walletStorage.getAllWallets()
-      for (const wallet of wallets) {
-        try {
-          walletStorage.removeWallet(wallet.id)
-        } catch {
-          // Ignore errors
-        }
-      }
-    } catch {
-      // Ignore if no wallets exist
-    }
+    transactionStore = new TransactionStore({ cwd: testStorage.configDir })
+    safeStorage = new SafeAccountStorage({ cwd: testStorage.configDir })
+    walletStorage = new WalletStorageService({ cwd: testStorage.configDir })
+    configStore = new ConfigStore({ cwd: testStorage.configDir })
 
     try {
       configStore.deleteChain(TEST_CHAIN.chainId)
@@ -87,51 +52,8 @@ describe('Transaction Integration Tests', () => {
   })
 
   afterEach(() => {
-    // Cleanup
-    try {
-      const transactions = transactionStore.getAllTransactions()
-      for (const tx of transactions) {
-        try {
-          transactionStore.deleteTransaction(tx.safeTxHash)
-        } catch {
-          // Ignore errors
-        }
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
-
-    try {
-      const safes = safeStorage.getAllSafes()
-      for (const safe of safes) {
-        try {
-          safeStorage.removeSafe(safe.chainId, safe.address)
-        } catch {
-          // Ignore errors
-        }
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
-
-    try {
-      const wallets = walletStorage.getAllWallets()
-      for (const wallet of wallets) {
-        try {
-          walletStorage.removeWallet(wallet.id)
-        } catch {
-          // Ignore errors
-        }
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
-
-    try {
-      configStore.deleteChain(TEST_CHAIN.chainId)
-    } catch {
-      // Ignore cleanup errors
-    }
+    // Cleanup test directories
+    testStorage.cleanup()
   })
 
   describe('Transaction Creation and Retrieval', () => {
@@ -401,8 +323,8 @@ describe('Transaction Integration Tests', () => {
         TEST_ADDRESS
       )
 
-      // Create new instance
-      const newTransactionStore = new TransactionStore()
+      // Create new instance pointing to same test directory
+      const newTransactionStore = new TransactionStore({ cwd: testStorage.configDir })
       const tx = newTransactionStore.getTransaction(TEST_SAFE_TX_HASH)
 
       expect(tx).not.toBeNull()
@@ -428,8 +350,8 @@ describe('Transaction Integration Tests', () => {
         signedAt: new Date().toISOString(),
       })
 
-      // Create new instance
-      const newTransactionStore = new TransactionStore()
+      // Create new instance pointing to same test directory
+      const newTransactionStore = new TransactionStore({ cwd: testStorage.configDir })
       const tx = newTransactionStore.getTransaction(TEST_SAFE_TX_HASH)
 
       expect(tx?.signatures).toHaveLength(1)

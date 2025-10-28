@@ -59,10 +59,11 @@ export class WalletStorageService {
   private secureStorage: SecureStorage
   private password: string | null = null
 
-  constructor() {
+  constructor(options?: { cwd?: string; projectName?: string }) {
     this.store = new Conf<WalletStore>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
       configName: 'wallets',
+      cwd: options?.cwd,
       defaults: {
         wallets: {},
         activeWallet: null,
@@ -70,8 +71,9 @@ export class WalletStorageService {
     })
 
     this.secureStore = new Conf<Record<string, string>>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
       configName: 'wallets-secure',
+      cwd: options?.cwd,
       defaults: {},
     })
 

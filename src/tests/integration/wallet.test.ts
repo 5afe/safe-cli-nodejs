@@ -1,44 +1,24 @@
 import { beforeEach, afterEach, describe, it, expect } from 'vitest'
 import { WalletStorageService } from '../../storage/wallet-store.js'
 import { TEST_PRIVATE_KEY, TEST_PASSWORD } from './test-helpers.js'
+import { createTestStorage } from '../helpers/test-storage.js'
 
 describe('Wallet Integration Tests', () => {
   let walletStorage: WalletStorageService
+  let testStorage: ReturnType<typeof createTestStorage>
 
   beforeEach(() => {
-    walletStorage = new WalletStorageService()
-    walletStorage.setPassword(TEST_PASSWORD)
+    // Create isolated test storage - NEVER touches user's actual config!
+    testStorage = createTestStorage('wallet-integration')
 
-    // Clear active wallet and all existing wallets
-    try {
-      const wallets = walletStorage.getAllWallets()
-      // Remove each wallet
-      for (const wallet of wallets) {
-        try {
-          walletStorage.removeWallet(wallet.id)
-        } catch {
-          // Ignore errors during cleanup
-        }
-      }
-    } catch {
-      // Ignore if no wallets exist
-    }
+    // Create wallet storage with isolated directory
+    walletStorage = new WalletStorageService({ cwd: testStorage.configDir })
+    walletStorage.setPassword(TEST_PASSWORD)
   })
 
   afterEach(() => {
-    // Cleanup - remove all wallets
-    try {
-      const wallets = walletStorage.getAllWallets()
-      for (const wallet of wallets) {
-        try {
-          walletStorage.removeWallet(wallet.id)
-        } catch {
-          // Ignore errors during cleanup
-        }
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
+    // Cleanup test directories
+    testStorage.cleanup()
   })
 
   describe('importWallet', () => {
@@ -164,8 +144,8 @@ describe('Wallet Integration Tests', () => {
     it('should persist wallet across instances', async () => {
       const wallet = await walletStorage.importWallet('Test Wallet', TEST_PRIVATE_KEY)
 
-      // Create new instance
-      const newWalletStorage = new WalletStorageService()
+      // Create new instance pointing to same test directory
+      const newWalletStorage = new WalletStorageService({ cwd: testStorage.configDir })
       newWalletStorage.setPassword(TEST_PASSWORD)
 
       const wallets = newWalletStorage.getAllWallets()

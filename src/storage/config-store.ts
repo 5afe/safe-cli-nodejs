@@ -5,9 +5,10 @@ import { DEFAULT_CHAINS } from '../constants/chains.js'
 export class ConfigStore {
   private store: Conf<Config>
 
-  constructor() {
+  constructor(options?: { cwd?: string; projectName?: string }) {
     this.store = new Conf<Config>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
+      cwd: options?.cwd,
       defaults: {
         version: '0.1.0',
         chains: DEFAULT_CHAINS,
