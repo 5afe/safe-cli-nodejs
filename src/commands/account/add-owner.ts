@@ -1,33 +1,31 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { type Address } from 'viem'
-import { getConfigStore } from '../../storage/config-store.js'
-import { getSafeStorage } from '../../storage/safe-store.js'
-import { getWalletStorage } from '../../storage/wallet-store.js'
-import { getTransactionStore } from '../../storage/transaction-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
-import { getValidationService } from '../../services/validation-service.js'
-import { SafeCLIError } from '../../utils/errors.js'
-import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 import { renderScreen } from '../../ui/render.js'
 import { OwnerAddSuccessScreen } from '../../ui/screens/index.js'
+import { createCommandContext } from '../../utils/command-context.js'
+import {
+  ensureActiveWallet,
+  ensureChainConfigured,
+  checkCancelled,
+  handleCommandError,
+} from '../../utils/command-helpers.js'
+import {
+  selectDeployedSafe,
+  fetchSafeOwnersAndThreshold,
+  ensureWalletIsOwner,
+  parseAddressInput,
+} from '../../utils/safe-helpers.js'
 
 export async function addOwner(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
 
   try {
-    const configStore = getConfigStore()
-    const safeStorage = getSafeStorage()
-    const walletStorage = getWalletStorage()
-    const transactionStore = getTransactionStore()
-    const chains = configStore.getAllChains()
+    const ctx = createCommandContext()
 
-    const activeWallet = walletStorage.getActiveWallet()
-    if (!activeWallet) {
-      p.log.error('No active wallet set. Please import a wallet first.')
-      p.outro('Setup required')
-      return
-    }
+    const activeWallet = ensureActiveWallet(ctx.walletStorage)
+    if (!activeWallet) return
 
     // Get Safe
     let chainId: string
@@ -35,48 +33,19 @@ export async function addOwner(account?: string) {
 
     if (account) {
       // Parse EIP-3770 address
-      try {
-        const parsed = parseSafeAddress(account, chains)
-        chainId = parsed.chainId
-        address = parsed.address
-      } catch (error) {
-        p.log.error(error instanceof Error ? error.message : 'Invalid account')
-        p.cancel('Operation cancelled')
-        return
-      }
+      const parsed = parseAddressInput(account, ctx.chains)
+      if (!parsed) return
+      chainId = parsed.chainId
+      address = parsed.address
     } else {
       // Show interactive selection
-      const safes = safeStorage.getAllSafes().filter((s) => s.deployed)
-      if (safes.length === 0) {
-        p.log.error('No deployed Safes found')
-        p.cancel('Use "safe account deploy" to deploy a Safe first')
-        return
-      }
-
-      const selected = await p.select({
-        message: 'Select Safe to add owner to:',
-        options: safes.map((s) => {
-          const chain = configStore.getChain(s.chainId)
-          const eip3770 = formatSafeAddress(s.address as Address, s.chainId, chains)
-          return {
-            value: `${s.chainId}:${s.address}`,
-            label: `${s.name} (${eip3770})`,
-            hint: chain?.name || s.chainId,
-          }
-        }),
-      })
-
-      if (p.isCancel(selected)) {
-        p.cancel('Operation cancelled')
-        return
-      }
-
-      const [selectedChainId, selectedAddress] = (selected as string).split(':')
-      chainId = selectedChainId
-      address = selectedAddress as Address
+      const result = await selectDeployedSafe(ctx.safeStorage, ctx.configStore, ctx.chains)
+      if (!result) return
+      chainId = result.chainId
+      address = result.address
     }
 
-    const safe = safeStorage.getSafe(chainId, address)
+    const safe = ctx.safeStorage.getSafe(chainId, address)
     if (!safe) {
       p.log.error(`Safe not found: ${address} on chain ${chainId}`)
       p.cancel('Operation cancelled')
@@ -90,55 +59,31 @@ export async function addOwner(account?: string) {
     }
 
     // Get chain
-    const chain = configStore.getChain(safe.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${safe.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
+    const chain = ensureChainConfigured(safe.chainId, ctx.configStore)
+    if (!chain) return
 
     // Fetch live Safe data
-    const txService = new TransactionService(chain)
-    let currentOwners: Address[]
-    let currentThreshold: number
-
-    try {
-      ;[currentOwners, currentThreshold] = await Promise.all([
-        txService.getOwners(safe.address as Address),
-        txService.getThreshold(safe.address as Address),
-      ])
-    } catch (error) {
-      p.log.error(
-        `Failed to fetch Safe data: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-      p.outro('Failed')
-      return
-    }
+    const safeData = await fetchSafeOwnersAndThreshold(chain, safe.address as Address)
+    if (!safeData) return
+    const { owners: currentOwners, threshold: currentThreshold } = safeData
 
     // Check if wallet is an owner
-    if (
-      !currentOwners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())
-    ) {
-      p.log.error('Active wallet is not an owner of this Safe')
-      p.outro('Failed')
-      return
-    }
+    if (!ensureWalletIsOwner(activeWallet, currentOwners)) return
 
     // Get new owner address
-    const validator = getValidationService()
     const newOwnerInput = await p.text({
       message: 'New owner address (supports EIP-3770 format: shortName:address):',
       placeholder: '0x... or eth:0x...',
       validate: (value) => {
-        const addressError = validator.validateAddressWithChain(value, chainId, chains)
+        const addressError = ctx.validator.validateAddressWithChain(value, chainId, ctx.chains)
         if (addressError) return addressError
 
         // Check for duplicates - need to get checksummed version
         try {
-          const checksummed = validator.assertAddressWithChain(
+          const checksummed = ctx.validator.assertAddressWithChain(
             value as string,
             chainId,
-            chains,
+            ctx.chains,
             'Owner address'
           )
           if (currentOwners.some((o) => o.toLowerCase() === checksummed.toLowerCase())) {
@@ -153,18 +98,15 @@ export async function addOwner(account?: string) {
       },
     })
 
-    if (p.isCancel(newOwnerInput)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(newOwnerInput)) return
 
     // Checksum the address (strips EIP-3770 prefix if present)
     let newOwner: Address
     try {
-      newOwner = validator.assertAddressWithChain(
+      newOwner = ctx.validator.assertAddressWithChain(
         newOwnerInput as string,
         chainId,
-        chains,
+        ctx.chains,
         'Owner address'
       )
     } catch (error) {
@@ -189,10 +131,7 @@ export async function addOwner(account?: string) {
       },
     })
 
-    if (p.isCancel(newThreshold)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(newThreshold)) return
 
     const thresholdNum = parseInt(newThreshold as string, 10)
 
@@ -212,7 +151,7 @@ export async function addOwner(account?: string) {
       initialValue: true,
     })
 
-    if (p.isCancel(confirm) || !confirm) {
+    if (!checkCancelled(confirm) || !confirm) {
       p.cancel('Operation cancelled')
       return
     }
@@ -221,6 +160,7 @@ export async function addOwner(account?: string) {
     spinner.start('Creating add owner transaction...')
 
     // The addOwnerWithThreshold method encodes the transaction data
+    const txService = new TransactionService(chain)
     const safeTransaction = await txService.createAddOwnerTransaction(
       safe.address as Address,
       newOwner,
@@ -228,7 +168,7 @@ export async function addOwner(account?: string) {
     )
 
     // Store transaction
-    transactionStore.createTransaction(
+    ctx.transactionStore.createTransaction(
       safeTransaction.safeTxHash,
       safe.address as Address,
       safe.chainId,
@@ -245,11 +185,6 @@ export async function addOwner(account?: string) {
       threshold: currentThreshold,
     })
   } catch (error) {
-    if (error instanceof SafeCLIError) {
-      p.log.error(error.message)
-    } else {
-      p.log.error(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-    p.outro('Failed')
+    handleCommandError(error)
   }
 }

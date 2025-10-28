@@ -1,5 +1,15 @@
 import { isAddress, isHex, getAddress, type Address } from 'viem'
 
+/**
+ * Simple validation utilities for low-level use in storage and services.
+ *
+ * @deprecated For command-level validation, prefer using ValidationService from services/validation-service.ts
+ * which provides more comprehensive validation with better error messages and support for @clack/prompts.
+ *
+ * These utilities are kept for backward compatibility and low-level infrastructure code
+ * (storage, services) where ValidationService dependency injection is not practical.
+ */
+
 export function isValidAddress(address: string): boolean {
   return isAddress(address)
 }
