@@ -74,13 +74,17 @@ export async function showSafeInfo(account?: string) {
     address = selectedAddress as Address
   }
 
-  const safe = safeStorage.getSafe(chainId, address)
-  if (!safe) {
-    logError(`Safe not found: ${address} on chain ${chainId}`)
-    p.cancel('Operation cancelled')
+  // Verify chain exists
+  const chain = configStore.getChain(chainId)
+  if (!chain) {
+    logError(`Chain not found: ${chainId}`)
+    p.cancel(
+      'Operation cancelled. Use "safe config chains" to add this chain or "safe config init" to load default chains'
+    )
     return
   }
 
-  // Render the AccountInfoScreen with the selected Safe
+  // Render the AccountInfoScreen with the Safe address
+  // Note: Safe doesn't need to be in storage - we can query any Safe on-chain
   await renderScreen(AccountInfoScreen, { chainId, address })
 }
