@@ -4,7 +4,7 @@ import { type Address, isAddress } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { SafeService } from '../../services/safe-service.js'
-import { isValidAddress } from '../../utils/validation.js'
+import { getValidationService } from '../../services/validation-service.js'
 import { checksumAddress, shortenAddress } from '../../utils/ethereum.js'
 import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
@@ -82,14 +82,11 @@ export async function openSafe(addressArg?: string) {
     chainId = selectedChainId as string
 
     // Get Safe address
+    const validator = getValidationService()
     const address = await p.text({
-      message: 'Safe address:',
-      placeholder: '0x...',
-      validate: (value) => {
-        if (!value) return 'Address is required'
-        if (!isValidAddress(value)) return 'Invalid Ethereum address'
-        return undefined
-      },
+      message: 'Safe address (supports EIP-3770 format: shortName:address):',
+      placeholder: '0x... or eth:0x...',
+      validate: (value) => validator.validateAddressWithChain(value, chainId, chains),
     })
 
     if (p.isCancel(address)) {
@@ -97,7 +94,13 @@ export async function openSafe(addressArg?: string) {
       return
     }
 
-    safeAddress = checksumAddress(address as string) as Address
+    // Strip EIP-3770 prefix if present
+    safeAddress = validator.assertAddressWithChain(
+      address as string,
+      chainId,
+      chains,
+      'Safe address'
+    )
   }
 
   const chain = configStore.getChain(chainId)!

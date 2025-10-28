@@ -1,5 +1,7 @@
 import { isAddress, isHex, getAddress, type Address } from 'viem'
 import { ValidationError } from '../utils/errors.js'
+import { isEIP3770, parseEIP3770, getChainIdFromShortName } from '../utils/eip3770.js'
+import type { ChainConfig } from '../types/config.js'
 
 /**
  * Centralized validation service for all input validation across the CLI.
@@ -24,6 +26,61 @@ export class ValidationService {
   }
 
   /**
+   * Validates an Ethereum address with EIP-3770 support and chain verification
+   * Accepts both plain addresses (0x...) and EIP-3770 format (shortName:0x...)
+   * If EIP-3770 format is provided, validates that the chain prefix matches expectedChainId
+   *
+   * @param value - Address to validate (plain or EIP-3770 format)
+   * @param expectedChainId - The chain ID that the address should be for
+   * @param chains - Chain configurations to resolve shortNames
+   * @returns Error message or undefined if valid
+   */
+  validateAddressWithChain(
+    value: unknown,
+    expectedChainId: string,
+    chains: Record<string, ChainConfig>
+  ): string | undefined {
+    if (!value || typeof value !== 'string') {
+      return 'Address is required'
+    }
+
+    // Check if it's EIP-3770 format
+    if (isEIP3770(value)) {
+      try {
+        const { shortName, address } = parseEIP3770(value)
+
+        // Resolve the chainId from the shortName
+        const chainId = getChainIdFromShortName(shortName, chains)
+
+        // Check if it matches the expected chain
+        if (chainId !== expectedChainId) {
+          const expectedChain = chains[expectedChainId]
+          const providedChain = chains[chainId]
+          const expectedName = expectedChain?.name || expectedChainId
+          const providedName = providedChain?.name || chainId
+
+          return `Chain mismatch: address is for ${providedName} (${shortName}:) but current Safe is on ${expectedName}`
+        }
+
+        // Validate the address part
+        if (!isAddress(address)) {
+          return 'Invalid Ethereum address'
+        }
+
+        return undefined
+      } catch (error) {
+        if (error instanceof Error) {
+          return error.message
+        }
+        return 'Invalid EIP-3770 address format'
+      }
+    }
+
+    // Plain address format - validate normally
+    return this.validateAddress(value)
+  }
+
+  /**
    * Asserts an Ethereum address is valid and returns checksummed version
    * @throws ValidationError if invalid
    */
@@ -34,6 +91,46 @@ export class ValidationService {
     }
     try {
       return getAddress(value)
+    } catch (error) {
+      throw new ValidationError(
+        `${fieldName}: Invalid address checksum - ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
+
+  /**
+   * Asserts an Ethereum address is valid (with EIP-3770 support) and returns checksummed version
+   * Strips the EIP-3770 prefix if present and validates chain match
+   *
+   * @param value - Address to validate (plain or EIP-3770 format)
+   * @param expectedChainId - The chain ID that the address should be for
+   * @param chains - Chain configurations to resolve shortNames
+   * @param fieldName - Field name for error messages
+   * @returns Checksummed address (without EIP-3770 prefix)
+   * @throws ValidationError if invalid
+   */
+  assertAddressWithChain(
+    value: string,
+    expectedChainId: string,
+    chains: Record<string, ChainConfig>,
+    fieldName = 'Address'
+  ): Address {
+    const error = this.validateAddressWithChain(value, expectedChainId, chains)
+    if (error) {
+      throw new ValidationError(`${fieldName}: ${error}`)
+    }
+
+    // If EIP-3770 format, extract the address part
+    let address: string
+    if (isEIP3770(value)) {
+      const parsed = parseEIP3770(value)
+      address = parsed.address
+    } else {
+      address = value
+    }
+
+    try {
+      return getAddress(address)
     } catch (error) {
       throw new ValidationError(
         `${fieldName}: Invalid address checksum - ${error instanceof Error ? error.message : 'Unknown error'}`

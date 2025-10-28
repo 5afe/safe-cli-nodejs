@@ -104,9 +104,9 @@ export async function createTransaction() {
 
     // Get transaction details
     const toInput = await p.text({
-      message: 'To address',
-      placeholder: '0x...',
-      validate: (value) => validator.validateAddress(value),
+      message: 'To address (supports EIP-3770 format: shortName:address)',
+      placeholder: '0x... or eth:0x...',
+      validate: (value) => validator.validateAddressWithChain(value, chainId, chains),
     })
 
     if (p.isCancel(toInput)) {
@@ -114,8 +114,8 @@ export async function createTransaction() {
       return
     }
 
-    // Checksum the address
-    const to = validator.assertAddress(toInput as string, 'To address')
+    // Checksum the address (strips EIP-3770 prefix if present)
+    const to = validator.assertAddressWithChain(toInput as string, chainId, chains, 'To address')
 
     // Check if address is a contract
     const contractService = new ContractService(chain)
@@ -275,7 +275,7 @@ export async function createTransaction() {
             }
 
             // Build transaction using interactive builder
-            const builder = new TransactionBuilder(abi)
+            const builder = new TransactionBuilder(abi, chainId, chains)
             const result = await builder.buildFunctionCall(func)
 
             value = result.value

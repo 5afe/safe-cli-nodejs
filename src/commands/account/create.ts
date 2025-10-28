@@ -46,6 +46,7 @@ export async function createSafe() {
   }
 
   const chain = configStore.getChain(chainId as string)!
+  const chainsConfig = configStore.getAllChains()
 
   // Configure owners
   const owners: Address[] = []
@@ -86,13 +87,22 @@ export async function createSafe() {
     }
 
     const ownerAddress = await p.text({
-      message: 'Owner address:',
-      placeholder: '0x...',
+      message: 'Owner address (supports EIP-3770 format: shortName:address):',
+      placeholder: '0x... or eth:0x...',
       validate: (value) => {
-        const addressError = validator.validateAddress(value)
+        const addressError = validator.validateAddressWithChain(
+          value,
+          chainId as string,
+          chainsConfig
+        )
         if (addressError) return addressError
-        const checksummed = checksumAddress(value as string)
-        if (owners.includes(checksummed as Address)) return 'Owner already added'
+        const checksummed = validator.assertAddressWithChain(
+          value as string,
+          chainId as string,
+          chainsConfig,
+          'Owner address'
+        )
+        if (owners.includes(checksummed)) return 'Owner already added'
         return undefined
       },
     })
@@ -102,7 +112,12 @@ export async function createSafe() {
       return
     }
 
-    const checksummed = checksumAddress(ownerAddress as string)
+    const checksummed = validator.assertAddressWithChain(
+      ownerAddress as string,
+      chainId as string,
+      chainsConfig,
+      'Owner address'
+    )
     owners.push(checksummed)
     console.log(`✓ Added ${shortenAddress(checksummed)}`)
   }

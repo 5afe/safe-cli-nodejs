@@ -191,7 +191,7 @@ describe('E2E Transaction Builder Test', () => {
       // 5. Build Approval Transaction
       // ============================================
       console.log('\n[E2E] Step 5: Build ERC20 approval transaction')
-      const transactionBuilder = new TransactionBuilder(abi)
+      const transactionBuilder = new TransactionBuilder(abi, SEPOLIA_CHAIN_ID, DEFAULT_CHAINS)
 
       // Build the transaction data for approving 100 DAI to the Safe itself
       // (This is safe since we control the Safe)
