@@ -5,6 +5,7 @@ import type { Wallet, WalletStore, PrivateKeyWallet, LedgerWallet } from '../typ
 import { WalletError } from '../utils/errors.js'
 import { isValidPrivateKey, normalizePrivateKey } from '../utils/validation.js'
 import { checksumAddress } from '../utils/ethereum.js'
+import { generateWalletId } from '../utils/key-generation.js'
 
 // Simple encryption for private keys
 // Note: For production, consider using OS keychain (keytar/keychain)
@@ -118,7 +119,7 @@ export class WalletStorageService {
     }
 
     // Create wallet metadata
-    const walletId = randomBytes(16).toString('hex')
+    const walletId = generateWalletId()
     const wallet: PrivateKeyWallet = {
       type: 'private-key',
       id: walletId,
@@ -161,7 +162,7 @@ export class WalletStorageService {
     }
 
     // Create wallet metadata
-    const walletId = randomBytes(16).toString('hex')
+    const walletId = generateWalletId()
     const wallet: LedgerWallet = {
       type: 'ledger',
       id: walletId,
