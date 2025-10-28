@@ -30,7 +30,7 @@
     "account-abstraction"
   ],
   "author": "Safe Global",
-  "license": "MIT",
+  "license": "LGPL-3.0",
   "dependencies": {
     "@clack/prompts": "^0.7.0",
     "@ledgerhq/hw-app-eth": "^6.46.1",
