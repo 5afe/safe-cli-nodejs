@@ -18,7 +18,7 @@ export const TEST_CHAINS: Record<string, ChainConfig> = {
     chainId: '11155111',
     name: 'Sepolia',
     shortName: 'sep',
-    rpcUrl: 'https://rpc.sepolia.org',
+    rpcUrl: 'https://0xrpc.io/sep',
     currency: 'ETH',
     transactionServiceUrl: 'https://safe-transaction-sepolia.safe.global',
     explorer: 'https://sepolia.etherscan.io',

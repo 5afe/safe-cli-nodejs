@@ -18,7 +18,7 @@ export function createMockConfigStore(): Record<string, unknown> {
         '11155111': {
           chainId: '11155111',
           name: 'Sepolia',
-          rpcUrl: 'https://rpc.sepolia.org',
+          rpcUrl: 'https://0xrpc.io/sep',
           currency: 'ETH',
           explorer: 'https://sepolia.etherscan.io',
         },
@@ -55,7 +55,7 @@ export function createMockConfigStore(): Record<string, unknown> {
         '11155111': {
           chainId: '11155111',
           name: 'Sepolia',
-          rpcUrl: 'https://rpc.sepolia.org',
+          rpcUrl: 'https://0xrpc.io/sep',
           currency: 'ETH',
           explorer: 'https://sepolia.etherscan.io',
         },

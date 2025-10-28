@@ -5,6 +5,7 @@ import { useSafe, useChain } from '../hooks/index.js'
 import { Header, KeyValue, Spinner } from '../components/index.js'
 import { theme } from '../theme.js'
 import { SafeService } from '../../services/safe-service.js'
+import { ABIService } from '../../services/abi-service.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { getConfigStore } from '../../storage/config-store.js'
 
@@ -31,6 +32,10 @@ interface LiveData {
   balance?: bigint
   owners: Address[]
   threshold: number
+  modules?: Address[]
+  guard?: Address | null
+  fallbackHandler?: Address | null
+  masterCopy?: Address | null
 }
 
 /**
@@ -49,15 +54,24 @@ export function AccountInfoScreen({
   address,
   onExit,
 }: AccountInfoScreenProps): React.ReactElement {
-  const { safe, loading: safeLoading, error: safeError } = useSafe(chainId, address)
+  const { safe, loading: safeLoading } = useSafe(chainId, address)
   const { chain, loading: chainLoading, error: chainError } = useChain(chainId)
   const [liveData, setLiveData] = useState<LiveData | null>(null)
   const [fetchingLive, setFetchingLive] = useState(false)
   const [liveError, setLiveError] = useState<string | null>(null)
+  const [contractNames, setContractNames] = useState<Record<Address, string>>({})
 
-  // Fetch live on-chain data for deployed Safes
+  // Fetch live on-chain data
   useEffect(() => {
-    if (!safe || !chain || !safe.deployed) {
+    if (!chain) {
+      if (!chainLoading && onExit) {
+        onExit()
+      }
+      return
+    }
+
+    // If Safe is in storage and not deployed, skip fetching
+    if (safe && !safe.deployed) {
       if (!safeLoading && !chainLoading && onExit) {
         onExit()
       }
@@ -76,6 +90,10 @@ export function AccountInfoScreen({
           balance: info.balance,
           owners: info.owners,
           threshold: info.threshold,
+          modules: info.modules,
+          guard: info.guard,
+          fallbackHandler: info.fallbackHandler,
+          masterCopy: info.masterCopy,
         })
         setFetchingLive(false)
         if (onExit) onExit()
@@ -87,21 +105,60 @@ export function AccountInfoScreen({
       })
   }, [safe, chain, safeLoading, chainLoading, address, onExit])
 
+  // Fetch contract names from Etherscan for modules, guard, fallback handler, and mastercopy
+  useEffect(() => {
+    if (!liveData || !chain) return
+
+    const addressesToFetch: Address[] = []
+
+    // Collect all addresses to fetch
+    if (liveData.masterCopy) addressesToFetch.push(liveData.masterCopy)
+    if (liveData.modules) addressesToFetch.push(...liveData.modules)
+    if (liveData.guard) addressesToFetch.push(liveData.guard)
+    if (liveData.fallbackHandler) addressesToFetch.push(liveData.fallbackHandler)
+
+    if (addressesToFetch.length === 0) return
+
+    // Get Etherscan API key from config
+    const configStore = getConfigStore()
+    const preferences = configStore.getPreferences()
+    const etherscanApiKey = preferences?.etherscanApiKey
+    const abiService = new ABIService(chain, etherscanApiKey)
+
+    // Fetch contract info for each address
+    const names: Record<Address, string> = {}
+    Promise.all(
+      addressesToFetch.map(async (addr) => {
+        try {
+          const info = await abiService.fetchContractInfo(addr)
+          if (info.name) {
+            names[addr] = info.name
+          }
+        } catch {
+          // Ignore errors - contract might not be verified
+        }
+      })
+    ).then(() => {
+      setContractNames(names)
+    })
+  }, [liveData, chain])
+
   // Loading state
   if (safeLoading || chainLoading) {
     return <Spinner message="Loading Safe information..." />
   }
 
   // Error state
-  if (safeError || chainError || !safe || !chain) {
+  if (chainError || !chain) {
     return (
       <Box flexDirection="column" paddingY={1}>
-        <Text color={theme.colors.error}>
-          Error: {safeError || chainError || 'Safe or chain not found'}
-        </Text>
+        <Text color={theme.colors.error}>Error: {chainError || 'Chain not found'}</Text>
       </Box>
     )
   }
+
+  // Note: safe can be null if the Safe is not in storage (ad-hoc query)
+  // This is fine - we'll fetch live data directly from the blockchain
 
   const configStore = getConfigStore()
   const chains = configStore.getAllChains()
@@ -111,12 +168,14 @@ export function AccountInfoScreen({
     <Box flexDirection="column" paddingY={1}>
       <Header title="Safe Information" />
 
-      {/* Safe name */}
-      <Box marginBottom={1}>
-        <Text bold color={theme.colors.primary}>
-          {safe.name}
-        </Text>
-      </Box>
+      {/* Safe name (if available) */}
+      {safe?.name && (
+        <Box marginBottom={1}>
+          <Text bold color={theme.colors.primary}>
+            {safe.name}
+          </Text>
+        </Box>
+      )}
 
       {/* Basic information */}
       <Box flexDirection="column" marginBottom={1}>
@@ -124,11 +183,17 @@ export function AccountInfoScreen({
           items={[
             { key: 'Address', value: eip3770, valueColor: theme.colors.primary },
             { key: 'Chain', value: `${chain.name} (${chain.chainId})` },
-            {
-              key: 'Status',
-              value: safe.deployed ? 'Deployed' : 'Not deployed',
-              valueColor: safe.deployed ? theme.colors.success : theme.colors.warning,
-            },
+            ...(safe
+              ? [
+                  {
+                    key: 'Status',
+                    value: safe.deployed ? 'Deployed' : 'Not deployed',
+                    valueColor: safe.deployed ? theme.colors.success : theme.colors.warning,
+                  },
+                ]
+              : liveData
+                ? [{ key: 'Status', value: 'Deployed', valueColor: theme.colors.success }]
+                : []),
           ]}
         />
       </Box>
@@ -137,7 +202,7 @@ export function AccountInfoScreen({
       {fetchingLive && <Spinner message="Loading on-chain data..." />}
 
       {/* Live on-chain data for deployed Safes */}
-      {safe.deployed && liveData && !fetchingLive && (
+      {liveData && !fetchingLive && (
         <>
           <Box flexDirection="column" marginBottom={1}>
             <KeyValue
@@ -178,11 +243,112 @@ export function AccountInfoScreen({
               </Text>
             </Box>
           </Box>
+
+          {/* Advanced Safe Information */}
+          {(liveData.masterCopy ||
+            liveData.modules ||
+            liveData.guard ||
+            liveData.fallbackHandler) && (
+            <Box flexDirection="column" marginBottom={1}>
+              <Box marginBottom={1}>
+                <Text bold color={theme.colors.primary}>
+                  Advanced Configuration:
+                </Text>
+              </Box>
+
+              {/* Master Copy / Implementation */}
+              {liveData.masterCopy && (
+                <Box flexDirection="column" marginBottom={1} marginLeft={2}>
+                  <Text color={theme.colors.dim}>Master Copy (Implementation):</Text>
+                  <Box marginLeft={2} flexDirection="column">
+                    <Text>{liveData.masterCopy}</Text>
+                    {contractNames[liveData.masterCopy] && (
+                      <Text color={theme.colors.success}>
+                        → {contractNames[liveData.masterCopy]}
+                      </Text>
+                    )}
+                    {chain.explorer && (
+                      <Text color={theme.colors.dim}>
+                        {chain.explorer}/address/{liveData.masterCopy}
+                      </Text>
+                    )}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Modules */}
+              {liveData.modules && liveData.modules.length > 0 && (
+                <Box flexDirection="column" marginBottom={1} marginLeft={2}>
+                  <Text color={theme.colors.dim}>Enabled Modules ({liveData.modules.length}):</Text>
+                  <Box flexDirection="column" marginLeft={2}>
+                    {liveData.modules.map((module, i) => (
+                      <Box key={module} flexDirection="column" marginBottom={1}>
+                        <Box>
+                          <Text color={theme.colors.dim}>{i + 1}. </Text>
+                          <Text>{module}</Text>
+                        </Box>
+                        {contractNames[module] && (
+                          <Box marginLeft={3}>
+                            <Text color={theme.colors.success}>→ {contractNames[module]}</Text>
+                          </Box>
+                        )}
+                        {chain.explorer && (
+                          <Box marginLeft={3}>
+                            <Text color={theme.colors.dim}>
+                              {chain.explorer}/address/{module}
+                            </Text>
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Guard */}
+              {liveData.guard && (
+                <Box flexDirection="column" marginBottom={1} marginLeft={2}>
+                  <Text color={theme.colors.dim}>Transaction Guard:</Text>
+                  <Box marginLeft={2} flexDirection="column">
+                    <Text>{liveData.guard}</Text>
+                    {contractNames[liveData.guard] && (
+                      <Text color={theme.colors.success}>→ {contractNames[liveData.guard]}</Text>
+                    )}
+                    {chain.explorer && (
+                      <Text color={theme.colors.dim}>
+                        {chain.explorer}/address/{liveData.guard}
+                      </Text>
+                    )}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Fallback Handler */}
+              {liveData.fallbackHandler && (
+                <Box flexDirection="column" marginBottom={1} marginLeft={2}>
+                  <Text color={theme.colors.dim}>Fallback Handler:</Text>
+                  <Box marginLeft={2} flexDirection="column">
+                    <Text>{liveData.fallbackHandler}</Text>
+                    {contractNames[liveData.fallbackHandler] && (
+                      <Text color={theme.colors.success}>
+                        → {contractNames[liveData.fallbackHandler]}
+                      </Text>
+                    )}
+                    {chain.explorer && (
+                      <Text color={theme.colors.dim}>
+                        {chain.explorer}/address/{liveData.fallbackHandler}
+                      </Text>
+                    )}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          )}
         </>
       )}
 
       {/* Live data fetch error */}
-      {safe.deployed && liveError && !fetchingLive && (
+      {liveError && !fetchingLive && (
         <Box flexDirection="column" marginBottom={1}>
           <Text color={theme.colors.warning}>⚠ Could not fetch on-chain data</Text>
           <Text color={theme.colors.dim}>{liveError}</Text>
@@ -190,7 +356,7 @@ export function AccountInfoScreen({
       )}
 
       {/* Predicted configuration for undeployed Safes */}
-      {!safe.deployed && safe.predictedConfig && (
+      {safe && !safe.deployed && safe.predictedConfig && (
         <Box flexDirection="column" marginBottom={1}>
           <Box marginBottom={1}>
             <Text bold color={theme.colors.primary}>
@@ -218,7 +384,7 @@ export function AccountInfoScreen({
       {chain.explorer && (
         <Box marginBottom={1}>
           <Text color={theme.colors.dim}>
-            Explorer: {chain.explorer}/address/{safe.address}
+            Explorer: {chain.explorer}/address/{address}
           </Text>
         </Box>
       )}
