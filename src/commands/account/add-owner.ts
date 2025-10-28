@@ -1,14 +1,14 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import { isAddress, type Address } from 'viem'
+import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { getTransactionStore } from '../../storage/transaction-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
+import { getValidationService } from '../../services/validation-service.js'
 import { SafeCLIError } from '../../utils/errors.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
-import { validateAndChecksumAddress } from '../../utils/validation.js'
 import { renderScreen } from '../../ui/render.js'
 import { OwnerAddSuccessScreen } from '../../ui/screens/index.js'
 
@@ -125,15 +125,30 @@ export async function addOwner(account?: string) {
     }
 
     // Get new owner address
+    const validator = getValidationService()
     const newOwnerInput = await p.text({
-      message: 'New owner address:',
-      placeholder: '0x...',
+      message: 'New owner address (supports EIP-3770 format: shortName:address):',
+      placeholder: '0x... or eth:0x...',
       validate: (value) => {
-        if (!value) return 'Address is required'
-        if (!isAddress(value)) return 'Invalid Ethereum address'
-        if (currentOwners.some((o) => o.toLowerCase() === value.toLowerCase())) {
-          return 'Address is already an owner'
+        const addressError = validator.validateAddressWithChain(value, chainId, chains)
+        if (addressError) return addressError
+
+        // Check for duplicates - need to get checksummed version
+        try {
+          const checksummed = validator.assertAddressWithChain(
+            value as string,
+            chainId,
+            chains,
+            'Owner address'
+          )
+          if (currentOwners.some((o) => o.toLowerCase() === checksummed.toLowerCase())) {
+            return 'Address is already an owner'
+          }
+        } catch (error) {
+          // Should not happen since validateAddressWithChain already passed
+          return error instanceof Error ? error.message : 'Invalid address'
         }
+
         return undefined
       },
     })
@@ -143,10 +158,15 @@ export async function addOwner(account?: string) {
       return
     }
 
-    // Checksum the address immediately
+    // Checksum the address (strips EIP-3770 prefix if present)
     let newOwner: Address
     try {
-      newOwner = validateAndChecksumAddress(newOwnerInput as string)
+      newOwner = validator.assertAddressWithChain(
+        newOwnerInput as string,
+        chainId,
+        chains,
+        'Owner address'
+      )
     } catch (error) {
       p.log.error(error instanceof Error ? error.message : 'Invalid address')
       p.outro('Failed')

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { ValidationService } from '../../../services/validation-service.js'
 import { ValidationError } from '../../../utils/errors.js'
-import { TEST_ADDRESSES, TEST_PRIVATE_KEYS } from '../../fixtures/index.js'
+import { TEST_ADDRESSES, TEST_PRIVATE_KEYS, TEST_CHAINS } from '../../fixtures/index.js'
+import type { ChainConfig } from '../../../types/config.js'
 
 describe('ValidationService', () => {
   let service: ValidationService
@@ -991,6 +992,125 @@ describe('ValidationService', () => {
 
       it('should include custom field name in error', () => {
         expect(() => service.assertAddresses([], 'Owner List')).toThrow('Owner List:')
+      })
+    })
+  })
+
+  describe('validateAddressWithChain / assertAddressWithChain', () => {
+    const chains: Record<string, ChainConfig> = {
+      '1': TEST_CHAINS.ethereum,
+      '11155111': TEST_CHAINS.sepolia,
+      '137': TEST_CHAINS.polygon,
+      '42161': TEST_CHAINS.arbitrum,
+    }
+
+    describe('plain addresses (without EIP-3770 prefix)', () => {
+      it('should accept valid plain address', () => {
+        const result = service.validateAddressWithChain(TEST_ADDRESSES.owner1, '1', chains)
+        expect(result).toBeUndefined()
+      })
+
+      it('should accept lowercase plain address', () => {
+        const lowercase = TEST_ADDRESSES.owner1.toLowerCase()
+        const result = service.validateAddressWithChain(lowercase, '1', chains)
+        expect(result).toBeUndefined()
+      })
+
+      it('should reject invalid plain address', () => {
+        const result = service.validateAddressWithChain(TEST_ADDRESSES.invalidShort, '1', chains)
+        expect(result).toBe('Invalid Ethereum address')
+      })
+    })
+
+    describe('EIP-3770 addresses (with chain prefix)', () => {
+      it('should accept EIP-3770 address matching the expected chain', () => {
+        const eip3770Address = `eth:${TEST_ADDRESSES.owner1}`
+        const result = service.validateAddressWithChain(eip3770Address, '1', chains)
+        expect(result).toBeUndefined()
+      })
+
+      it('should accept EIP-3770 address with different chain when it matches', () => {
+        const eip3770Address = `sep:${TEST_ADDRESSES.owner1}`
+        const result = service.validateAddressWithChain(eip3770Address, '11155111', chains)
+        expect(result).toBeUndefined()
+      })
+
+      it('should reject EIP-3770 address when chain prefix does not match expected chain', () => {
+        const eip3770Address = `matic:${TEST_ADDRESSES.owner1}` // Polygon
+        const result = service.validateAddressWithChain(eip3770Address, '1', chains) // Expecting Ethereum
+        expect(result).toContain('Chain mismatch')
+        expect(result).toContain('Polygon')
+        expect(result).toContain('Ethereum')
+      })
+
+      it('should reject EIP-3770 address with unknown chain prefix', () => {
+        const eip3770Address = `unknown:${TEST_ADDRESSES.owner1}`
+        const result = service.validateAddressWithChain(eip3770Address, '1', chains)
+        expect(result).toContain('Chain with shortName "unknown" not found')
+      })
+
+      it('should reject EIP-3770 address with invalid address part', () => {
+        const eip3770Address = 'eth:0xinvalid'
+        const result = service.validateAddressWithChain(eip3770Address, '1', chains)
+        expect(result).toContain('Invalid Ethereum address')
+      })
+
+      it('should show chain names in error message when chains are configured', () => {
+        const eip3770Address = `arb1:${TEST_ADDRESSES.owner1}` // Arbitrum
+        const result = service.validateAddressWithChain(eip3770Address, '137', chains) // Expecting Polygon
+        expect(result).toContain('Arbitrum')
+        expect(result).toContain('Polygon')
+      })
+
+      it('should show chain IDs when chain not in config', () => {
+        const eip3770Address = `eth:${TEST_ADDRESSES.owner1}`
+        const result = service.validateAddressWithChain(eip3770Address, '999999', chains)
+        expect(result).toContain('Chain mismatch')
+      })
+    })
+
+    describe('assertAddressWithChain', () => {
+      it('should return checksummed address for plain address', () => {
+        const lowercase = TEST_ADDRESSES.owner1.toLowerCase()
+        const result = service.assertAddressWithChain(lowercase, '1', chains)
+        expect(result).toBe(TEST_ADDRESSES.owner1)
+      })
+
+      it('should return checksummed address and strip EIP-3770 prefix', () => {
+        const eip3770Address = `eth:${TEST_ADDRESSES.owner1.toLowerCase()}`
+        const result = service.assertAddressWithChain(eip3770Address, '1', chains)
+        expect(result).toBe(TEST_ADDRESSES.owner1)
+        expect(result).not.toContain(':')
+      })
+
+      it('should throw ValidationError for chain mismatch', () => {
+        const eip3770Address = `matic:${TEST_ADDRESSES.owner1}`
+        expect(() =>
+          service.assertAddressWithChain(eip3770Address, '1', chains, 'To address')
+        ).toThrow(ValidationError)
+        expect(() =>
+          service.assertAddressWithChain(eip3770Address, '1', chains, 'To address')
+        ).toThrow('To address:')
+      })
+
+      it('should throw ValidationError for invalid address', () => {
+        expect(() =>
+          service.assertAddressWithChain(TEST_ADDRESSES.invalidShort, '1', chains, 'Owner address')
+        ).toThrow(ValidationError)
+      })
+
+      it('should throw ValidationError for unknown chain prefix', () => {
+        const eip3770Address = `unknown:${TEST_ADDRESSES.owner1}`
+        expect(() => service.assertAddressWithChain(eip3770Address, '1', chains)).toThrow(
+          ValidationError
+        )
+      })
+
+      it('should include custom field name in error', () => {
+        const eip3770Address = `matic:${TEST_ADDRESSES.owner1}`
+        expect(() =>
+          service.assertAddressWithChain(eip3770Address, '1', chains, 'Destination address')
+        ).toThrow('Destination address:')
       })
     })
   })

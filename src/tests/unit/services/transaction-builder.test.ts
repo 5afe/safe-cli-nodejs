@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { TransactionBuilder } from '../../../services/transaction-builder.js'
 import type { ABI, ABIFunction } from '../../../services/abi-service.js'
+import type { ChainConfig } from '../../../types/config.js'
 import * as p from '@clack/prompts'
+import { TEST_CHAINS } from '../../fixtures/chains.js'
 
 // Mock @clack/prompts
 vi.mock('@clack/prompts', () => ({
@@ -25,6 +27,13 @@ vi.mock('viem', async () => {
 
 describe('TransactionBuilder', () => {
   let builder: TransactionBuilder
+  const chainId = '1'
+  const chains: Record<string, ChainConfig> = {
+    '1': TEST_CHAINS.ethereum,
+    '11155111': TEST_CHAINS.sepolia,
+    '137': TEST_CHAINS.polygon,
+  }
+
   const mockABI: ABI = [
     {
       type: 'function',
@@ -47,13 +56,13 @@ describe('TransactionBuilder', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    builder = new TransactionBuilder(mockABI)
+    builder = new TransactionBuilder(mockABI, chainId, chains)
     vi.mocked(p.isCancel).mockReturnValue(false)
   })
 
   describe('constructor', () => {
-    it('should create builder with ABI', () => {
-      const b = new TransactionBuilder(mockABI)
+    it('should create builder with ABI, chainId, and chains', () => {
+      const b = new TransactionBuilder(mockABI, chainId, chains)
       expect(b).toBeInstanceOf(TransactionBuilder)
     })
   })

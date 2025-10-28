@@ -1,6 +1,8 @@
 import * as p from '@clack/prompts'
-import { encodeFunctionData, parseEther, type Address } from 'viem'
+import { encodeFunctionData, parseEther } from 'viem'
 import type { ABIFunction, ABI } from './abi-service.js'
+import type { ChainConfig } from '../types/config.js'
+import { getValidationService } from './validation-service.js'
 import { SafeCLIError } from '../utils/errors.js'
 
 export interface TransactionBuilderResult {
@@ -13,9 +15,14 @@ export interface TransactionBuilderResult {
  */
 export class TransactionBuilder {
   private abi: ABI
+  private chainId: string
+  private chains: Record<string, ChainConfig>
+  private validator = getValidationService()
 
-  constructor(abi: ABI) {
+  constructor(abi: ABI, chainId: string, chains: Record<string, ChainConfig>) {
     this.abi = abi
+    this.chainId = chainId
+    this.chains = chains
   }
 
   /**
@@ -102,7 +109,7 @@ export class TransactionBuilder {
    * Get placeholder text for parameter type
    */
   private getPlaceholder(type: string): string {
-    if (type === 'address') return '0x...'
+    if (type === 'address') return '0x... or eth:0x...'
     if (type.startsWith('uint') || type.startsWith('int')) return '123'
     if (type === 'bool') return 'true or false'
     if (type === 'string') return 'your text here'
@@ -115,6 +122,12 @@ export class TransactionBuilder {
    * Validate parameter input
    */
   private validateParameter(value: string, type: string): string | undefined {
+    // For addresses, use ValidationService directly to avoid try-catch overhead
+    if (type === 'address') {
+      return this.validator.validateAddressWithChain(value, this.chainId, this.chains)
+    }
+
+    // For other types, parse and catch errors
     try {
       this.parseParameter(value, type)
       return undefined
@@ -127,12 +140,10 @@ export class TransactionBuilder {
    * Parse parameter value based on type
    */
   private parseParameter(value: string, type: string): unknown {
-    // Address
+    // Address (with EIP-3770 support using ValidationService)
     if (type === 'address') {
-      if (!/^0x[a-fA-F0-9]{40}$/.test(value)) {
-        throw new Error('Invalid address format')
-      }
-      return value as Address
+      // Use ValidationService for consistent address validation and chain checking
+      return this.validator.assertAddressWithChain(value, this.chainId, this.chains, 'Parameter')
     }
 
     // Boolean
