@@ -16,6 +16,15 @@ interface TestStorageContext {
 }
 
 /**
+ * Check if a path is in a temporary directory
+ * Validates against tmpdir(), /tmp (Unix), and \Temp (Windows)
+ */
+export function isTempDirectory(path: string): boolean {
+  const tmp = tmpdir()
+  return path.includes(tmp) || path.includes('/tmp') || path.includes('\\Temp')
+}
+
+/**
  * Create isolated storage directories for testing
  * ALWAYS call cleanup() in afterEach to remove test data
  */
@@ -24,8 +33,8 @@ export function createTestStorage(prefix: string = 'safe-cli-test'): TestStorage
   const dataDir = mkdtempSync(join(tmpdir(), `${prefix}-data-`))
 
   // Verify we're in a temporary directory (safety check)
-  if (!configDir.includes(tmpdir()) || !dataDir.includes(tmpdir())) {
-    throw new Error('CRITICAL: Test storage must be in temp directory!')
+  if (!isTempDirectory(configDir) || !isTempDirectory(dataDir)) {
+    throw new Error(`CRITICAL: Test storage must be in temp directory! Got: ${configDir}`)
   }
 
   const cleanup = () => {
@@ -73,11 +82,11 @@ export function enforceTestEnvironment(): void {
   const xdgConfig = process.env.XDG_CONFIG_HOME
   const xdgData = process.env.XDG_DATA_HOME
 
-  if (xdgConfig && !xdgConfig.includes(tmpdir()) && !xdgConfig.includes('/tmp')) {
+  if (xdgConfig && !isTempDirectory(xdgConfig)) {
     throw new Error(`CRITICAL: XDG_CONFIG_HOME must point to temp directory, got: ${xdgConfig}`)
   }
 
-  if (xdgData && !xdgData.includes(tmpdir()) && !xdgData.includes('/tmp')) {
+  if (xdgData && !isTempDirectory(xdgData)) {
     throw new Error(`CRITICAL: XDG_DATA_HOME must point to temp directory, got: ${xdgData}`)
   }
 }
@@ -102,7 +111,7 @@ export function safeCleanupTestData(
   }
 ): void {
   // Verify we're working with test directories
-  if (!context.configDir.includes(tmpdir())) {
+  if (!isTempDirectory(context.configDir)) {
     throw new Error('CRITICAL: Can only cleanup test storage, not production config!')
   }
 
