@@ -62,14 +62,20 @@ export function isEIP3770(value: string): boolean {
 
 /**
  * Get chain shortName from chainId using chain configs
+ * Returns fallback if chain not found (for graceful degradation)
  */
 export function getShortNameFromChainId(
   chainId: string,
-  chains: Record<string, ChainConfig>
+  chains: Record<string, ChainConfig>,
+  options?: { throwOnMissing?: boolean }
 ): string {
   const chain = chains[chainId]
   if (!chain) {
-    throw new SafeCLIError(`Chain with ID ${chainId} not found in configuration`)
+    if (options?.throwOnMissing) {
+      throw new SafeCLIError(`Chain with ID ${chainId} not found in configuration`)
+    }
+    // Graceful fallback: use chainId as shortName
+    return `chain:${chainId}`
   }
   return chain.shortName
 }
@@ -81,6 +87,11 @@ export function getChainIdFromShortName(
   shortName: string,
   chains: Record<string, ChainConfig>
 ): string {
+  // Handle fallback format: "chain:123" -> "123"
+  if (shortName.startsWith('chain:')) {
+    return shortName.substring(6)
+  }
+
   for (const [chainId, chain] of Object.entries(chains)) {
     if (chain.shortName === shortName) {
       return chainId
