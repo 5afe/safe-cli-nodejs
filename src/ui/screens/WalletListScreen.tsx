@@ -139,12 +139,10 @@ export function WalletListScreen({ onExit }: WalletListScreenProps): React.React
               })
             }
 
-            if (wallet.lastUsed) {
-              items.push({
-                key: 'Last used',
-                value: new Date(wallet.lastUsed).toLocaleString(),
-              })
-            }
+            items.push({
+              key: 'Last used',
+              value: wallet.lastUsed ? new Date(wallet.lastUsed).toLocaleString() : 'Never',
+            })
 
             return (
               <Box flexDirection="column">

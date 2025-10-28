@@ -5,6 +5,7 @@ import { addChain, listChains, removeChain } from './commands/config/chains.js'
 import { editChains } from './commands/config/edit.js'
 import { importWallet } from './commands/wallet/import.js'
 import { importLedgerWallet } from './commands/wallet/import-ledger.js'
+import { createWallet } from './commands/wallet/create.js'
 import { listWallets } from './commands/wallet/list.js'
 import { useWallet } from './commands/wallet/use.js'
 import { removeWallet } from './commands/wallet/remove.js'
@@ -124,6 +125,17 @@ wallet
   .action(async () => {
     try {
       await importLedgerWallet()
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+wallet
+  .command('create')
+  .description('Create a new wallet with a generated private key')
+  .action(async () => {
+    try {
+      await createWallet()
     } catch (error) {
       handleError(error)
     }

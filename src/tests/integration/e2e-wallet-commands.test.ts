@@ -50,6 +50,7 @@ describe('E2E Wallet Commands', () => {
       expect(result.exitCode).toBe(0)
       expect(result.stdout).toContain('Manage wallets')
       expect(result.stdout).toContain('import')
+      expect(result.stdout).toContain('create')
       expect(result.stdout).toContain('list')
       expect(result.stdout).toContain('use')
       expect(result.stdout).toContain('remove')
@@ -90,6 +91,43 @@ describe('E2E Wallet Commands', () => {
 
         // Either succeeded or partially completed (depending on interactive lib behavior)
         expect(hasSuccess || hasAddress !== null || result.exitCode === 0).toBe(true)
+      },
+      { timeout: 60000 }
+    )
+  })
+
+  describe('wallet create', () => {
+    it('should show help for wallet create', async () => {
+      const result = await cli.exec(['wallet', 'create', '--help'])
+
+      expect(result.exitCode).toBe(0)
+      expect(result.stdout).toContain('Create a new wallet')
+    })
+
+    it(
+      'should create a new wallet with generated private key',
+      async () => {
+        const result = await cli.execWithInput(
+          ['wallet', 'create'],
+          [
+            'y', // Accept security warnings
+            'test-password-123', // Password
+            'test-password-123', // Confirm password
+            'Generated Wallet', // Wallet name
+            // Note: We can't easily test the backup verification in automated tests
+            // as it requires reading and re-entering the generated private key
+          ],
+          {
+            timeout: 30000,
+            env: {
+              XDG_CONFIG_HOME: testConfigDir,
+              XDG_DATA_HOME: testDataDir,
+            },
+          }
+        )
+
+        // The command should start successfully and show security warnings
+        expect(result.stdout).toContain('Security Warning')
       },
       { timeout: 60000 }
     )
