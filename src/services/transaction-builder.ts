@@ -1,9 +1,9 @@
 import * as p from '@clack/prompts'
-import { encodeFunctionData, parseEther, type Address } from 'viem'
+import { encodeFunctionData, parseEther } from 'viem'
 import type { ABIFunction, ABI } from './abi-service.js'
 import type { ChainConfig } from '../types/config.js'
+import { getValidationService } from './validation-service.js'
 import { SafeCLIError } from '../utils/errors.js'
-import { isEIP3770, parseEIP3770, getChainIdFromShortName } from '../utils/eip3770.js'
 
 export interface TransactionBuilderResult {
   data: `0x${string}`
@@ -17,6 +17,7 @@ export class TransactionBuilder {
   private abi: ABI
   private chainId: string
   private chains: Record<string, ChainConfig>
+  private validator = getValidationService()
 
   constructor(abi: ABI, chainId: string, chains: Record<string, ChainConfig>) {
     this.abi = abi
@@ -121,6 +122,12 @@ export class TransactionBuilder {
    * Validate parameter input
    */
   private validateParameter(value: string, type: string): string | undefined {
+    // For addresses, use ValidationService directly to avoid try-catch overhead
+    if (type === 'address') {
+      return this.validator.validateAddressWithChain(value, this.chainId, this.chains)
+    }
+
+    // For other types, parse and catch errors
     try {
       this.parseParameter(value, type)
       return undefined
@@ -133,42 +140,10 @@ export class TransactionBuilder {
    * Parse parameter value based on type
    */
   private parseParameter(value: string, type: string): unknown {
-    // Address (with EIP-3770 support)
+    // Address (with EIP-3770 support using ValidationService)
     if (type === 'address') {
-      // Check if EIP-3770 format
-      if (isEIP3770(value)) {
-        try {
-          const { shortName, address } = parseEIP3770(value)
-
-          // Resolve the chainId from the shortName
-          const chainId = getChainIdFromShortName(shortName, this.chains)
-
-          // Check if it matches the expected chain
-          if (chainId !== this.chainId) {
-            const expectedChain = this.chains[this.chainId]
-            const providedChain = this.chains[chainId]
-            const expectedName = expectedChain?.name || this.chainId
-            const providedName = providedChain?.name || chainId
-
-            throw new Error(
-              `Chain mismatch: address is for ${providedName} (${shortName}:) but current Safe is on ${expectedName}`
-            )
-          }
-
-          return address
-        } catch (error) {
-          if (error instanceof Error) {
-            throw error
-          }
-          throw new Error('Invalid EIP-3770 address format')
-        }
-      }
-
-      // Plain address format
-      if (!/^0x[a-fA-F0-9]{40}$/.test(value)) {
-        throw new Error('Invalid address format')
-      }
-      return value as Address
+      // Use ValidationService for consistent address validation and chain checking
+      return this.validator.assertAddressWithChain(value, this.chainId, this.chains, 'Parameter')
     }
 
     // Boolean
