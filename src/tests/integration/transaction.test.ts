@@ -323,8 +323,8 @@ describe('Transaction Integration Tests', () => {
         TEST_ADDRESS
       )
 
-      // Create new instance
-      const newTransactionStore = new TransactionStore()
+      // Create new instance pointing to same test directory
+      const newTransactionStore = new TransactionStore({ cwd: testStorage.configDir })
       const tx = newTransactionStore.getTransaction(TEST_SAFE_TX_HASH)
 
       expect(tx).not.toBeNull()
@@ -350,8 +350,8 @@ describe('Transaction Integration Tests', () => {
         signedAt: new Date().toISOString(),
       })
 
-      // Create new instance
-      const newTransactionStore = new TransactionStore()
+      // Create new instance pointing to same test directory
+      const newTransactionStore = new TransactionStore({ cwd: testStorage.configDir })
       const tx = newTransactionStore.getTransaction(TEST_SAFE_TX_HASH)
 
       expect(tx?.signatures).toHaveLength(1)

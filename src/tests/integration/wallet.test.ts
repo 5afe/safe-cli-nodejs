@@ -144,8 +144,8 @@ describe('Wallet Integration Tests', () => {
     it('should persist wallet across instances', async () => {
       const wallet = await walletStorage.importWallet('Test Wallet', TEST_PRIVATE_KEY)
 
-      // Create new instance
-      const newWalletStorage = new WalletStorageService()
+      // Create new instance pointing to same test directory
+      const newWalletStorage = new WalletStorageService({ cwd: testStorage.configDir })
       newWalletStorage.setPassword(TEST_PASSWORD)
 
       const wallets = newWalletStorage.getAllWallets()

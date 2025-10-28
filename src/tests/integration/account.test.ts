@@ -190,8 +190,8 @@ describe('Account Integration Tests', () => {
         name: 'Test Safe',
       })
 
-      // Create new instance
-      const newSafeStorage = new SafeAccountStorage()
+      // Create new instance pointing to same test directory
+      const newSafeStorage = new SafeAccountStorage({ cwd: testStorage.configDir })
       const safe = newSafeStorage.getSafe(TEST_CHAIN.chainId, TEST_SAFE_ADDRESS)
 
       expect(safe).toBeDefined()
