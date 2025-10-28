@@ -159,15 +159,23 @@ describe('eip3770 utils', () => {
       expect(result).toBe('arb1')
     })
 
-    it('should throw for unknown chainId', () => {
-      expect(() => getShortNameFromChainId('999999', CHAINS_BY_ID)).toThrow(SafeCLIError)
-      expect(() => getShortNameFromChainId('999999', CHAINS_BY_ID)).toThrow(
-        'Chain with ID 999999 not found in configuration'
-      )
+    it('should return fallback format for unknown chainId by default', () => {
+      const result = getShortNameFromChainId('999999', CHAINS_BY_ID)
+      expect(result).toBe('chain:999999')
     })
 
-    it('should throw for empty chainId', () => {
-      expect(() => getShortNameFromChainId('', CHAINS_BY_ID)).toThrow(SafeCLIError)
+    it('should throw for unknown chainId when throwOnMissing is true', () => {
+      expect(() =>
+        getShortNameFromChainId('999999', CHAINS_BY_ID, { throwOnMissing: true })
+      ).toThrow(SafeCLIError)
+      expect(() =>
+        getShortNameFromChainId('999999', CHAINS_BY_ID, { throwOnMissing: true })
+      ).toThrow('Chain with ID 999999 not found in configuration')
+    })
+
+    it('should return fallback format for empty chainId', () => {
+      const result = getShortNameFromChainId('', CHAINS_BY_ID)
+      expect(result).toBe('chain:')
     })
   })
 
@@ -190,6 +198,16 @@ describe('eip3770 utils', () => {
     it('should return chainId for arb1', () => {
       const result = getChainIdFromShortName('arb1', CHAINS_BY_ID)
       expect(result).toBe('42161')
+    })
+
+    it('should handle fallback format chain:123', () => {
+      const result = getChainIdFromShortName('chain:999999', CHAINS_BY_ID)
+      expect(result).toBe('999999')
+    })
+
+    it('should handle fallback format for known chains', () => {
+      const result = getChainIdFromShortName('chain:1', CHAINS_BY_ID)
+      expect(result).toBe('1')
     })
 
     it('should throw for unknown shortName', () => {
@@ -266,10 +284,14 @@ describe('eip3770 utils', () => {
       expect(result).toBe(`matic:${TEST_ADDRESSES.safe1}`)
     })
 
-    it('should throw for unknown chainId', () => {
-      expect(() => formatSafeAddress(TEST_ADDRESSES.safe1, '999999', CHAINS_BY_ID)).toThrow(
-        SafeCLIError
-      )
+    it('should return fallback format for unknown chainId', () => {
+      const result = formatSafeAddress(TEST_ADDRESSES.safe1, '999999', CHAINS_BY_ID)
+      expect(result).toBe(`chain:999999:${TEST_ADDRESSES.safe1}`)
+    })
+
+    it('should handle empty chains config gracefully', () => {
+      const result = formatSafeAddress(TEST_ADDRESSES.safe1, '1', {})
+      expect(result).toBe(`chain:1:${TEST_ADDRESSES.safe1}`)
     })
   })
 
