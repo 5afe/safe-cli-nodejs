@@ -132,15 +132,23 @@ export async function addOwner(account?: string) {
       validate: (value) => {
         const addressError = validator.validateAddressWithChain(value, chainId, chains)
         if (addressError) return addressError
-        const checksummed = validator.assertAddressWithChain(
-          value as string,
-          chainId,
-          chains,
-          'Owner address'
-        )
-        if (currentOwners.some((o) => o.toLowerCase() === checksummed.toLowerCase())) {
-          return 'Address is already an owner'
+
+        // Check for duplicates - need to get checksummed version
+        try {
+          const checksummed = validator.assertAddressWithChain(
+            value as string,
+            chainId,
+            chains,
+            'Owner address'
+          )
+          if (currentOwners.some((o) => o.toLowerCase() === checksummed.toLowerCase())) {
+            return 'Address is already an owner'
+          }
+        } catch (error) {
+          // Should not happen since validateAddressWithChain already passed
+          return error instanceof Error ? error.message : 'Invalid address'
         }
+
         return undefined
       },
     })

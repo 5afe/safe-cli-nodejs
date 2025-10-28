@@ -96,13 +96,21 @@ export async function createSafe() {
           chainsConfig
         )
         if (addressError) return addressError
-        const checksummed = validator.assertAddressWithChain(
-          value as string,
-          chainId as string,
-          chainsConfig,
-          'Owner address'
-        )
-        if (owners.includes(checksummed)) return 'Owner already added'
+
+        // Check for duplicates - need to get checksummed version
+        try {
+          const checksummed = validator.assertAddressWithChain(
+            value as string,
+            chainId as string,
+            chainsConfig,
+            'Owner address'
+          )
+          if (owners.includes(checksummed)) return 'Owner already added'
+        } catch (error) {
+          // Should not happen since validateAddressWithChain already passed
+          return error instanceof Error ? error.message : 'Invalid address'
+        }
+
         return undefined
       },
     })
