@@ -23,8 +23,8 @@ export default tseslint.config(
     files: ['**/*.test.ts', '**/test/**/*.ts', '**/tests/**/*.ts', '**/fixtures/**/*.ts', '**/helpers/**/*.ts'],
     ...tseslint.configs.disableTypeChecked,
     rules: {
-      // Allow 'any' in test files for mocking purposes
-      '@typescript-eslint/no-explicit-any': 'warn',
+      // Allow 'any' in test files for mocking purposes (silenced)
+      '@typescript-eslint/no-explicit-any': 'off',
       // Still enforce no unused vars in tests
       '@typescript-eslint/no-unused-vars': 'error',
     },

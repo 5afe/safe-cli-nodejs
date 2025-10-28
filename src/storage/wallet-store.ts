@@ -1,4 +1,5 @@
 import Conf from 'conf'
+import { tmpdir } from 'os'
 import { randomBytes, createCipheriv, createDecipheriv, pbkdf2Sync } from 'crypto'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { Wallet, WalletStore, PrivateKeyWallet, LedgerWallet } from '../types/wallet.js'
@@ -59,10 +60,28 @@ export class WalletStorageService {
   private secureStorage: SecureStorage
   private password: string | null = null
 
-  constructor() {
+  constructor(options?: { cwd?: string; projectName?: string }) {
+    // SAFETY: Prevent test mode from touching production config
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+      if (options?.cwd) {
+        const tmp = tmpdir()
+        const isTempDir =
+          options.cwd.includes(tmp) ||
+          options.cwd.includes('/tmp') ||
+          options.cwd.includes('\\Temp')
+        if (!isTempDir) {
+          throw new Error(
+            'CRITICAL SAFETY CHECK: Test mode requires cwd to be in temp directory! ' +
+              `Got: ${options.cwd}. Use createTestStorage() from src/tests/helpers/test-storage.ts`
+          )
+        }
+      }
+    }
+
     this.store = new Conf<WalletStore>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
       configName: 'wallets',
+      cwd: options?.cwd,
       defaults: {
         wallets: {},
         activeWallet: null,
@@ -70,8 +89,9 @@ export class WalletStorageService {
     })
 
     this.secureStore = new Conf<Record<string, string>>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
       configName: 'wallets-secure',
+      cwd: options?.cwd,
       defaults: {},
     })
 

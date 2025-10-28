@@ -14,11 +14,12 @@ import type { Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { ConfigStore } from '../../storage/config-store.js'
 import { WalletStorageService } from '../../storage/wallet-store.js'
-import { SafeStorageService } from '../../storage/safe-store.js'
+import { SafeAccountStorage } from '../../storage/safe-store.js'
 import { TransactionStore } from '../../storage/transaction-store.js'
 import { SafeService } from '../../services/safe-service.js'
 import { TransactionService } from '../../services/transaction-service.js'
 import { DEFAULT_CHAINS } from '../../constants/chains.js'
+import { createTestStorage } from '../helpers/test-storage.js'
 
 /**
  * E2E Test Wallet (ONLY FOR TESTING ON SEPOLIA)
@@ -43,27 +44,28 @@ describe('E2E Flow Test', () => {
 
   let configStore: ConfigStore
   let walletStorage: WalletStorageService
-  let safeStorage: SafeStorageService
+  let safeStorage: SafeAccountStorage
   let transactionStore: TransactionStore
   let tempDir: string
+  let testStorage: ReturnType<typeof createTestStorage>
 
   beforeEach(() => {
-    // Initialize stores
-    configStore = new ConfigStore()
-    walletStorage = new WalletStorageService()
-    safeStorage = new SafeStorageService()
-    transactionStore = new TransactionStore()
+    // CRITICAL: Create isolated test storage - NEVER touches user's actual config!
+    testStorage = createTestStorage('full-workflow-e2e')
+
+    // Initialize stores with isolated directories
+    configStore = new ConfigStore({ cwd: testStorage.configDir })
+    walletStorage = new WalletStorageService({ cwd: testStorage.configDir })
+    safeStorage = new SafeAccountStorage({ cwd: testStorage.configDir })
+    transactionStore = new TransactionStore({ cwd: testStorage.configDir })
 
     // Create temp directory for exports
     tempDir = mkdtempSync(join(tmpdir(), 'safe-cli-e2e-'))
-
-    // Clean up any existing data
-    cleanupTestData()
   })
 
   afterEach(() => {
-    // Cleanup
-    cleanupTestData()
+    // Cleanup test directories
+    testStorage.cleanup()
 
     // Remove temp directory
     try {
@@ -78,60 +80,6 @@ describe('E2E Flow Test', () => {
       // Ignore cleanup errors
     }
   })
-
-  function cleanupTestData() {
-    // Clear wallets
-    try {
-      const wallets = walletStorage.getAllWallets()
-      wallets.forEach((wallet) => {
-        try {
-          walletStorage.removeWallet(wallet.id)
-        } catch {
-          // Ignore
-        }
-      })
-    } catch {
-      // Ignore
-    }
-
-    // Clear safes
-    try {
-      const safes = safeStorage.getAllSafes()
-      safes.forEach((safe) => {
-        try {
-          safeStorage.removeSafe(safe.chainId, safe.address as Address)
-        } catch {
-          // Ignore
-        }
-      })
-    } catch {
-      // Ignore
-    }
-
-    // Clear transactions
-    try {
-      const txs = transactionStore.getAllTransactions()
-      txs.forEach((tx) => {
-        try {
-          transactionStore.removeTransaction(tx.safeTxHash)
-        } catch {
-          // Ignore
-        }
-      })
-    } catch {
-      // Ignore
-    }
-
-    // Clear chains
-    try {
-      const chains = configStore.getAllChains()
-      Object.keys(chains).forEach((chainId) => {
-        configStore.deleteChain(chainId)
-      })
-    } catch {
-      // Ignore
-    }
-  }
 
   it(
     'should complete full E2E flow: init config -> import wallet -> create safe -> deploy -> create tx -> sign -> export -> import -> execute',

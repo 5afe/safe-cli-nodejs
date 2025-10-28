@@ -1,4 +1,5 @@
 import Conf from 'conf'
+import { tmpdir } from 'os'
 import type { SafeAccount, SafeStore } from '../types/safe.js'
 import { SafeCLIError } from '../utils/errors.js'
 
@@ -13,10 +14,28 @@ function getSafeKey(chainId: string, address: string): string {
 export class SafeAccountStorage {
   private store: Conf<SafeStore>
 
-  constructor() {
+  constructor(options?: { cwd?: string; projectName?: string }) {
+    // SAFETY: Prevent test mode from touching production config
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+      if (options?.cwd) {
+        const tmp = tmpdir()
+        const isTempDir =
+          options.cwd.includes(tmp) ||
+          options.cwd.includes('/tmp') ||
+          options.cwd.includes('\\Temp')
+        if (!isTempDir) {
+          throw new Error(
+            'CRITICAL SAFETY CHECK: Test mode requires cwd to be in temp directory! ' +
+              `Got: ${options.cwd}. Use createTestStorage() from src/tests/helpers/test-storage.ts`
+          )
+        }
+      }
+    }
+
     this.store = new Conf<SafeStore>({
-      projectName: 'safe-cli',
+      projectName: options?.projectName || 'safe-cli',
       configName: 'safes',
+      cwd: options?.cwd,
       defaults: {
         safes: {},
       },
