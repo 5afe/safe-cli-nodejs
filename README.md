@@ -466,7 +466,7 @@ safe tx execute <txHash>
 ### Storage Location
 
 Configuration files are stored in:
-- **macOS/Linux**: `~/.config/safe-cli/`
+- **macOS/Linux**: `~/Library/Preferences/safe-cli/config.json`
 - **Windows**: `%APPDATA%\safe-cli\`
 
 ### Supported Networks (Default)
@@ -629,7 +629,7 @@ Please ensure:
 
 ## 📄 License
 
-MIT
+LGPL-3.0
 
 ---
 
