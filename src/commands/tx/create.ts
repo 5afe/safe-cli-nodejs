@@ -9,10 +9,16 @@ import { ContractService } from '../../services/contract-service.js'
 import { ABIService, type ABI, type ABIFunction } from '../../services/abi-service.js'
 import { TransactionBuilder } from '../../services/transaction-builder.js'
 import { getValidationService } from '../../services/validation-service.js'
-import { SafeCLIError } from '../../utils/errors.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { renderScreen } from '../../ui/render.js'
 import { TransactionCreateSuccessScreen } from '../../ui/screens/index.js'
+import {
+  ensureActiveWallet,
+  ensureChainConfigured,
+  checkCancelled,
+  handleCommandError,
+} from '../../utils/command-helpers.js'
+import { ensureWalletIsOwner } from '../../utils/safe-helpers.js'
 
 export async function createTransaction() {
   p.intro('Create Safe Transaction')
@@ -24,12 +30,8 @@ export async function createTransaction() {
     const transactionStore = getTransactionStore()
     const validator = getValidationService()
 
-    const activeWallet = walletStorage.getActiveWallet()
-    if (!activeWallet) {
-      p.log.error('No active wallet set. Please import a wallet first.')
-      p.outro('Setup required')
-      return
-    }
+    const activeWallet = ensureActiveWallet(walletStorage)
+    if (!activeWallet) return
 
     // Get all Safes
     const safes = safeStorage.getAllSafes()
@@ -56,10 +58,7 @@ export async function createTransaction() {
       }),
     })) as string
 
-    if (p.isCancel(safeKey)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(safeKey)) return
 
     const [chainId, address] = safeKey.split(':')
     const safe = safeStorage.getSafe(chainId, address as Address)
@@ -70,12 +69,8 @@ export async function createTransaction() {
     }
 
     // Get chain
-    const chain = configStore.getChain(chainId)
-    if (!chain) {
-      p.log.error(`Chain ${chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
+    const chain = ensureChainConfigured(chainId, configStore)
+    if (!chain) return
 
     // Fetch live owners from blockchain
     const spinner = p.spinner()
@@ -96,11 +91,7 @@ export async function createTransaction() {
     }
 
     // Check if wallet is an owner
-    if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
-      p.log.error('Active wallet is not an owner of this Safe')
-      p.outro('Failed')
-      return
-    }
+    if (!ensureWalletIsOwner(activeWallet, owners)) return
 
     // Get transaction details
     const toInput = await p.text({
@@ -109,10 +100,7 @@ export async function createTransaction() {
       validate: (value) => validator.validateAddressWithChain(value, chainId, chains),
     })
 
-    if (p.isCancel(toInput)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(toInput)) return
 
     // Checksum the address (strips EIP-3770 prefix if present)
     const to = validator.assertAddressWithChain(toInput as string, chainId, chains, 'To address')
@@ -238,10 +226,7 @@ export async function createTransaction() {
             initialValue: true,
           })
 
-          if (p.isCancel(useBuilder)) {
-            p.cancel('Operation cancelled')
-            return
-          }
+          if (!checkCancelled(useBuilder)) return
 
           if (useBuilder) {
             // Show function selector with pagination
@@ -259,10 +244,7 @@ export async function createTransaction() {
               maxItems: 15, // Limit visible items for pagination
             })
 
-            if (p.isCancel(selectedFuncSig)) {
-              p.cancel('Operation cancelled')
-              return
-            }
+            if (!checkCancelled(selectedFuncSig)) return
 
             const func = functions.find((f) => {
               const sig = `${f.name}(${f.inputs?.map((i) => i.type).join(',') || ''})`
@@ -298,10 +280,7 @@ export async function createTransaction() {
         validate: (val) => validator.validateWeiValue(val),
       })) as string
 
-      if (p.isCancel(value)) {
-        p.cancel('Operation cancelled')
-        return
-      }
+      if (!checkCancelled(value)) return
 
       data = (await p.text({
         message: 'Transaction data (hex)',
@@ -310,10 +289,7 @@ export async function createTransaction() {
         validate: (val) => validator.validateHexData(val),
       })) as `0x${string}`
 
-      if (p.isCancel(data)) {
-        p.cancel('Operation cancelled')
-        return
-      }
+      if (!checkCancelled(data)) return
     }
 
     const operation = (await p.select({
@@ -325,10 +301,7 @@ export async function createTransaction() {
       initialValue: 0,
     })) as number as 0 | 1
 
-    if (p.isCancel(operation)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(operation)) return
 
     // Get current Safe nonce for recommendation
     const txService = new TransactionService(chain)
@@ -350,10 +323,7 @@ export async function createTransaction() {
       validate: (value) => validator.validateNonce(value, currentNonce),
     })) as string
 
-    if (p.isCancel(nonceInput)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(nonceInput)) return
 
     const nonce = nonceInput ? parseInt(nonceInput, 10) : undefined
 
@@ -404,11 +374,6 @@ export async function createTransaction() {
       })
     }
   } catch (error) {
-    if (error instanceof SafeCLIError) {
-      p.log.error(error.message)
-    } else {
-      p.log.error(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-    p.outro('Failed')
+    handleCommandError(error)
   }
 }

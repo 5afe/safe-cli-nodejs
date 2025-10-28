@@ -6,6 +6,7 @@ import { getValidationService } from '../../services/validation-service.js'
 import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
 import { WalletImportSuccessScreen } from '../../ui/screens/index.js'
+import { promptPassword, checkCancelled } from '../../utils/command-helpers.js'
 
 export async function importWallet() {
   p.intro('Import Wallet')
@@ -14,27 +15,10 @@ export async function importWallet() {
   const validator = getValidationService()
 
   // Get password for encryption
-  const password = await p.password({
-    message: 'Create a password to encrypt your wallet:',
-    validate: (value) => validator.validatePassword(value, 8),
-  })
+  const password = await promptPassword(true)
+  if (!password) return
 
-  if (p.isCancel(password)) {
-    p.cancel('Operation cancelled')
-    return
-  }
-
-  const confirmPassword = await p.password({
-    message: 'Confirm password:',
-    validate: (value) => validator.validatePasswordConfirmation(value, password as string),
-  })
-
-  if (p.isCancel(confirmPassword)) {
-    p.cancel('Operation cancelled')
-    return
-  }
-
-  walletStorage.setPassword(password as string)
+  walletStorage.setPassword(password)
 
   // Get private key
   const privateKey = await p.password({
@@ -42,10 +26,7 @@ export async function importWallet() {
     validate: (value) => validator.validatePrivateKey(value),
   })
 
-  if (p.isCancel(privateKey)) {
-    p.cancel('Operation cancelled')
-    return
-  }
+  if (!checkCancelled(privateKey)) return
 
   // Get wallet name
   const name = await p.text({

@@ -1,32 +1,31 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { type Address } from 'viem'
-import { getConfigStore } from '../../storage/config-store.js'
-import { getSafeStorage } from '../../storage/safe-store.js'
-import { getWalletStorage } from '../../storage/wallet-store.js'
-import { getTransactionStore } from '../../storage/transaction-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
-import { SafeCLIError } from '../../utils/errors.js'
-import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 import { renderScreen } from '../../ui/render.js'
 import { OwnerRemoveSuccessScreen } from '../../ui/screens/index.js'
+import { createCommandContext } from '../../utils/command-context.js'
+import {
+  ensureActiveWallet,
+  ensureChainConfigured,
+  checkCancelled,
+  handleCommandError,
+} from '../../utils/command-helpers.js'
+import {
+  selectDeployedSafe,
+  fetchSafeOwnersAndThreshold,
+  ensureWalletIsOwner,
+  parseAddressInput,
+} from '../../utils/safe-helpers.js'
 
 export async function removeOwner(account?: string) {
   p.intro(pc.bgCyan(pc.black(' Remove Safe Owner ')))
 
   try {
-    const configStore = getConfigStore()
-    const safeStorage = getSafeStorage()
-    const walletStorage = getWalletStorage()
-    const transactionStore = getTransactionStore()
-    const chains = configStore.getAllChains()
+    const ctx = createCommandContext()
 
-    const activeWallet = walletStorage.getActiveWallet()
-    if (!activeWallet) {
-      p.log.error('No active wallet set. Please import a wallet first.')
-      p.outro('Setup required')
-      return
-    }
+    const activeWallet = ensureActiveWallet(ctx.walletStorage)
+    if (!activeWallet) return
 
     // Get Safe
     let chainId: string
@@ -34,48 +33,19 @@ export async function removeOwner(account?: string) {
 
     if (account) {
       // Parse EIP-3770 address
-      try {
-        const parsed = parseSafeAddress(account, chains)
-        chainId = parsed.chainId
-        address = parsed.address
-      } catch (error) {
-        p.log.error(error instanceof Error ? error.message : 'Invalid account')
-        p.cancel('Operation cancelled')
-        return
-      }
+      const parsed = parseAddressInput(account, ctx.chains)
+      if (!parsed) return
+      chainId = parsed.chainId
+      address = parsed.address
     } else {
       // Show interactive selection
-      const safes = safeStorage.getAllSafes().filter((s) => s.deployed)
-      if (safes.length === 0) {
-        p.log.error('No deployed Safes found')
-        p.cancel('Use "safe account deploy" to deploy a Safe first')
-        return
-      }
-
-      const selected = await p.select({
-        message: 'Select Safe to remove owner from:',
-        options: safes.map((s) => {
-          const chain = configStore.getChain(s.chainId)
-          const eip3770 = formatSafeAddress(s.address as Address, s.chainId, chains)
-          return {
-            value: `${s.chainId}:${s.address}`,
-            label: `${s.name} (${eip3770})`,
-            hint: chain?.name || s.chainId,
-          }
-        }),
-      })
-
-      if (p.isCancel(selected)) {
-        p.cancel('Operation cancelled')
-        return
-      }
-
-      const [selectedChainId, selectedAddress] = (selected as string).split(':')
-      chainId = selectedChainId
-      address = selectedAddress as Address
+      const result = await selectDeployedSafe(ctx.safeStorage, ctx.configStore, ctx.chains)
+      if (!result) return
+      chainId = result.chainId
+      address = result.address
     }
 
-    const safe = safeStorage.getSafe(chainId, address)
+    const safe = ctx.safeStorage.getSafe(chainId, address)
     if (!safe) {
       p.log.error(`Safe not found: ${address} on chain ${chainId}`)
       p.cancel('Operation cancelled')
@@ -89,41 +59,16 @@ export async function removeOwner(account?: string) {
     }
 
     // Get chain
-    const chain = configStore.getChain(safe.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${safe.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
+    const chain = ensureChainConfigured(safe.chainId, ctx.configStore)
+    if (!chain) return
 
     // Fetch live owners and threshold from blockchain
-    const spinner = p.spinner()
-    spinner.start('Fetching Safe information from blockchain...')
-
-    let owners: Address[]
-    let currentThreshold: number
-    try {
-      const txService = new TransactionService(chain)
-      ;[owners, currentThreshold] = await Promise.all([
-        txService.getOwners(safe.address as Address),
-        txService.getThreshold(safe.address as Address),
-      ])
-      spinner.stop('Safe information fetched')
-    } catch (error) {
-      spinner.stop('Failed to fetch Safe information')
-      p.log.error(
-        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
-      )
-      p.outro('Failed')
-      return
-    }
+    const safeData = await fetchSafeOwnersAndThreshold(chain, safe.address as Address)
+    if (!safeData) return
+    const { owners, threshold: currentThreshold } = safeData
 
     // Check if wallet is an owner
-    if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
-      p.log.error('Active wallet is not an owner of this Safe')
-      p.outro('Failed')
-      return
-    }
+    if (!ensureWalletIsOwner(activeWallet, owners)) return
 
     // Check that Safe has at least 2 owners
     if (owners.length <= 1) {
@@ -141,10 +86,7 @@ export async function removeOwner(account?: string) {
       })),
     })
 
-    if (p.isCancel(ownerToRemove)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(ownerToRemove)) return
 
     const removeAddress = ownerToRemove as Address
 
@@ -169,10 +111,7 @@ export async function removeOwner(account?: string) {
       },
     })
 
-    if (p.isCancel(newThreshold)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    if (!checkCancelled(newThreshold)) return
 
     const thresholdNum = parseInt(newThreshold as string, 10)
 
@@ -192,7 +131,7 @@ export async function removeOwner(account?: string) {
       initialValue: true,
     })
 
-    if (p.isCancel(confirm) || !confirm) {
+    if (!checkCancelled(confirm) || !confirm) {
       p.cancel('Operation cancelled')
       return
     }
@@ -210,7 +149,7 @@ export async function removeOwner(account?: string) {
     )
 
     // Store transaction
-    transactionStore.createTransaction(
+    ctx.transactionStore.createTransaction(
       safeTransaction.safeTxHash,
       safe.address as Address,
       safe.chainId,
@@ -227,11 +166,6 @@ export async function removeOwner(account?: string) {
       threshold: currentThreshold,
     })
   } catch (error) {
-    if (error instanceof SafeCLIError) {
-      p.log.error(error.message)
-    } else {
-      p.log.error(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-    p.outro('Failed')
+    handleCommandError(error)
   }
 }

@@ -1,68 +1,43 @@
 import * as p from '@clack/prompts'
 import type { Address } from 'viem'
-import { getConfigStore } from '../../storage/config-store.js'
-import { getSafeStorage } from '../../storage/safe-store.js'
-import { getTransactionStore } from '../../storage/transaction-store.js'
-import { getWalletStorage } from '../../storage/wallet-store.js'
 import { TransactionService } from '../../services/transaction-service.js'
-import { SafeCLIError } from '../../utils/errors.js'
-import { formatSafeAddress } from '../../utils/eip3770.js'
 import { TransactionStatus } from '../../types/transaction.js'
 import { renderScreen } from '../../ui/render.js'
 import { TransactionExecuteSuccessScreen } from '../../ui/screens/index.js'
+import { createCommandContext } from '../../utils/command-context.js'
+import {
+  ensureActiveWallet,
+  ensureChainConfigured,
+  handleCommandError,
+  promptPassword,
+} from '../../utils/command-helpers.js'
+import { selectTransaction } from '../../utils/safe-helpers.js'
 
 export async function executeTransaction(safeTxHash?: string) {
   p.intro('Execute Safe Transaction')
 
   try {
-    const safeStorage = getSafeStorage()
-    const configStore = getConfigStore()
-    const walletStorage = getWalletStorage()
-    const transactionStore = getTransactionStore()
+    const ctx = createCommandContext()
 
-    const activeWallet = walletStorage.getActiveWallet()
-    if (!activeWallet) {
-      p.log.error('No active wallet set. Please import a wallet first.')
-      p.outro('Setup required')
-      return
-    }
+    const activeWallet = ensureActiveWallet(ctx.walletStorage)
+    if (!activeWallet) return
 
     // Get transaction to execute
     let selectedSafeTxHash = safeTxHash
 
     if (!selectedSafeTxHash) {
-      const signedTxs = transactionStore
-        .getAllTransactions()
-        .filter((tx) => tx.status === TransactionStatus.SIGNED)
-
-      if (signedTxs.length === 0) {
-        p.log.error('No signed transactions ready for execution')
-        p.outro('Nothing to execute')
-        return
-      }
-
-      const chains = configStore.getAllChains()
-
-      selectedSafeTxHash = (await p.select({
-        message: 'Select transaction to execute',
-        options: signedTxs.map((tx) => {
-          const safe = safeStorage.getSafe(tx.chainId, tx.safeAddress)
-          const eip3770 = formatSafeAddress(tx.safeAddress as Address, tx.chainId, chains)
-          return {
-            value: tx.safeTxHash,
-            label: `${tx.safeTxHash.slice(0, 10)}... → ${tx.metadata.to}`,
-            hint: `Safe: ${safe?.name || eip3770} | Signatures: ${tx.signatures?.length || 0}`,
-          }
-        }),
-      })) as string
-
-      if (p.isCancel(selectedSafeTxHash)) {
-        p.cancel('Operation cancelled')
-        return
-      }
+      const hash = await selectTransaction(
+        ctx.transactionStore,
+        ctx.safeStorage,
+        ctx.configStore,
+        [TransactionStatus.SIGNED],
+        'Select transaction to execute'
+      )
+      if (!hash) return
+      selectedSafeTxHash = hash
     }
 
-    const transaction = transactionStore.getTransaction(selectedSafeTxHash)
+    const transaction = ctx.transactionStore.getTransaction(selectedSafeTxHash)
     if (!transaction) {
       p.log.error(`Transaction ${selectedSafeTxHash} not found`)
       p.outro('Failed')
@@ -82,7 +57,7 @@ export async function executeTransaction(safeTxHash?: string) {
     }
 
     // Get Safe info
-    const safe = safeStorage.getSafe(transaction.chainId, transaction.safeAddress)
+    const safe = ctx.safeStorage.getSafe(transaction.chainId, transaction.safeAddress)
     if (!safe) {
       p.log.error('Safe not found')
       p.outro('Failed')
@@ -90,12 +65,8 @@ export async function executeTransaction(safeTxHash?: string) {
     }
 
     // Get chain
-    const chain = configStore.getChain(transaction.chainId)
-    if (!chain) {
-      p.log.error(`Chain ${transaction.chainId} not found in configuration`)
-      p.outro('Failed')
-      return
-    }
+    const chain = ensureChainConfigured(transaction.chainId, ctx.configStore)
+    if (!chain) return
 
     // Fetch live owners and threshold from blockchain
     const spinner = p.spinner()
@@ -153,18 +124,8 @@ export async function executeTransaction(safeTxHash?: string) {
     }
 
     // Request password
-    const password = (await p.password({
-      message: 'Enter wallet password',
-      validate: (value) => {
-        if (!value) return 'Password is required'
-        return undefined
-      },
-    })) as string
-
-    if (p.isCancel(password)) {
-      p.cancel('Operation cancelled')
-      return
-    }
+    const password = await promptPassword(false, 'Enter wallet password')
+    if (!password) return
 
     // Get private key
     const spinner2 = p.spinner()
@@ -172,7 +133,7 @@ export async function executeTransaction(safeTxHash?: string) {
 
     let privateKey: string
     try {
-      privateKey = walletStorage.getPrivateKey(activeWallet.id, password)
+      privateKey = ctx.walletStorage.getPrivateKey(activeWallet.id, password)
     } catch {
       spinner2.stop('Failed')
       p.log.error('Invalid password')
@@ -193,7 +154,7 @@ export async function executeTransaction(safeTxHash?: string) {
     )
 
     // Update transaction status
-    transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.EXECUTED, txHash)
+    ctx.transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.EXECUTED, txHash)
 
     spinner2.stop('Transaction executed')
 
@@ -204,11 +165,6 @@ export async function executeTransaction(safeTxHash?: string) {
       explorerUrl,
     })
   } catch (error) {
-    if (error instanceof SafeCLIError) {
-      p.log.error(error.message)
-    } else {
-      p.log.error(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-    p.outro('Failed')
+    handleCommandError(error)
   }
 }
