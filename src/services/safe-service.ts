@@ -179,25 +179,30 @@ export class SafeService {
     }
   }
 
+  // Helper to create a public client for this chain
+  private createPublicClient() {
+    return createPublicClient({
+      chain: {
+        id: parseInt(this.chain.chainId, 10),
+        name: this.chain.name,
+        nativeCurrency: {
+          name: this.chain.currency,
+          symbol: this.chain.currency,
+          decimals: 18,
+        },
+        rpcUrls: {
+          default: { http: [this.chain.rpcUrl] },
+          public: { http: [this.chain.rpcUrl] },
+        },
+      },
+      transport: http(this.chain.rpcUrl),
+    })
+  }
+
   // Get enabled modules for a Safe
   private async getModules(safeAddress: Address): Promise<Address[]> {
     try {
-      const publicClient = createPublicClient({
-        chain: {
-          id: parseInt(this.chain.chainId, 10),
-          name: this.chain.name,
-          nativeCurrency: {
-            name: this.chain.currency,
-            symbol: this.chain.currency,
-            decimals: 18,
-          },
-          rpcUrls: {
-            default: { http: [this.chain.rpcUrl] },
-            public: { http: [this.chain.rpcUrl] },
-          },
-        },
-        transport: http(this.chain.rpcUrl),
-      })
+      const publicClient = this.createPublicClient()
 
       // Call getModulesPaginated with sentinel and large page size
       const result = await publicClient.readContract({
@@ -231,22 +236,7 @@ export class SafeService {
   // Get guard for a Safe
   private async getGuard(safeAddress: Address): Promise<Address | null> {
     try {
-      const publicClient = createPublicClient({
-        chain: {
-          id: parseInt(this.chain.chainId, 10),
-          name: this.chain.name,
-          nativeCurrency: {
-            name: this.chain.currency,
-            symbol: this.chain.currency,
-            decimals: 18,
-          },
-          rpcUrls: {
-            default: { http: [this.chain.rpcUrl] },
-            public: { http: [this.chain.rpcUrl] },
-          },
-        },
-        transport: http(this.chain.rpcUrl),
-      })
+      const publicClient = this.createPublicClient()
 
       // Read from guard storage slot
       const guardData = await publicClient.getStorageAt({
@@ -276,22 +266,7 @@ export class SafeService {
   // Get fallback handler for a Safe
   private async getFallbackHandler(safeAddress: Address): Promise<Address | null> {
     try {
-      const publicClient = createPublicClient({
-        chain: {
-          id: parseInt(this.chain.chainId, 10),
-          name: this.chain.name,
-          nativeCurrency: {
-            name: this.chain.currency,
-            symbol: this.chain.currency,
-            decimals: 18,
-          },
-          rpcUrls: {
-            default: { http: [this.chain.rpcUrl] },
-            public: { http: [this.chain.rpcUrl] },
-          },
-        },
-        transport: http(this.chain.rpcUrl),
-      })
+      const publicClient = this.createPublicClient()
 
       // Read from fallback handler storage slot
       const handlerData = await publicClient.getStorageAt({
@@ -321,22 +296,7 @@ export class SafeService {
   // Get mastercopy (implementation) address for a Safe proxy
   private async getMasterCopy(safeAddress: Address): Promise<Address | null> {
     try {
-      const publicClient = createPublicClient({
-        chain: {
-          id: parseInt(this.chain.chainId, 10),
-          name: this.chain.name,
-          nativeCurrency: {
-            name: this.chain.currency,
-            symbol: this.chain.currency,
-            decimals: 18,
-          },
-          rpcUrls: {
-            default: { http: [this.chain.rpcUrl] },
-            public: { http: [this.chain.rpcUrl] },
-          },
-        },
-        transport: http(this.chain.rpcUrl),
-      })
+      const publicClient = this.createPublicClient()
 
       // Try EIP-1967 implementation slot first
       const implementationData = await publicClient.getStorageAt({
