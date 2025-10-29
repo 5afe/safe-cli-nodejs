@@ -64,7 +64,7 @@ describe('SafeTransactionServiceAPI', () => {
       expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
       expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
-        txServiceUrl: testChain.transactionServiceUrl,
+        txServiceUrl: `${testChain.transactionServiceUrl}/api`,
         apiKey: undefined,
       })
     })
@@ -76,7 +76,7 @@ describe('SafeTransactionServiceAPI', () => {
       expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
       expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
-        txServiceUrl: testChain.transactionServiceUrl,
+        txServiceUrl: `${testChain.transactionServiceUrl}/api`,
         apiKey,
       })
     })
@@ -108,7 +108,7 @@ describe('SafeTransactionServiceAPI', () => {
       expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
       expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
-        txServiceUrl: testChain.transactionServiceUrl?.replace('.safe.global', '.staging.5afe.dev'),
+        txServiceUrl: `${testChain.transactionServiceUrl?.replace('.safe.global', '.staging.5afe.dev')}/api`,
         apiKey: undefined,
       })
     })
@@ -119,9 +119,34 @@ describe('SafeTransactionServiceAPI', () => {
       expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
       expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
-        txServiceUrl: testChain.transactionServiceUrl,
+        txServiceUrl: `${testChain.transactionServiceUrl}/api`,
         apiKey: undefined,
       })
+    })
+
+    it('should append /api to URL when not present', () => {
+      const chainWithoutApi = {
+        ...testChain,
+        transactionServiceUrl: 'https://safe-transaction-mainnet.safe.global',
+      }
+      new SafeTransactionServiceAPI(chainWithoutApi)
+
+      const lastCall =
+        MockSafeApiKitConstructor.__mockCalls[MockSafeApiKitConstructor.__mockCalls.length - 1]
+      expect(lastCall.txServiceUrl).toBe('https://safe-transaction-mainnet.safe.global/api')
+    })
+
+    it('should not double append /api if already present', () => {
+      const chainWithApi = {
+        ...testChain,
+        transactionServiceUrl: 'https://safe-transaction-mainnet.safe.global/api',
+      }
+      new SafeTransactionServiceAPI(chainWithApi)
+
+      const lastCall =
+        MockSafeApiKitConstructor.__mockCalls[MockSafeApiKitConstructor.__mockCalls.length - 1]
+      expect(lastCall.txServiceUrl).toBe('https://safe-transaction-mainnet.safe.global/api')
+      expect(lastCall.txServiceUrl).not.toContain('/api/api')
     })
   })
 
@@ -574,6 +599,14 @@ describe('SafeTransactionServiceAPI', () => {
       mockApiKit.getTransaction.mockRejectedValue(
         new Error('No MultisigTransaction matches the given query')
       )
+
+      const result = await service.getTransaction(safeTxHash)
+
+      expect(result).toBeNull()
+    })
+
+    it('should return null for "Not Found" error without 404', async () => {
+      mockApiKit.getTransaction.mockRejectedValue(new Error('Not Found'))
 
       const result = await service.getTransaction(safeTxHash)
 
