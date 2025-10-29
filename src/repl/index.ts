@@ -277,20 +277,6 @@ function printContext(session: ReplSession): void {
     console.log(`  🔑 Wallet: \x1b[2mnone\x1b[0m`)
   }
 
-  const safe = session.activeSafe
-  if (safe) {
-    console.log(`  🔐 Safe: \x1b[35m${safe.name}\x1b[0m (${safe.address.slice(0, 10)}...)`)
-  } else {
-    console.log(`  🔐 Safe: \x1b[2mnone\x1b[0m`)
-  }
-
-  const chain = session.activeChain
-  if (chain) {
-    console.log(`  ⛓️  Chain: \x1b[33m${chain.name}\x1b[0m (${chain.chainId})`)
-  } else {
-    console.log(`  ⛓️  Chain: \x1b[2mnone\x1b[0m`)
-  }
-
   console.log('')
 }
 
