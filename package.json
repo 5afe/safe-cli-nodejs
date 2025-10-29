@@ -29,7 +29,7 @@
     "smart-account",
     "account-abstraction"
   ],
-  "author": "Safe Global",
+  "author": "Safe Labs",
   "license": "LGPL-3.0",
   "dependencies": {
     "@clack/prompts": "^0.7.0",

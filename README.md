@@ -146,104 +146,44 @@ Follow the interactive prompts to configure owners and threshold.
 
 ### Creating a New Wallet
 
-If you don't have an existing private key, you can generate a new wallet:
+Generate a new wallet with a cryptographically secure private key:
 
 ```bash
 safe wallet create
 ```
 
-**Security Flow:**
+The CLI will:
+- Guide you through security warnings and password setup
+- Generate and display your private key **once** (back it up!)
+- Require confirmation you've saved it
+- Encrypt and store the key locally
 
-The CLI will guide you through a secure wallet creation process:
-
-1. **Security warnings** - Read and acknowledge the risks
-2. **Password setup** - Create a strong password for encryption
-3. **Wallet naming** - Give your wallet a memorable name
-4. **Key generation** - A cryptographically secure private key is generated
-5. **Private key display** - Your key is shown **once** - back it up safely!
-6. **Backup verification** - Confirm you've saved it by re-entering the last 8 characters
-7. **Encryption** - The key is encrypted and stored locally
-
-**Example:**
-```bash
-$ safe wallet create
-
-┌  Create New Wallet
-│
-◆  🔐 Security Warning
-│  ⚠️  This command will generate a NEW private key
-│  ⚠️  You are SOLELY responsible for backing it up securely
-│  ⚠️  Loss of your private key = permanent loss of funds
-│  ⚠️  NEVER share your private key with anyone
-│  ⚠️  This CLI stores keys encrypted locally with your password
-│
-◆  Do you understand these risks and wish to continue?
-│  Yes
-│
-◆  Create a password to encrypt your wallets
-│  ********
-│
-◆  Confirm password
-│  ********
-│
-◆  Give this wallet a name
-│  My New Wallet
-│
-◇  Private key generated successfully
-│
-◆  🔑 Your Private Key
-│  0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-│
-│  ⚠️  Write this down and store it in a secure location.
-│  ⚠️  This is the ONLY time it will be displayed in plain text.
-│  ⚠️  Anyone with this key has FULL control of your wallet.
-│
-◆  To confirm you have saved it, enter the last 8 characters:
-│  90abcdef
-│
-◇  Wallet created successfully
-│  Name: My New Wallet
-│  Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
-│
-└  Done!
-```
-
-**🔒 Security Best Practices:**
-
-- **Write it down** - Store your private key on paper in a secure location
-- **Multiple copies** - Keep backups in different safe locations
-- **Never digital** - Don't store in cloud storage, email, or screenshots
-- **Use hardware wallets** - For significant funds, use `safe wallet import-ledger` instead
-- **Test first** - Try creating a test wallet on testnet (Sepolia) before mainnet
-
-**⚠️ Important Notes:**
-
-- Your private key is encrypted with your password and stored locally
-- Without your password, the encrypted key cannot be decrypted
-- If you lose your private key, you lose access to your funds permanently
-- The CLI cannot recover your private key if lost
+**Security Notes:**
+- Private keys are encrypted with AES-256-GCM and stored locally
+- For production use with significant funds, use `safe wallet import-ledger` instead
+- If you lose your private key, you permanently lose access to your funds
 
 ### Importing an Existing Wallet
 
-If you already have a private key:
+Import a wallet using your existing private key:
 
 ```bash
 safe wallet import
 ```
 
-Follow the prompts to securely import your existing key. It will be encrypted with your password.
+The key will be encrypted with your password and stored locally.
 
 ---
 
 ## 🔐 Hardware Wallet Support
 
-Safe CLI supports **Ledger hardware wallets** for enhanced security. Your private keys never leave the device.
+Safe CLI supports **Ledger hardware wallets** for maximum security. Private keys never leave the device.
 
 ### Prerequisites
 
-1. **Ledger device** (Nano S, Nano S Plus, or Nano X)
-2. **Ethereum app installed** on your Ledger
-3. **Device firmware** up to date
+- Ledger device (Nano S, Nano S Plus, or Nano X)
+- Ethereum app installed and up to date
+- **Contract data** enabled in Ethereum app settings (required for Safe)
 
 ### Importing a Ledger Wallet
 
@@ -251,127 +191,27 @@ Safe CLI supports **Ledger hardware wallets** for enhanced security. Your privat
 safe wallet import-ledger
 ```
 
-The CLI will guide you through:
+The CLI will:
+- Detect your connected Ledger device
+- Let you choose a derivation path (Ledger Live recommended: `m/44'/60'/0'/0/0`)
+- Select account index (0, 1, 2, etc.)
+- Verify the address matches your device
+- Store wallet metadata (address, path, name)
 
-1. **Device detection** - Connects to your Ledger automatically
-2. **Derivation path selection** - Choose your address path:
-   - **Ledger Live** (recommended): `m/44'/60'/0'/0/0`
-   - **Legacy MEW**: `m/44'/60'/0'/0` (for MyEtherWallet compatibility)
-   - **Custom path**: Advanced users can specify their own BIP44 path
-3. **Account index** - Select which account to use (0, 1, 2, etc.)
-4. **Address verification** - Confirm the address matches your device screen
-5. **Wallet naming** - Give your wallet a friendly name
+**Usage:** Once imported, your Ledger works seamlessly with all commands. You'll confirm transactions physically on the device.
 
-**Example:**
-```bash
-$ safe wallet import-ledger
-
-┌  Import Ledger Hardware Wallet
-│
-◇  Device detected!
-│
-◆  Select derivation path
-│  ● Ledger Live (m/44'/60'/0'/0/0) - Default for Ledger Live (recommended)
-│  ○ Legacy MEW (m/44'/60'/0'/0) - Compatible with MyEtherWallet/MyCrypto
-│  ○ Custom path - Advanced: specify your own BIP44 path
-└
-◆  Enter account index
-│  0
-└
-◇  Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
-│  Derivation path: m/44'/60'/0'/0/0
-│
-◆  Does this address match what is shown on your Ledger device?
-│  Yes
-└
-◆  Enter a name for this wallet
-│  My Ledger
-└
-◇  Wallet imported successfully!
-│  ID: a3f5e8c92d1b...
-│  Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
-│  Path: m/44'/60'/0'/0/0
-│
-└  Done!
-```
-
-### Using Your Ledger Wallet
-
-Once imported, your Ledger wallet works seamlessly with all Safe CLI commands:
-
-**Signing Transactions:**
-```bash
-safe tx sign
-
-# The CLI automatically detects your Ledger wallet
-# → Connecting to Ledger device...
-# → Please confirm transaction on your Ledger device...
-# → Transaction signed ✓
-```
-
-**Switching Wallets:**
-```bash
-safe wallet list  # Shows: 🔐 Ledger or 🔑 Private Key
-safe wallet use   # Switch between wallets
-```
-
-### Multiple Ledger Accounts
-
-You can import multiple accounts from the same Ledger:
-
-```bash
-# Import account 0
-safe wallet import-ledger
-# → Account index: 0
-# → Name: "Ledger Account 0"
-
-# Import account 1
-safe wallet import-ledger
-# → Account index: 1
-# → Name: "Ledger Account 1"
-```
-
-Each account is tracked separately with its own derivation path.
+**Multiple accounts:** Import multiple accounts from the same Ledger by running `safe wallet import-ledger` again with different account indices.
 
 ### Troubleshooting
 
-**"No Ledger device found"**
-- Ensure device is connected via USB
-- Unlock your Ledger
-- Open the **Ethereum app** on the device
-
-**"Failed to connect to Ledger"**
+**Device not found:**
+- Connect device via USB, unlock it, and open the Ethereum app
 - Close Ledger Live (it locks the device)
-- Try a different USB cable/port
-- Update Ledger firmware to latest version
 
-**"Transaction signing failed"**
-- Make sure you approved the transaction on device
-- Check that **Contract data** is enabled in Ethereum app settings
-- Verify the device didn't time out (screen went dark)
-
-**Contract Data Setting (Required for Safe):**
-1. Open Ethereum app on Ledger
-2. Navigate to Settings
-3. Enable "Contract data"
-4. Exit back to main Ethereum app
-
-### Security Notes
-
-✅ **What's stored locally:**
-- Wallet address
-- Derivation path
-- Wallet name and metadata
-
-❌ **What's NOT stored:**
-- Private keys (always on device)
-- PIN code
-- Recovery phrase
-
-🔒 **Transaction signing:**
-- All signatures happen on the device
-- You must physically approve each transaction
-- Address and transaction details shown on device screen
+**Transaction signing failed:**
+- Approve the transaction on your device
+- Enable "Contract data" in Ethereum app settings
+- Ensure device hasn't timed out
 
 ---
 
@@ -466,20 +306,17 @@ safe tx execute <txHash>
 ### Storage Location
 
 Configuration files are stored in:
-- **macOS/Linux**: `~/Library/Preferences/safe-cli/config.json`
+- **macOS**: `~/Library/Preferences/safe-cli/`
+- **Linux**: `~/.config/safe-cli/`
 - **Windows**: `%APPDATA%\safe-cli\`
 
 ### Supported Networks (Default)
 
-- Ethereum Mainnet
-- Sepolia Testnet
-- Polygon
-- Arbitrum One
-- Optimism
-- Base
-- Gnosis Chain
-- BNB Smart Chain
-- Avalanche C-Chain
+Pre-configured for 18+ networks including:
+- Ethereum, Sepolia (testnet)
+- Layer 2s: Arbitrum, Optimism, Base, Polygon, zkSync Era, Polygon zkEVM, Scroll, Linea
+- Alternative L1s: BNB Chain, Gnosis Chain, Avalanche, Celo, Aurora
+- Emerging chains: Mantle, World Chain, Sonic, Unichain
 
 Add custom networks with `safe config chains add`.
 
