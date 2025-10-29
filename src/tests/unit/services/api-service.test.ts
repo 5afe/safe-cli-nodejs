@@ -4,10 +4,22 @@ import { TEST_ADDRESSES, TEST_CHAINS } from '../../fixtures/index.js'
 import { SafeCLIError } from '../../../utils/errors.js'
 import type { TransactionMetadata } from '../../../types/transaction.js'
 
-// Mock Safe API Kit
+// Mock Safe API Kit as a class
+class MockSafeApiKit {
+  constructor() {
+    return {
+      proposeTransaction: vi.fn(),
+      confirmTransaction: vi.fn(),
+      getPendingTransactions: vi.fn(),
+      getAllTransactions: vi.fn(),
+      getTransaction: vi.fn(),
+    }
+  }
+}
+
 vi.mock('@safe-global/api-kit', () => {
   return {
-    default: vi.fn(),
+    default: MockSafeApiKit,
   }
 })
 
@@ -36,7 +48,6 @@ describe('SafeTransactionServiceAPI', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(SafeApiKit).mockReturnValue(mockApiKit as any)
     service = new SafeTransactionServiceAPI(testChain)
   })
 
@@ -46,21 +57,23 @@ describe('SafeTransactionServiceAPI', () => {
       expect(svc).toBeInstanceOf(SafeTransactionServiceAPI)
     })
 
-    it('should initialize SafeApiKit with correct chainId', () => {
+    it('should initialize SafeApiKit with correct chainId and txServiceUrl', () => {
       new SafeTransactionServiceAPI(testChain)
 
       expect(SafeApiKit).toHaveBeenCalledWith({
         chainId: BigInt(testChain.chainId),
+        txServiceUrl: testChain.transactionServiceUrl,
         apiKey: undefined,
       })
     })
 
     it('should initialize SafeApiKit with apiKey when provided', () => {
       const apiKey = 'test-api-key'
-      new SafeTransactionServiceAPI(testChain, apiKey)
+      new SafeTransactionServiceAPI(testChain, { apiKey })
 
       expect(SafeApiKit).toHaveBeenCalledWith({
         chainId: BigInt(testChain.chainId),
+        txServiceUrl: testChain.transactionServiceUrl,
         apiKey,
       })
     })
@@ -84,6 +97,26 @@ describe('SafeTransactionServiceAPI', () => {
       }
 
       expect(() => new SafeTransactionServiceAPI(invalidChain as any)).toThrow(testChain.name)
+    })
+
+    it('should use staging URL when useStaging is true', () => {
+      new SafeTransactionServiceAPI(testChain, { useStaging: true })
+
+      expect(SafeApiKit).toHaveBeenCalledWith({
+        chainId: BigInt(testChain.chainId),
+        txServiceUrl: testChain.transactionServiceUrl?.replace('.safe.global', '.staging.5afe.dev'),
+        apiKey: undefined,
+      })
+    })
+
+    it('should use production URL when useStaging is false', () => {
+      new SafeTransactionServiceAPI(testChain, { useStaging: false })
+
+      expect(SafeApiKit).toHaveBeenCalledWith({
+        chainId: BigInt(testChain.chainId),
+        txServiceUrl: testChain.transactionServiceUrl,
+        apiKey: undefined,
+      })
     })
   })
 

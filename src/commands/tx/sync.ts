@@ -122,8 +122,11 @@ export async function syncTransactions(account?: string) {
       return
     }
 
-    const apiKey = configStore.getPreferences().safeApiKey
-    const apiService = new SafeTransactionServiceAPI(chain, apiKey)
+    const preferences = configStore.getPreferences()
+    const apiService = new SafeTransactionServiceAPI(chain, {
+      apiKey: preferences.safeApiKey,
+      useStaging: preferences.isStagingSafeApi,
+    })
 
     // Step 1: Pull remote transactions
     const spinner = p.spinner()

@@ -17,7 +17,9 @@ export class ConfigStore {
           signingMethod: 'ETH_SIGN_TYPED_DATA_V4',
           gasStrategy: 'medium',
         },
-        preferences: {},
+        preferences: {
+          isStagingSafeApi: false,
+        },
       },
     })
   }
@@ -91,6 +93,15 @@ export class ConfigStore {
     value: Config['preferences'][K]
   ): void {
     this.store.set(`preferences.${key}`, value)
+  }
+
+  // Staging mode helpers
+  isStagingMode(): boolean {
+    return this.store.get('preferences.isStagingSafeApi', false)
+  }
+
+  setStagingMode(enabled: boolean): void {
+    this.store.set('preferences.isStagingSafeApi', enabled)
   }
 
   // Reset to defaults
