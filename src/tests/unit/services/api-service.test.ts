@@ -4,22 +4,27 @@ import { TEST_ADDRESSES, TEST_CHAINS } from '../../fixtures/index.js'
 import { SafeCLIError } from '../../../utils/errors.js'
 import type { TransactionMetadata } from '../../../types/transaction.js'
 
-// Mock Safe API Kit as a class
-class MockSafeApiKit {
-  constructor() {
-    return {
-      proposeTransaction: vi.fn(),
-      confirmTransaction: vi.fn(),
-      getPendingTransactions: vi.fn(),
-      getAllTransactions: vi.fn(),
-      getTransaction: vi.fn(),
-    }
-  }
-}
-
+// Mock Safe API Kit
 vi.mock('@safe-global/api-kit', () => {
+  const mockInstance = {
+    proposeTransaction: vi.fn(),
+    confirmTransaction: vi.fn(),
+    getPendingTransactions: vi.fn(),
+    getAllTransactions: vi.fn(),
+    getTransaction: vi.fn(),
+  }
+  const mockCalls: any[] = []
+  function MockConstructor(this: any, ...args: any[]) {
+    mockCalls.push(args[0])
+    return mockInstance
+  }
+  ;(MockConstructor as any).__mockInstance = mockInstance
+  ;(MockConstructor as any).__mockCalls = mockCalls
+  ;(MockConstructor as any).mockClear = () => {
+    mockCalls.length = 0
+  }
   return {
-    default: MockSafeApiKit,
+    default: MockConstructor,
   }
 })
 
@@ -38,16 +43,12 @@ import SafeApiKit from '@safe-global/api-kit'
 describe('SafeTransactionServiceAPI', () => {
   let service: SafeTransactionServiceAPI
   const testChain = TEST_CHAINS.ethereum
-  const mockApiKit = {
-    proposeTransaction: vi.fn(),
-    confirmTransaction: vi.fn(),
-    getPendingTransactions: vi.fn(),
-    getAllTransactions: vi.fn(),
-    getTransaction: vi.fn(),
-  }
+  const MockSafeApiKitConstructor = SafeApiKit as any
+  const mockApiKit = MockSafeApiKitConstructor.__mockInstance
 
   beforeEach(() => {
     vi.clearAllMocks()
+    MockSafeApiKitConstructor.mockClear()
     service = new SafeTransactionServiceAPI(testChain)
   })
 
@@ -60,7 +61,8 @@ describe('SafeTransactionServiceAPI', () => {
     it('should initialize SafeApiKit with correct chainId and txServiceUrl', () => {
       new SafeTransactionServiceAPI(testChain)
 
-      expect(SafeApiKit).toHaveBeenCalledWith({
+      expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
+      expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
         txServiceUrl: testChain.transactionServiceUrl,
         apiKey: undefined,
@@ -71,7 +73,8 @@ describe('SafeTransactionServiceAPI', () => {
       const apiKey = 'test-api-key'
       new SafeTransactionServiceAPI(testChain, { apiKey })
 
-      expect(SafeApiKit).toHaveBeenCalledWith({
+      expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
+      expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
         txServiceUrl: testChain.transactionServiceUrl,
         apiKey,
@@ -102,7 +105,8 @@ describe('SafeTransactionServiceAPI', () => {
     it('should use staging URL when useStaging is true', () => {
       new SafeTransactionServiceAPI(testChain, { useStaging: true })
 
-      expect(SafeApiKit).toHaveBeenCalledWith({
+      expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
+      expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
         txServiceUrl: testChain.transactionServiceUrl?.replace('.safe.global', '.staging.5afe.dev'),
         apiKey: undefined,
@@ -112,7 +116,8 @@ describe('SafeTransactionServiceAPI', () => {
     it('should use production URL when useStaging is false', () => {
       new SafeTransactionServiceAPI(testChain, { useStaging: false })
 
-      expect(SafeApiKit).toHaveBeenCalledWith({
+      expect(MockSafeApiKitConstructor.__mockCalls).toHaveLength(2) // includes beforeEach
+      expect(MockSafeApiKitConstructor.__mockCalls[1]).toEqual({
         chainId: BigInt(testChain.chainId),
         txServiceUrl: testChain.transactionServiceUrl,
         apiKey: undefined,
