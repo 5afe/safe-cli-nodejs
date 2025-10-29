@@ -238,14 +238,14 @@ async function executeCommand(
       }
     }
   } finally {
-    // Restore stdin to raw mode and resume it for REPL
-    // @clack/prompts disables raw mode and pauses stdin when it finishes
+    // Resume stdin for REPL
+    // @clack/prompts pauses stdin when it finishes
     // Paused stdin doesn't keep the Node event loop alive, causing the process to exit
     if (process.stdin.isTTY && !process.stdin.destroyed) {
       // Small delay to ensure @clack/prompts has fully cleaned up
       await new Promise((resolve) => setTimeout(resolve, 50))
-      process.stdin.setRawMode(true)
       // CRITICAL: Resume stdin so it keeps the event loop alive
+      // Note: We don't call setRawMode here - the REPL manages that itself
       process.stdin.resume()
     }
 
