@@ -211,6 +211,10 @@ async function executeCommand(
   // Note: process.exit is already overridden globally in startRepl()
   // It's now a no-op so commands can't kill the REPL
 
+  // Pause the REPL's input while the command executes
+  // This prevents the REPL from interpreting @clack/prompts output as commands
+  replServer.pause()
+
   try {
     // Create a fresh instance to avoid state pollution
     const programCopy = program.configureOutput({
@@ -238,16 +242,11 @@ async function executeCommand(
       }
     }
   } finally {
-    // Resume stdin for REPL
-    // @clack/prompts pauses stdin when it finishes
-    // Paused stdin doesn't keep the Node event loop alive, causing the process to exit
-    if (process.stdin.isTTY && !process.stdin.destroyed) {
-      // Small delay to ensure @clack/prompts has fully cleaned up
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      // CRITICAL: Resume stdin so it keeps the event loop alive
-      // Note: We don't call setRawMode here - the REPL manages that itself
-      process.stdin.resume()
-    }
+    // Small delay to ensure @clack/prompts has fully cleaned up
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Resume the REPL's input
+    replServer.resume()
 
     // Refresh session after command execution
     session.refresh()
