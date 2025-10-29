@@ -211,13 +211,18 @@ async function executeCommand(
   // Note: process.exit is already overridden globally in startRepl()
   // It's now a no-op so commands can't kill the REPL
 
-  // Pause the REPL's input while the command executes
-  // This prevents the REPL from interpreting @clack/prompts output as commands
+  // Completely detach the REPL from stdin while the command executes
   replServer.pause()
 
-  // Disable raw mode to let @clack/prompts manage terminal state properly
+  // Remove all REPL listeners from stdin temporarily
+  const stdinListeners = process.stdin.listeners('data')
+  process.stdin.removeAllListeners('data')
+
+  // Disable raw mode and ensure stdin is in a clean state for @clack/prompts
   if (process.stdin.isTTY && !process.stdin.destroyed) {
     process.stdin.setRawMode(false)
+    // Give the terminal time to transition out of raw mode
+    await new Promise((resolve) => setTimeout(resolve, 50))
   }
 
   try {
@@ -247,8 +252,13 @@ async function executeCommand(
       }
     }
   } finally {
-    // Small delay to ensure @clack/prompts has fully cleaned up
+    // Wait for @clack/prompts to fully clean up
     await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Restore stdin listeners
+    for (const listener of stdinListeners) {
+      process.stdin.on('data', listener as (chunk: Buffer) => void)
+    }
 
     // Restore raw mode for REPL
     if (process.stdin.isTTY && !process.stdin.destroyed) {
