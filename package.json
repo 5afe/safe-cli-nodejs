@@ -1,6 +1,6 @@
 {
   "name": "@safe-global/safe-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Modern CLI for Safe Smart Account management",
   "type": "module",
   "bin": {
