@@ -27,6 +27,7 @@ import { importTransaction } from './commands/tx/import.js'
 import { pushTransaction } from './commands/tx/push.js'
 import { pullTransactions } from './commands/tx/pull.js'
 import { syncTransactions } from './commands/tx/sync.js'
+import { replCommand } from './commands/repl.js'
 import { handleError } from './utils/errors.js'
 
 const program = new Command()
@@ -372,16 +373,16 @@ tx.command('sync [account]')
     }
   })
 
-// Show welcome message if no command provided
-if (process.argv.length === 2) {
-  // Migration: Phase 4 - Tier 1 command
-  // Old: 14 lines of imperative console.log
-  // New: Declarative Ink rendering
-  const { renderScreen } = await import('./ui/render.js')
-  const { WelcomeScreen } = await import('./ui/screens/index.js')
-
-  await renderScreen(WelcomeScreen, {})
-  process.exit(0)
-}
+// REPL command
+program
+  .command('repl')
+  .description('Start interactive REPL mode')
+  .action(async () => {
+    try {
+      await replCommand(program)
+    } catch (error) {
+      handleError(error)
+    }
+  })
 
 export { program }

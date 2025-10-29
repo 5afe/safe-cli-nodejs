@@ -83,7 +83,7 @@ export function AccountInfoScreen({
     const safeService = new SafeService(chain)
     safeService
       .getSafeInfo(address)
-      .then((info) => {
+      .then(async (info) => {
         setLiveData({
           version: info.version,
           nonce: info.nonce,
@@ -96,6 +96,47 @@ export function AccountInfoScreen({
           masterCopy: info.masterCopy,
         })
         setFetchingLive(false)
+
+        // Fetch contract names for advanced configuration
+        const addressesToFetch: Address[] = []
+        if (info.masterCopy) addressesToFetch.push(info.masterCopy)
+        if (info.modules) addressesToFetch.push(...info.modules)
+        if (info.guard) addressesToFetch.push(info.guard)
+        if (info.fallbackHandler) addressesToFetch.push(info.fallbackHandler)
+
+        if (addressesToFetch.length > 0) {
+          // Get Etherscan API key from config
+          const configStore = getConfigStore()
+          const preferences = configStore.getPreferences()
+          const etherscanApiKey = preferences?.etherscanApiKey
+          const abiService = new ABIService(chain, etherscanApiKey)
+
+          // Fetch contract info for each address (with timeout)
+          const names: Record<Address, string> = {}
+          try {
+            await Promise.race([
+              Promise.all(
+                addressesToFetch.map(async (addr) => {
+                  try {
+                    const contractInfo = await abiService.fetchContractInfo(addr)
+                    if (contractInfo.name) {
+                      names[addr] = contractInfo.name
+                    }
+                  } catch {
+                    // Ignore errors - contract might not be verified
+                  }
+                })
+              ),
+              // Timeout after 3 seconds for contract name fetching
+              new Promise((resolve) => setTimeout(resolve, 3000)),
+            ])
+            setContractNames(names)
+          } catch {
+            // Ignore errors
+          }
+        }
+
+        // Call onExit after all data is fetched
         if (onExit) onExit()
       })
       .catch((error) => {
@@ -104,44 +145,6 @@ export function AccountInfoScreen({
         if (onExit) onExit()
       })
   }, [safe, chain, safeLoading, chainLoading, address, onExit])
-
-  // Fetch contract names from Etherscan for modules, guard, fallback handler, and mastercopy
-  useEffect(() => {
-    if (!liveData || !chain) return
-
-    const addressesToFetch: Address[] = []
-
-    // Collect all addresses to fetch
-    if (liveData.masterCopy) addressesToFetch.push(liveData.masterCopy)
-    if (liveData.modules) addressesToFetch.push(...liveData.modules)
-    if (liveData.guard) addressesToFetch.push(liveData.guard)
-    if (liveData.fallbackHandler) addressesToFetch.push(liveData.fallbackHandler)
-
-    if (addressesToFetch.length === 0) return
-
-    // Get Etherscan API key from config
-    const configStore = getConfigStore()
-    const preferences = configStore.getPreferences()
-    const etherscanApiKey = preferences?.etherscanApiKey
-    const abiService = new ABIService(chain, etherscanApiKey)
-
-    // Fetch contract info for each address
-    const names: Record<Address, string> = {}
-    Promise.all(
-      addressesToFetch.map(async (addr) => {
-        try {
-          const info = await abiService.fetchContractInfo(addr)
-          if (info.name) {
-            names[addr] = info.name
-          }
-        } catch {
-          // Ignore errors - contract might not be verified
-        }
-      })
-    ).then(() => {
-      setContractNames(names)
-    })
-  }, [liveData, chain])
 
   // Loading state
   if (safeLoading || chainLoading) {

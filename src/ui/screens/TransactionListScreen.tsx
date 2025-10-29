@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Box, Text } from 'ink'
 import type { Address } from 'viem'
 import { useTransactions, useTransactionsBySafe } from '../hooks/index.js'
@@ -34,6 +34,7 @@ export interface TransactionListScreenProps {
 
 interface TransactionItemProps {
   transaction: StoredTransaction
+  onThresholdLoaded?: () => void
 }
 
 /**
@@ -57,7 +58,7 @@ function getStatusBadge(status: TransactionStatus): { emoji: string; text: strin
 /**
  * Individual transaction item component
  */
-function TransactionItem({ transaction }: TransactionItemProps): React.ReactElement {
+function TransactionItem({ transaction, onThresholdLoaded }: TransactionItemProps): React.ReactElement {
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
   const chains = configStore.getAllChains()
@@ -72,7 +73,10 @@ function TransactionItem({ transaction }: TransactionItemProps): React.ReactElem
 
   // Fetch live threshold from blockchain
   useEffect(() => {
-    if (!safe?.deployed || !chain) return
+    if (!safe?.deployed || !chain) {
+      if (onThresholdLoaded) onThresholdLoaded()
+      return
+    }
 
     const fetchThreshold = async () => {
       try {
@@ -81,11 +85,13 @@ function TransactionItem({ transaction }: TransactionItemProps): React.ReactElem
         setThreshold(liveThreshold)
       } catch {
         // Silently fail - threshold will remain undefined
+      } finally {
+        if (onThresholdLoaded) onThresholdLoaded()
       }
     }
 
     fetchThreshold()
-  }, [safe?.deployed, chain, transaction.safeAddress])
+  }, [safe?.deployed, chain, transaction.safeAddress, onThresholdLoaded])
 
   return (
     <Box flexDirection="column" marginBottom={1}>
@@ -167,12 +173,8 @@ export function TransactionListScreen({
     ? filteredTransactionsResult
     : allTransactionsResult
 
-  // Auto-exit after rendering
-  useEffect(() => {
-    if (!loading && onExit) {
-      onExit()
-    }
-  }, [loading, onExit])
+  const completedCountRef = useRef(0)
+  const [allThresholdsLoaded, setAllThresholdsLoaded] = useState(false)
 
   // Apply status filter and sort
   const transactions = useMemo(() => {
@@ -192,6 +194,27 @@ export function TransactionListScreen({
 
     return result
   }, [rawTransactions, statusFilter])
+
+  // Reset completion counter when transactions change
+  useEffect(() => {
+    completedCountRef.current = 0
+    setAllThresholdsLoaded(false)
+  }, [transactions.length])
+
+  // Track when all threshold fetches complete
+  const handleThresholdLoaded = () => {
+    completedCountRef.current++
+    if (completedCountRef.current >= transactions.length) {
+      setAllThresholdsLoaded(true)
+    }
+  }
+
+  // Call onExit when loading is done and all thresholds are loaded
+  useEffect(() => {
+    if (!loading && (transactions.length === 0 || allThresholdsLoaded) && onExit) {
+      onExit()
+    }
+  }, [loading, allThresholdsLoaded, transactions.length, onExit])
 
   // Calculate summary statistics
   const summary = useMemo(() => {
@@ -248,7 +271,7 @@ export function TransactionListScreen({
       {/* Transaction list */}
       <Box flexDirection="column" marginBottom={1}>
         {transactions.map((tx) => (
-          <TransactionItem key={tx.safeTxHash} transaction={tx} />
+          <TransactionItem key={tx.safeTxHash} transaction={tx} onThresholdLoaded={handleThresholdLoaded} />
         ))}
       </Box>
 

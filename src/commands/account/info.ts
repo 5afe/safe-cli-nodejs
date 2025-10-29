@@ -1,5 +1,5 @@
 import * as p from '@clack/prompts'
-import { type Address } from 'viem'
+import { type Address, isAddress } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { logError } from '../../ui/messages.js'
@@ -32,15 +32,44 @@ export async function showSafeInfo(account?: string) {
   let address: Address
 
   if (account) {
-    // Parse EIP-3770 address
-    try {
-      const parsed = parseSafeAddress(account, chains)
-      chainId = parsed.chainId
-      address = parsed.address
-    } catch (error) {
-      logError(error instanceof Error ? error.message : 'Invalid account')
-      p.cancel('Operation cancelled')
-      return
+    // Check if it's a plain address without chain prefix
+    if (isAddress(account) && !account.includes(':')) {
+      // Prompt for chain selection
+      const chainOptions = Object.entries(chains).map(([id, chain]) => ({
+        value: id,
+        label: chain.name,
+        hint: chain.shortName,
+      }))
+
+      if (chainOptions.length === 0) {
+        logError('No chains configured')
+        p.cancel('Use "safe config init" to load default chains')
+        return
+      }
+
+      const selectedChainId = await p.select({
+        message: 'Select chain for this Safe:',
+        options: chainOptions,
+      })
+
+      if (p.isCancel(selectedChainId)) {
+        p.cancel('Operation cancelled')
+        return
+      }
+
+      chainId = selectedChainId as string
+      address = account as Address
+    } else {
+      // Parse EIP-3770 address
+      try {
+        const parsed = parseSafeAddress(account, chains)
+        chainId = parsed.chainId
+        address = parsed.address
+      } catch (error) {
+        logError(error instanceof Error ? error.message : 'Invalid account')
+        p.cancel('Operation cancelled')
+        return
+      }
     }
   } else {
     // Show interactive selection
