@@ -215,6 +215,11 @@ async function executeCommand(
   // This prevents the REPL from interpreting @clack/prompts output as commands
   replServer.pause()
 
+  // Disable raw mode to let @clack/prompts manage terminal state properly
+  if (process.stdin.isTTY && !process.stdin.destroyed) {
+    process.stdin.setRawMode(false)
+  }
+
   try {
     // Create a fresh instance to avoid state pollution
     const programCopy = program.configureOutput({
@@ -244,6 +249,11 @@ async function executeCommand(
   } finally {
     // Small delay to ensure @clack/prompts has fully cleaned up
     await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Restore raw mode for REPL
+    if (process.stdin.isTTY && !process.stdin.destroyed) {
+      process.stdin.setRawMode(true)
+    }
 
     // Resume the REPL's input
     replServer.resume()
