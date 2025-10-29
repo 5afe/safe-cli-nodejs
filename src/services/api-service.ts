@@ -19,10 +19,16 @@ export class SafeTransactionServiceAPI {
     }
 
     // Convert to staging URL if staging mode is enabled
-    const txServiceUrl = convertToStagingUrl(
+    let txServiceUrl = convertToStagingUrl(
       chain.transactionServiceUrl,
       options?.useStaging ?? false
     )
+
+    // SafeApiKit expects the URL to include /api path
+    // e.g., https://safe-transaction-mainnet.safe.global/api
+    if (!txServiceUrl.endsWith('/api')) {
+      txServiceUrl = `${txServiceUrl}/api`
+    }
 
     this.apiKit = new SafeApiKit({
       chainId: BigInt(chain.chainId),
@@ -128,9 +134,11 @@ export class SafeTransactionServiceAPI {
     } catch (error) {
       // Transaction not found is expected, return null
       if (error instanceof Error) {
+        const errorMessage = error.message.toLowerCase()
         if (
-          error.message.includes('404') ||
-          error.message.includes('No MultisigTransaction matches the given query')
+          errorMessage.includes('404') ||
+          errorMessage.includes('not found') ||
+          errorMessage.includes('no multisigtransaction matches the given query')
         ) {
           return null
         }
