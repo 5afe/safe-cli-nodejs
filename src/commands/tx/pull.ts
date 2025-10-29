@@ -117,8 +117,11 @@ export async function pullTransactions(account?: string) {
     spinner.start('Fetching transactions from Safe Transaction Service...')
 
     try {
-      const apiKey = configStore.getPreferences().safeApiKey
-      const apiService = new SafeTransactionServiceAPI(chain, apiKey)
+      const preferences = configStore.getPreferences()
+      const apiService = new SafeTransactionServiceAPI(chain, {
+        apiKey: preferences.safeApiKey,
+        useStaging: preferences.isStagingSafeApi,
+      })
 
       // Get pending transactions
       const remoteTxs = await apiService.getPendingTransactions(address)

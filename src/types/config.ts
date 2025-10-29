@@ -32,6 +32,7 @@ export const DefaultsConfigSchema = z.object({
 export const PreferencesConfigSchema = z.object({
   safeApiKey: z.string().optional(),
   etherscanApiKey: z.string().optional(),
+  isStagingSafeApi: z.boolean().optional().default(false),
 })
 
 export const ConfigSchema = z.object({

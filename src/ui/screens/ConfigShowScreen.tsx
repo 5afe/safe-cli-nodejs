@@ -131,6 +131,15 @@ export function ConfigShowScreen({ onExit }: ConfigShowScreenProps): React.React
                 : theme.colors.dim,
             },
             {
+              key: 'Safe API Environment',
+              value: config.preferences.isStagingSafeApi
+                ? 'staging.5afe.dev'
+                : 'safe.global (production)',
+              valueColor: config.preferences.isStagingSafeApi
+                ? theme.colors.warning
+                : undefined,
+            },
+            {
               key: 'Etherscan API Key',
               value: config.preferences.etherscanApiKey
                 ? obfuscateApiKey(config.preferences.etherscanApiKey)

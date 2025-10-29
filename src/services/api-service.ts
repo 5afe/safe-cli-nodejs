@@ -3,6 +3,7 @@ import type { Address } from 'viem'
 import type { ChainConfig } from '../types/config.js'
 import type { TransactionMetadata } from '../types/transaction.js'
 import { SafeCLIError } from '../utils/errors.js'
+import { convertToStagingUrl } from '../utils/url.js'
 
 /**
  * Service for interacting with Safe Transaction Service API
@@ -10,16 +11,23 @@ import { SafeCLIError } from '../utils/errors.js'
 export class SafeTransactionServiceAPI {
   private apiKit: SafeApiKit
 
-  constructor(chain: ChainConfig, apiKey?: string) {
+  constructor(chain: ChainConfig, options?: { apiKey?: string; useStaging?: boolean }) {
     if (!chain.transactionServiceUrl) {
       throw new SafeCLIError(
         `Transaction Service not available for ${chain.name}. Please configure transactionServiceUrl in chain config.`
       )
     }
 
+    // Convert to staging URL if staging mode is enabled
+    const txServiceUrl = convertToStagingUrl(
+      chain.transactionServiceUrl,
+      options?.useStaging ?? false
+    )
+
     this.apiKit = new SafeApiKit({
       chainId: BigInt(chain.chainId),
-      apiKey,
+      txServiceUrl,
+      apiKey: options?.apiKey,
     })
   }
 
