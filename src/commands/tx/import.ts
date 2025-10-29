@@ -235,7 +235,7 @@ export async function importTransaction(input?: string) {
     try {
       parsedData = JSON.parse(jsonData)
     } catch {
-      throw new SafeCLIError('Invalid JSON format')
+      throw new SafeCLIError('Invalid JSON format. Please make sure the JSON is quoted.')
     }
 
     // Auto-detect format and handle accordingly
