@@ -1,5 +1,7 @@
 # Safe CLI
 
+[![npm version](https://img.shields.io/npm/v/@safe-global/safe-cli.svg)](https://www.npmjs.com/package/@safe-global/safe-cli)
+
 > A modern, interactive command-line tool for managing Safe Smart Accounts
 
 Built on top of the [Safe Core SDK](https://github.com/safe-global/safe-core-sdk), Safe CLI makes it easy to create, manage, and interact with Safe multi-signature wallets directly from your terminal.
