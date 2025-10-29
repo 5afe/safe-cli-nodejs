@@ -211,18 +211,15 @@ async function executeCommand(
   // Note: process.exit is already overridden globally in startRepl()
   // It's now a no-op so commands can't kill the REPL
 
-  // Completely detach the REPL from stdin while the command executes
-  replServer.pause()
-
-  // Remove all REPL listeners from stdin temporarily
-  const stdinListeners = process.stdin.listeners('data')
-  process.stdin.removeAllListeners('data')
-
-  // Disable raw mode and ensure stdin is in a clean state for @clack/prompts
-  if (process.stdin.isTTY && !process.stdin.destroyed) {
-    process.stdin.setRawMode(false)
-    // Give the terminal time to transition out of raw mode
-    await new Promise((resolve) => setTimeout(resolve, 50))
+  // Close the REPL's readline interface to fully release stdin
+  // This is cleaner than trying to manage listeners manually
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const replInterface = (replServer as any).rli
+  if (replInterface) {
+    replInterface.pause()
+    if (process.stdin.isTTY && !process.stdin.destroyed) {
+      process.stdin.setRawMode(false)
+    }
   }
 
   try {
@@ -255,18 +252,13 @@ async function executeCommand(
     // Wait for @clack/prompts to fully clean up
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    // Restore stdin listeners
-    for (const listener of stdinListeners) {
-      process.stdin.on('data', listener as (chunk: Buffer) => void)
+    // Restore the REPL's readline interface
+    if (replInterface) {
+      if (process.stdin.isTTY && !process.stdin.destroyed) {
+        process.stdin.setRawMode(true)
+      }
+      replInterface.resume()
     }
-
-    // Restore raw mode for REPL
-    if (process.stdin.isTTY && !process.stdin.destroyed) {
-      process.stdin.setRawMode(true)
-    }
-
-    // Resume the REPL's input
-    replServer.resume()
 
     // Refresh session after command execution
     session.refresh()
