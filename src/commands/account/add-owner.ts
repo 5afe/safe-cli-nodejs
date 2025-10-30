@@ -18,6 +18,13 @@ import {
   parseAddressInput,
 } from '../../utils/safe-helpers.js'
 
+/**
+ * Check if an address is already an owner of the Safe
+ */
+function isAddressAlreadyOwner(address: Address, owners: Address[]): boolean {
+  return owners.some((o) => o.toLowerCase() === address.toLowerCase())
+}
+
 export async function addOwner(account?: string, ownerAddress?: string) {
   p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
 
@@ -84,7 +91,7 @@ export async function addOwner(account?: string, ownerAddress?: string) {
         )
 
         // Check for duplicates
-        if (currentOwners.some((o) => o.toLowerCase() === newOwner.toLowerCase())) {
+        if (isAddressAlreadyOwner(newOwner, currentOwners)) {
           p.log.error('Address is already an owner')
           p.outro('Failed')
           return
@@ -111,7 +118,7 @@ export async function addOwner(account?: string, ownerAddress?: string) {
               ctx.chains,
               'Owner address'
             )
-            if (currentOwners.some((o) => o.toLowerCase() === checksummed.toLowerCase())) {
+            if (isAddressAlreadyOwner(checksummed, currentOwners)) {
               return 'Address is already an owner'
             }
           } catch (error) {
