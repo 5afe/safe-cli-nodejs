@@ -235,22 +235,22 @@ account
   })
 
 account
-  .command('add-owner [account]')
+  .command('add-owner [account] [ownerAddress]')
   .description('Add a new owner to a Safe (EIP-3770 format: shortName:address)')
-  .action(async (account?: string) => {
+  .action(async (account?: string, ownerAddress?: string) => {
     try {
-      await addOwner(account)
+      await addOwner(account, ownerAddress)
     } catch (error) {
       handleError(error)
     }
   })
 
 account
-  .command('remove-owner [account]')
+  .command('remove-owner [account] [ownerAddress]')
   .description('Remove an owner from a Safe (EIP-3770 format: shortName:address)')
-  .action(async (account?: string) => {
+  .action(async (account?: string, ownerAddress?: string) => {
     try {
-      await removeOwner(account)
+      await removeOwner(account, ownerAddress)
     } catch (error) {
       handleError(error)
     }

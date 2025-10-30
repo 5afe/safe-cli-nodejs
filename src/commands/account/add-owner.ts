@@ -18,7 +18,7 @@ import {
   parseAddressInput,
 } from '../../utils/safe-helpers.js'
 
-export async function addOwner(account?: string) {
+export async function addOwner(account?: string, ownerAddress?: string) {
   p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
 
   try {
@@ -71,48 +71,73 @@ export async function addOwner(account?: string) {
     if (!ensureWalletIsOwner(activeWallet, currentOwners)) return
 
     // Get new owner address
-    const newOwnerInput = await p.text({
-      message: 'New owner address (supports EIP-3770 format: shortName:address):',
-      placeholder: '0x... or eth:0x...',
-      validate: (value) => {
-        const addressError = ctx.validator.validateAddressWithChain(value, chainId, ctx.chains)
-        if (addressError) return addressError
-
-        // Check for duplicates - need to get checksummed version
-        try {
-          const checksummed = ctx.validator.assertAddressWithChain(
-            value as string,
-            chainId,
-            ctx.chains,
-            'Owner address'
-          )
-          if (currentOwners.some((o) => o.toLowerCase() === checksummed.toLowerCase())) {
-            return 'Address is already an owner'
-          }
-        } catch (error) {
-          // Should not happen since validateAddressWithChain already passed
-          return error instanceof Error ? error.message : 'Invalid address'
-        }
-
-        return undefined
-      },
-    })
-
-    if (!checkCancelled(newOwnerInput)) return
-
-    // Checksum the address (strips EIP-3770 prefix if present)
     let newOwner: Address
-    try {
-      newOwner = ctx.validator.assertAddressWithChain(
-        newOwnerInput as string,
-        chainId,
-        ctx.chains,
-        'Owner address'
-      )
-    } catch (error) {
-      p.log.error(error instanceof Error ? error.message : 'Invalid address')
-      p.outro('Failed')
-      return
+
+    if (ownerAddress) {
+      // Use provided owner address
+      try {
+        newOwner = ctx.validator.assertAddressWithChain(
+          ownerAddress,
+          chainId,
+          ctx.chains,
+          'Owner address'
+        )
+
+        // Check for duplicates
+        if (currentOwners.some((o) => o.toLowerCase() === newOwner.toLowerCase())) {
+          p.log.error('Address is already an owner')
+          p.outro('Failed')
+          return
+        }
+      } catch (error) {
+        p.log.error(error instanceof Error ? error.message : 'Invalid address')
+        p.outro('Failed')
+        return
+      }
+    } else {
+      // Prompt for new owner address
+      const newOwnerInput = await p.text({
+        message: 'New owner address (supports EIP-3770 format: shortName:address):',
+        placeholder: '0x... or eth:0x...',
+        validate: (value) => {
+          const addressError = ctx.validator.validateAddressWithChain(value, chainId, ctx.chains)
+          if (addressError) return addressError
+
+          // Check for duplicates - need to get checksummed version
+          try {
+            const checksummed = ctx.validator.assertAddressWithChain(
+              value as string,
+              chainId,
+              ctx.chains,
+              'Owner address'
+            )
+            if (currentOwners.some((o) => o.toLowerCase() === checksummed.toLowerCase())) {
+              return 'Address is already an owner'
+            }
+          } catch (error) {
+            // Should not happen since validateAddressWithChain already passed
+            return error instanceof Error ? error.message : 'Invalid address'
+          }
+
+          return undefined
+        },
+      })
+
+      if (!checkCancelled(newOwnerInput)) return
+
+      // Checksum the address (strips EIP-3770 prefix if present)
+      try {
+        newOwner = ctx.validator.assertAddressWithChain(
+          newOwnerInput as string,
+          chainId,
+          ctx.chains,
+          'Owner address'
+        )
+      } catch (error) {
+        p.log.error(error instanceof Error ? error.message : 'Invalid address')
+        p.outro('Failed')
+        return
+      }
     }
 
     // Ask about threshold
