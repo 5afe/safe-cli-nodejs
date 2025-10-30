@@ -18,7 +18,7 @@ import {
   parseAddressInput,
 } from '../../utils/safe-helpers.js'
 
-export async function removeOwner(account?: string) {
+export async function removeOwner(account?: string, ownerAddress?: string) {
   p.intro(pc.bgCyan(pc.black(' Remove Safe Owner ')))
 
   try {
@@ -77,18 +77,44 @@ export async function removeOwner(account?: string) {
       return
     }
 
-    // Select owner to remove
-    const ownerToRemove = await p.select({
-      message: 'Select owner to remove:',
-      options: owners.map((owner) => ({
-        value: owner,
-        label: owner,
-      })),
-    })
+    // Get owner to remove
+    let removeAddress: Address
 
-    if (!checkCancelled(ownerToRemove)) return
+    if (ownerAddress) {
+      // Use provided owner address
+      try {
+        removeAddress = ctx.validator.assertAddressWithChain(
+          ownerAddress,
+          chainId,
+          ctx.chains,
+          'Owner address'
+        )
 
-    const removeAddress = ownerToRemove as Address
+        // Check if address is actually an owner
+        if (!owners.some((o) => o.toLowerCase() === removeAddress.toLowerCase())) {
+          p.log.error('Address is not an owner of this Safe')
+          p.outro('Failed')
+          return
+        }
+      } catch (error) {
+        p.log.error(error instanceof Error ? error.message : 'Invalid address')
+        p.outro('Failed')
+        return
+      }
+    } else {
+      // Select owner to remove interactively
+      const ownerToRemove = await p.select({
+        message: 'Select owner to remove:',
+        options: owners.map((owner) => ({
+          value: owner,
+          label: owner,
+        })),
+      })
+
+      if (!checkCancelled(ownerToRemove)) return
+
+      removeAddress = ownerToRemove as Address
+    }
 
     // Calculate max threshold after removal
     const maxThreshold = owners.length - 1
