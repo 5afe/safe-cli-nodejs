@@ -10,7 +10,11 @@ import {
   ensureChainConfigured,
   checkCancelled,
   handleCommandError,
+  isNonInteractiveMode,
+  outputSuccess,
+  outputError,
 } from '../../utils/command-helpers.js'
+import { ExitCode } from '../../constants/exit-codes.js'
 import {
   selectDeployedSafe,
   fetchSafeOwnersAndThreshold,
@@ -34,7 +38,9 @@ export async function addOwner(
   ownerAddress?: string,
   options: AddOwnerOptions = {}
 ) {
-  p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
+  if (!isNonInteractiveMode()) {
+    p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
+  }
 
   try {
     const ctx = createCommandContext()
@@ -62,15 +68,11 @@ export async function addOwner(
 
     const safe = ctx.safeStorage.getSafe(chainId, address)
     if (!safe) {
-      p.log.error(`Safe not found: ${address} on chain ${chainId}`)
-      p.cancel('Operation cancelled')
-      return
+      outputError(`Safe not found: ${address} on chain ${chainId}`, ExitCode.SAFE_NOT_FOUND)
     }
 
     if (!safe.deployed) {
-      p.log.error('Safe must be deployed before adding owners')
-      p.cancel('Operation cancelled')
-      return
+      outputError('Safe must be deployed before adding owners', ExitCode.ERROR)
     }
 
     // Get chain
@@ -100,16 +102,18 @@ export async function addOwner(
 
         // Check for duplicates
         if (isAddressAlreadyOwner(newOwner, currentOwners)) {
-          p.log.error('Address is already an owner')
-          p.outro('Failed')
-          return
+          outputError('Address is already an owner', ExitCode.INVALID_ARGS)
         }
       } catch (error) {
-        p.log.error(error instanceof Error ? error.message : 'Invalid address')
-        p.outro('Failed')
-        return
+        outputError(
+          error instanceof Error ? error.message : 'Invalid address',
+          ExitCode.INVALID_ARGS
+        )
       }
     } else {
+      if (isNonInteractiveMode()) {
+        outputError('Owner address is required in non-interactive mode', ExitCode.INVALID_ARGS)
+      }
       // Prompt for new owner address
       const newOwnerInput = await p.text({
         message: 'New owner address (supports EIP-3770 format: shortName:address):',
@@ -149,9 +153,10 @@ export async function addOwner(
           'Owner address'
         )
       } catch (error) {
-        p.log.error(error instanceof Error ? error.message : 'Invalid address')
-        p.outro('Failed')
-        return
+        outputError(
+          error instanceof Error ? error.message : 'Invalid address',
+          ExitCode.INVALID_ARGS
+        )
       }
     }
 
@@ -162,14 +167,13 @@ export async function addOwner(
       // Use provided threshold
       const num = parseInt(options.threshold, 10)
       if (isNaN(num) || num < 1) {
-        p.log.error('Threshold must be at least 1')
-        p.outro('Failed')
-        return
+        outputError('Threshold must be at least 1', ExitCode.INVALID_ARGS)
       }
       if (num > currentOwners.length + 1) {
-        p.log.error(`Threshold cannot exceed ${currentOwners.length + 1} owners`)
-        p.outro('Failed')
-        return
+        outputError(
+          `Threshold cannot exceed ${currentOwners.length + 1} owners`,
+          ExitCode.INVALID_ARGS
+        )
       }
       thresholdNum = num
     } else {
@@ -194,29 +198,31 @@ export async function addOwner(
       thresholdNum = parseInt(newThreshold as string, 10)
     }
 
-    // Show summary
-    console.log('')
-    console.log(pc.bold('Add Owner Summary:'))
-    console.log(`  ${pc.dim('Safe:')}          ${safe.name}`)
-    console.log(`  ${pc.dim('New Owner:')}     ${newOwner}`)
-    console.log(`  ${pc.dim('Current Owners:')} ${currentOwners.length}`)
-    console.log(`  ${pc.dim('New Owners:')}    ${currentOwners.length + 1}`)
-    console.log(`  ${pc.dim('Old Threshold:')} ${currentThreshold}`)
-    console.log(`  ${pc.dim('New Threshold:')} ${thresholdNum}`)
-    console.log('')
+    if (!isNonInteractiveMode()) {
+      // Show summary
+      console.log('')
+      console.log(pc.bold('Add Owner Summary:'))
+      console.log(`  ${pc.dim('Safe:')}          ${safe.name}`)
+      console.log(`  ${pc.dim('New Owner:')}     ${newOwner}`)
+      console.log(`  ${pc.dim('Current Owners:')} ${currentOwners.length}`)
+      console.log(`  ${pc.dim('New Owners:')}    ${currentOwners.length + 1}`)
+      console.log(`  ${pc.dim('Old Threshold:')} ${currentThreshold}`)
+      console.log(`  ${pc.dim('New Threshold:')} ${thresholdNum}`)
+      console.log('')
 
-    const confirm = await p.confirm({
-      message: 'Create transaction to add this owner?',
-      initialValue: true,
-    })
+      const confirm = await p.confirm({
+        message: 'Create transaction to add this owner?',
+        initialValue: true,
+      })
 
-    if (!checkCancelled(confirm) || !confirm) {
-      p.cancel('Operation cancelled')
-      return
+      if (!checkCancelled(confirm) || !confirm) {
+        p.cancel('Operation cancelled')
+        return
+      }
     }
 
-    const spinner = p.spinner()
-    spinner.start('Creating add owner transaction...')
+    const spinner = !isNonInteractiveMode() ? p.spinner() : null
+    spinner?.start('Creating add owner transaction...')
 
     // The addOwnerWithThreshold method encodes the transaction data
     const txService = new TransactionService(chain)
@@ -235,14 +241,26 @@ export async function addOwner(
       activeWallet.address as Address
     )
 
-    spinner.stop('Transaction created')
+    spinner?.stop('Transaction created')
 
-    await renderScreen(OwnerAddSuccessScreen, {
-      safeTxHash: safeTransaction.safeTxHash,
-      safeAddress: safe.address as Address,
-      chainId: safe.chainId,
-      threshold: currentThreshold,
-    })
+    if (isNonInteractiveMode()) {
+      outputSuccess('Add owner transaction created', {
+        safeTxHash: safeTransaction.safeTxHash,
+        safeAddress: safe.address,
+        chainId: safe.chainId,
+        chainName: chain.name,
+        newOwner,
+        newThreshold: thresholdNum,
+        totalOwners: currentOwners.length + 1,
+      })
+    } else {
+      await renderScreen(OwnerAddSuccessScreen, {
+        safeTxHash: safeTransaction.safeTxHash,
+        safeAddress: safe.address as Address,
+        chainId: safe.chainId,
+        threshold: currentThreshold,
+      })
+    }
   } catch (error) {
     handleCommandError(error)
   }
