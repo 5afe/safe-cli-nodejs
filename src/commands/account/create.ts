@@ -11,7 +11,17 @@ import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
 import { AccountCreateSuccessScreen } from '../../ui/screens/index.js'
 
-export async function createSafe() {
+export interface SafeCreateOptions {
+  chainId?: string
+  owners?: string
+  threshold?: string
+  name?: string
+  noDeploy?: boolean
+}
+
+// TODO: Implement full argument support for account create
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function createSafe(_options: SafeCreateOptions = {}) {
   p.intro('Create Safe Account')
 
   const configStore = getConfigStore()

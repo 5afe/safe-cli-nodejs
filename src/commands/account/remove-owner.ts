@@ -18,7 +18,15 @@ import {
   parseAddressInput,
 } from '../../utils/safe-helpers.js'
 
-export async function removeOwner(account?: string, ownerAddress?: string) {
+export interface RemoveOwnerOptions {
+  threshold?: string
+}
+
+export async function removeOwner(
+  account?: string,
+  ownerAddress?: string,
+  options: RemoveOwnerOptions = {}
+) {
   p.intro(pc.bgCyan(pc.black(' Remove Safe Owner ')))
 
   try {
@@ -119,27 +127,46 @@ export async function removeOwner(account?: string, ownerAddress?: string) {
     // Calculate max threshold after removal
     const maxThreshold = owners.length - 1
 
-    // Ask about threshold
-    const suggestedThreshold = Math.min(currentThreshold, maxThreshold)
+    // Get threshold
+    let thresholdNum: number
 
-    const newThreshold = await p.text({
-      message: `New threshold (current: ${currentThreshold}, max: ${maxThreshold}):`,
-      placeholder: `${suggestedThreshold}`,
-      initialValue: `${suggestedThreshold}`,
-      validate: (value) => {
-        if (!value) return 'Threshold is required'
-        const num = parseInt(value, 10)
-        if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
-        if (num > maxThreshold) {
-          return `Threshold cannot exceed ${maxThreshold} (remaining owners)`
-        }
-        return undefined
-      },
-    })
+    if (options.threshold) {
+      // Use provided threshold
+      const num = parseInt(options.threshold, 10)
+      if (isNaN(num) || num < 1) {
+        p.log.error('Threshold must be at least 1')
+        p.outro('Failed')
+        return
+      }
+      if (num > maxThreshold) {
+        p.log.error(`Threshold cannot exceed ${maxThreshold} (remaining owners)`)
+        p.outro('Failed')
+        return
+      }
+      thresholdNum = num
+    } else {
+      // Ask about threshold
+      const suggestedThreshold = Math.min(currentThreshold, maxThreshold)
 
-    if (!checkCancelled(newThreshold)) return
+      const newThreshold = await p.text({
+        message: `New threshold (current: ${currentThreshold}, max: ${maxThreshold}):`,
+        placeholder: `${suggestedThreshold}`,
+        initialValue: `${suggestedThreshold}`,
+        validate: (value) => {
+          if (!value) return 'Threshold is required'
+          const num = parseInt(value, 10)
+          if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
+          if (num > maxThreshold) {
+            return `Threshold cannot exceed ${maxThreshold} (remaining owners)`
+          }
+          return undefined
+        },
+      })
 
-    const thresholdNum = parseInt(newThreshold as string, 10)
+      if (!checkCancelled(newThreshold)) return
+
+      thresholdNum = parseInt(newThreshold as string, 10)
+    }
 
     // Show summary
     console.log('')

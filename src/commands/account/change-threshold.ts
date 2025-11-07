@@ -18,7 +18,11 @@ import {
   parseAddressInput,
 } from '../../utils/safe-helpers.js'
 
-export async function changeThreshold(account?: string) {
+export interface ChangeThresholdOptions {
+  threshold?: string
+}
+
+export async function changeThreshold(account?: string, options: ChangeThresholdOptions = {}) {
   p.intro(pc.bgCyan(pc.black(' Change Safe Threshold ')))
 
   try {
@@ -70,27 +74,51 @@ export async function changeThreshold(account?: string) {
     // Check if wallet is an owner
     if (!ensureWalletIsOwner(activeWallet, owners)) return
 
-    // Ask for new threshold
-    const newThreshold = await p.text({
-      message: `New threshold (current: ${currentThreshold}, max: ${owners.length}):`,
-      placeholder: `${currentThreshold}`,
-      validate: (value) => {
-        if (!value) return 'Threshold is required'
-        const num = parseInt(value, 10)
-        if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
-        if (num > owners.length) {
-          return `Threshold cannot exceed ${owners.length} (current owners)`
-        }
-        if (num === currentThreshold) {
-          return 'New threshold must be different from current threshold'
-        }
-        return undefined
-      },
-    })
+    // Get new threshold
+    let thresholdNum: number
 
-    if (!checkCancelled(newThreshold)) return
+    if (options.threshold) {
+      // Use provided threshold
+      const num = parseInt(options.threshold, 10)
+      if (isNaN(num) || num < 1) {
+        p.log.error('Threshold must be at least 1')
+        p.outro('Failed')
+        return
+      }
+      if (num > owners.length) {
+        p.log.error(`Threshold cannot exceed ${owners.length} (current owners)`)
+        p.outro('Failed')
+        return
+      }
+      if (num === currentThreshold) {
+        p.log.error('New threshold must be different from current threshold')
+        p.outro('Failed')
+        return
+      }
+      thresholdNum = num
+    } else {
+      // Ask for new threshold
+      const newThreshold = await p.text({
+        message: `New threshold (current: ${currentThreshold}, max: ${owners.length}):`,
+        placeholder: `${currentThreshold}`,
+        validate: (value) => {
+          if (!value) return 'Threshold is required'
+          const num = parseInt(value, 10)
+          if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
+          if (num > owners.length) {
+            return `Threshold cannot exceed ${owners.length} (current owners)`
+          }
+          if (num === currentThreshold) {
+            return 'New threshold must be different from current threshold'
+          }
+          return undefined
+        },
+      })
 
-    const thresholdNum = parseInt(newThreshold as string, 10)
+      if (!checkCancelled(newThreshold)) return
+
+      thresholdNum = parseInt(newThreshold as string, 10)
+    }
 
     // Show summary
     console.log('')

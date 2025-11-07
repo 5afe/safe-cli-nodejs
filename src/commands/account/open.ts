@@ -11,7 +11,11 @@ import { renderScreen } from '../../ui/render.js'
 import { SafeOpenSuccessScreen } from '../../ui/screens/index.js'
 import { parseEIP3770, getChainIdFromShortName } from '../../utils/eip3770.js'
 
-export async function openSafe(addressArg?: string) {
+export interface SafeOpenOptions {
+  name?: string
+}
+
+export async function openSafe(addressArg?: string, options: SafeOpenOptions = {}) {
   p.intro(pc.bgCyan(pc.black(' Open Existing Safe ')))
 
   const configStore = getConfigStore()
@@ -138,21 +142,30 @@ export async function openSafe(addressArg?: string) {
     }
     console.log('')
 
-    // Give it a name
-    const name = await p.text({
-      message: 'Give this Safe a name:',
-      placeholder: 'my-safe',
-      validate: (value) => (!value ? 'Name is required' : undefined),
-    })
+    // Get name
+    let safeName: string
 
-    if (p.isCancel(name)) {
-      p.cancel('Operation cancelled')
-      return
+    if (options.name) {
+      safeName = options.name
+    } else {
+      // Ask for name
+      const name = await p.text({
+        message: 'Give this Safe a name:',
+        placeholder: 'my-safe',
+        validate: (value) => (!value ? 'Name is required' : undefined),
+      })
+
+      if (p.isCancel(name)) {
+        p.cancel('Operation cancelled')
+        return
+      }
+
+      safeName = name as string
     }
 
     // Save to storage
     const safe = safeStorage.createSafe({
-      name: name as string,
+      name: safeName,
       address: safeAddress,
       chainId: chain.chainId,
       deployed: true,

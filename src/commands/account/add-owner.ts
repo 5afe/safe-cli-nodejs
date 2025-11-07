@@ -25,7 +25,15 @@ function isAddressAlreadyOwner(address: Address, owners: Address[]): boolean {
   return owners.some((o) => o.toLowerCase() === address.toLowerCase())
 }
 
-export async function addOwner(account?: string, ownerAddress?: string) {
+export interface AddOwnerOptions {
+  threshold?: string
+}
+
+export async function addOwner(
+  account?: string,
+  ownerAddress?: string,
+  options: AddOwnerOptions = {}
+) {
   p.intro(pc.bgCyan(pc.black(' Add Safe Owner ')))
 
   try {
@@ -147,25 +155,44 @@ export async function addOwner(account?: string, ownerAddress?: string) {
       }
     }
 
-    // Ask about threshold
-    const newThreshold = await p.text({
-      message: `New threshold (current: ${currentThreshold}, max: ${currentOwners.length + 1}):`,
-      placeholder: `${currentThreshold}`,
-      initialValue: `${currentThreshold}`,
-      validate: (value) => {
-        if (!value) return 'Threshold is required'
-        const num = parseInt(value, 10)
-        if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
-        if (num > currentOwners.length + 1) {
-          return `Threshold cannot exceed ${currentOwners.length + 1} owners`
-        }
-        return undefined
-      },
-    })
+    // Get threshold
+    let thresholdNum: number
 
-    if (!checkCancelled(newThreshold)) return
+    if (options.threshold) {
+      // Use provided threshold
+      const num = parseInt(options.threshold, 10)
+      if (isNaN(num) || num < 1) {
+        p.log.error('Threshold must be at least 1')
+        p.outro('Failed')
+        return
+      }
+      if (num > currentOwners.length + 1) {
+        p.log.error(`Threshold cannot exceed ${currentOwners.length + 1} owners`)
+        p.outro('Failed')
+        return
+      }
+      thresholdNum = num
+    } else {
+      // Ask about threshold
+      const newThreshold = await p.text({
+        message: `New threshold (current: ${currentThreshold}, max: ${currentOwners.length + 1}):`,
+        placeholder: `${currentThreshold}`,
+        initialValue: `${currentThreshold}`,
+        validate: (value) => {
+          if (!value) return 'Threshold is required'
+          const num = parseInt(value, 10)
+          if (isNaN(num) || num < 1) return 'Threshold must be at least 1'
+          if (num > currentOwners.length + 1) {
+            return `Threshold cannot exceed ${currentOwners.length + 1} owners`
+          }
+          return undefined
+        },
+      })
 
-    const thresholdNum = parseInt(newThreshold as string, 10)
+      if (!checkCancelled(newThreshold)) return
+
+      thresholdNum = parseInt(newThreshold as string, 10)
+    }
 
     // Show summary
     console.log('')
