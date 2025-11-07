@@ -235,9 +235,10 @@ account
 account
   .command('deploy [account]')
   .description('Deploy a Safe to the blockchain (EIP-3770 format: shortName:address)')
-  .action(async (account?: string) => {
+  .option('--skip-confirmation', 'Skip deployment confirmation prompt')
+  .action(async (account?: string, options?: { skipConfirmation?: boolean }) => {
     try {
-      await deploySafe(account)
+      await deploySafe(account, options)
     } catch (error) {
       handleError(error)
     }
@@ -246,9 +247,10 @@ account
 account
   .command('open [address]')
   .description('Open an existing Safe (EIP-3770 format: shortName:address)')
-  .action(async (address?: string) => {
+  .option('--name <name>', 'Name for the Safe')
+  .action(async (address?: string, options?: { name?: string }) => {
     try {
-      await openSafe(address)
+      await openSafe(address, options)
     } catch (error) {
       handleError(error)
     }
@@ -279,9 +281,10 @@ account
 account
   .command('add-owner [account] [ownerAddress]')
   .description('Add a new owner to a Safe (EIP-3770 format: shortName:address)')
-  .action(async (account?: string, ownerAddress?: string) => {
+  .option('--threshold <number>', 'New threshold after adding owner')
+  .action(async (account?: string, ownerAddress?: string, options?: { threshold?: string }) => {
     try {
-      await addOwner(account, ownerAddress)
+      await addOwner(account, ownerAddress, options)
     } catch (error) {
       handleError(error)
     }
@@ -290,9 +293,10 @@ account
 account
   .command('remove-owner [account] [ownerAddress]')
   .description('Remove an owner from a Safe (EIP-3770 format: shortName:address)')
-  .action(async (account?: string, ownerAddress?: string) => {
+  .option('--threshold <number>', 'New threshold after removing owner')
+  .action(async (account?: string, ownerAddress?: string, options?: { threshold?: string }) => {
     try {
-      await removeOwner(account, ownerAddress)
+      await removeOwner(account, ownerAddress, options)
     } catch (error) {
       handleError(error)
     }
@@ -301,9 +305,10 @@ account
 account
   .command('change-threshold [account]')
   .description('Change the signature threshold of a Safe (EIP-3770 format: shortName:address)')
-  .action(async (account?: string) => {
+  .option('--threshold <number>', 'New threshold value')
+  .action(async (account?: string, options?: { threshold?: string }) => {
     try {
-      await changeThreshold(account)
+      await changeThreshold(account, options)
     } catch (error) {
       handleError(error)
     }
