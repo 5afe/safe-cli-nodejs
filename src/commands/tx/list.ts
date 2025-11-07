@@ -7,6 +7,7 @@ import type { TransactionStatus } from '../../types/transaction.js'
 import { formatSafeAddress } from '../../utils/eip3770.js'
 import { renderScreen } from '../../ui/render.js'
 import { TransactionListScreen } from '../../ui/screens/index.js'
+import { isNonInteractiveMode, outputSuccess } from '../../utils/command-helpers.js'
 
 /**
  * Lists Safe transactions with optional filtering by Safe and status.
@@ -33,10 +34,14 @@ export async function listTransactions(account?: string, statusFilter?: Transact
 
     // Check if we have any transactions at all
     if (transactions.length === 0) {
-      // Show empty state screen
-      await renderScreen(TransactionListScreen, {
-        statusFilter,
-      })
+      if (isNonInteractiveMode()) {
+        outputSuccess('No transactions found', { transactions: [] })
+      } else {
+        // Show empty state screen
+        await renderScreen(TransactionListScreen, {
+          statusFilter,
+        })
+      }
       return
     }
 
@@ -66,9 +71,28 @@ export async function listTransactions(account?: string, statusFilter?: Transact
 
       if (safes.length === 0) {
         // No Safes, show all transactions
-        await renderScreen(TransactionListScreen, {
-          statusFilter,
-        })
+        if (isNonInteractiveMode()) {
+          // Apply status filter if specified
+          const filtered = statusFilter
+            ? transactions.filter((tx) => tx.status === statusFilter)
+            : transactions
+          outputSuccess('Transactions retrieved', {
+            total: filtered.length,
+            transactions: filtered.map((tx) => ({
+              safeTxHash: tx.safeTxHash,
+              safeAddress: tx.safeAddress,
+              chainId: tx.chainId,
+              status: tx.status,
+              metadata: tx.metadata,
+              signatures: tx.signatures,
+              createdAt: tx.createdAt,
+            })),
+          })
+        } else {
+          await renderScreen(TransactionListScreen, {
+            statusFilter,
+          })
+        }
         return
       }
 
@@ -112,12 +136,47 @@ export async function listTransactions(account?: string, statusFilter?: Transact
       }
     }
 
-    // Render the TransactionListScreen with the selected filters
-    await renderScreen(TransactionListScreen, {
-      safeAddress: filterSafeAddress || undefined,
-      chainId: filterChainId || undefined,
-      statusFilter,
-    })
+    // Apply filters
+    let filtered = transactions
+    if (filterSafeAddress) {
+      filtered = filtered.filter(
+        (tx) => tx.safeAddress.toLowerCase() === filterSafeAddress!.toLowerCase()
+      )
+    }
+    if (filterChainId) {
+      filtered = filtered.filter((tx) => tx.chainId === filterChainId)
+    }
+    if (statusFilter) {
+      filtered = filtered.filter((tx) => tx.status === statusFilter)
+    }
+
+    // Output in JSON mode or render screen
+    if (isNonInteractiveMode()) {
+      outputSuccess('Transactions retrieved', {
+        total: filtered.length,
+        filters: {
+          safeAddress: filterSafeAddress || undefined,
+          chainId: filterChainId || undefined,
+          status: statusFilter || undefined,
+        },
+        transactions: filtered.map((tx) => ({
+          safeTxHash: tx.safeTxHash,
+          safeAddress: tx.safeAddress,
+          chainId: tx.chainId,
+          status: tx.status,
+          metadata: tx.metadata,
+          signatures: tx.signatures,
+          createdAt: tx.createdAt,
+        })),
+      })
+    } else {
+      // Render the TransactionListScreen with the selected filters
+      await renderScreen(TransactionListScreen, {
+        safeAddress: filterSafeAddress || undefined,
+        chainId: filterChainId || undefined,
+        statusFilter,
+      })
+    }
   } catch (error) {
     p.log.error(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     p.outro('Failed')

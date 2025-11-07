@@ -11,12 +11,19 @@ import {
   ensureActiveWallet,
   ensureChainConfigured,
   handleCommandError,
-  promptPassword,
+  isNonInteractiveMode,
+  outputSuccess,
+  outputError,
 } from '../../utils/command-helpers.js'
 import { selectTransaction } from '../../utils/safe-helpers.js'
+import { getPassword } from '../../utils/password-handler.js'
+import { getGlobalOptions } from '../../types/global-options.js'
+import { ExitCode } from '../../constants/exit-codes.js'
 
 export async function signTransaction(safeTxHash?: string) {
-  p.intro('Sign Safe Transaction')
+  if (!isNonInteractiveMode()) {
+    p.intro('Sign Safe Transaction')
+  }
 
   try {
     const ctx = createCommandContext()
@@ -28,6 +35,9 @@ export async function signTransaction(safeTxHash?: string) {
     let selectedSafeTxHash = safeTxHash
 
     if (!selectedSafeTxHash) {
+      if (isNonInteractiveMode()) {
+        outputError('Transaction hash is required in non-interactive mode', ExitCode.INVALID_ARGS)
+      }
       const hash = await selectTransaction(
         ctx.transactionStore,
         ctx.safeStorage,
@@ -41,29 +51,21 @@ export async function signTransaction(safeTxHash?: string) {
 
     const transaction = ctx.transactionStore.getTransaction(selectedSafeTxHash)
     if (!transaction) {
-      p.log.error(`Transaction ${selectedSafeTxHash} not found`)
-      p.outro('Failed')
-      return
+      outputError(`Transaction ${selectedSafeTxHash} not found`, ExitCode.ERROR)
     }
 
     if (transaction.status === 'executed') {
-      p.log.error('Transaction already executed')
-      p.outro('Failed')
-      return
+      outputError('Transaction already executed', ExitCode.ERROR)
     }
 
     if (transaction.status === 'rejected') {
-      p.log.error('Transaction has been rejected')
-      p.outro('Failed')
-      return
+      outputError('Transaction has been rejected', ExitCode.ERROR)
     }
 
     // Get Safe info
     const safe = ctx.safeStorage.getSafe(transaction.chainId, transaction.safeAddress)
     if (!safe) {
-      p.log.error('Safe not found')
-      p.outro('Failed')
-      return
+      outputError('Safe not found', ExitCode.SAFE_NOT_FOUND)
     }
 
     // Get chain
@@ -71,8 +73,8 @@ export async function signTransaction(safeTxHash?: string) {
     if (!chain) return
 
     // Fetch live owners and threshold from blockchain
-    const spinner = p.spinner()
-    spinner.start('Fetching Safe information from blockchain...')
+    const spinner = !isNonInteractiveMode() ? p.spinner() : null
+    spinner?.start('Fetching Safe information from blockchain...')
 
     let owners: Address[]
     let threshold: number
@@ -82,21 +84,18 @@ export async function signTransaction(safeTxHash?: string) {
         txService.getOwners(transaction.safeAddress),
         txService.getThreshold(transaction.safeAddress),
       ])
-      spinner.stop('Safe information fetched')
+      spinner?.stop('Safe information fetched')
     } catch (error) {
-      spinner.stop('Failed to fetch Safe information')
-      p.log.error(
-        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      spinner?.stop('Failed to fetch Safe information')
+      outputError(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain',
+        ExitCode.NETWORK_ERROR
       )
-      p.outro('Failed')
-      return
     }
 
     // Check if wallet is an owner
     if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
-      p.log.error('Active wallet is not an owner of this Safe')
-      p.outro('Failed')
-      return
+      outputError('Active wallet is not an owner of this Safe', ExitCode.ERROR)
     }
 
     // Check if already signed
@@ -104,7 +103,7 @@ export async function signTransaction(safeTxHash?: string) {
       (sig) => sig.signer.toLowerCase() === activeWallet.address.toLowerCase()
     )
 
-    if (existingSignature) {
+    if (existingSignature && !isNonInteractiveMode()) {
       const confirm = await p.confirm({
         message: 'You have already signed this transaction. Sign again?',
         initialValue: false,
@@ -117,27 +116,28 @@ export async function signTransaction(safeTxHash?: string) {
     }
 
     // Sign transaction based on wallet type
-    const spinner2 = p.spinner()
+    const spinner2 = !isNonInteractiveMode() ? p.spinner() : null
     let signature: string
 
     if (activeWallet.type === 'ledger') {
       // Ledger wallet signing
-      spinner2.start('Connecting to Ledger device...')
+      spinner2?.start('Connecting to Ledger device...')
 
       try {
         // Check if device is connected
         if (!(await LedgerService.isDeviceConnected())) {
-          spinner2.stop('No Ledger device found')
-          p.log.warn('Please connect your Ledger device and try again')
-          p.outro('Failed')
-          return
+          spinner2?.stop('No Ledger device found')
+          outputError(
+            'No Ledger device found. Please connect your Ledger device and try again',
+            ExitCode.ERROR
+          )
         }
 
         // Connect to Ledger
         const ledgerService = new LedgerService()
         await ledgerService.connect()
 
-        spinner2.message('Please confirm transaction on your Ledger device...')
+        spinner2?.message('Please confirm transaction on your Ledger device...')
 
         // Sign with Ledger
         const txService = new TransactionService(chain)
@@ -151,43 +151,50 @@ export async function signTransaction(safeTxHash?: string) {
         // Disconnect
         await ledgerService.disconnect()
 
-        spinner2.stop('Transaction signed')
+        spinner2?.stop('Transaction signed')
       } catch (error) {
-        spinner2.stop('Failed')
+        spinner2?.stop('Failed')
         if (error instanceof SafeCLIError) {
-          p.log.error(error.message)
+          outputError(error.message, ExitCode.ERROR)
         } else {
-          p.log.error(
-            `Failed to sign with Ledger: ${error instanceof Error ? error.message : 'Unknown error'}`
+          outputError(
+            `Failed to sign with Ledger: ${error instanceof Error ? error.message : 'Unknown error'}. Make sure your Ledger is connected, unlocked, and the Ethereum app is open`,
+            ExitCode.ERROR
           )
-          p.log.warn('Make sure your Ledger is connected, unlocked, and the Ethereum app is open')
         }
-        p.outro('Failed')
-        return
       }
     } else {
       // Private key wallet signing
-      // Request password
-      const password = await promptPassword(false, 'Enter wallet password')
-      if (!password) return
+      // Request password using centralized handler
+      const globalOptions = getGlobalOptions()
+      const password = await getPassword(
+        {
+          password: globalOptions.password,
+          passwordFile: globalOptions.passwordFile,
+          passwordEnv: 'SAFE_WALLET_PASSWORD',
+        },
+        'Enter wallet password'
+      )
 
-      spinner2.start('Signing transaction')
+      if (!password) {
+        outputError('Password is required', ExitCode.AUTH_FAILURE)
+      }
+
+      spinner2?.start('Signing transaction')
 
       let privateKey: string
       try {
         privateKey = ctx.walletStorage.getPrivateKey(activeWallet.id, password)
       } catch {
-        spinner2.stop('Failed')
-        p.log.error('Invalid password')
-        p.outro('Failed')
-        return
+        spinner2?.stop('Failed')
+        outputError('Invalid password', ExitCode.AUTH_FAILURE)
       }
 
       // Sign transaction
       const txService = new TransactionService(chain, privateKey)
       signature = await txService.signTransaction(transaction.safeAddress, transaction.metadata)
 
-      spinner2.stop('Transaction signed')
+      spinner2?.stop('Transaction signed')
     }
 
     // Store signature
@@ -206,37 +213,73 @@ export async function signTransaction(safeTxHash?: string) {
     const updatedTx = ctx.transactionStore.getTransaction(selectedSafeTxHash)!
     const currentSignatures = updatedTx.signatures?.length || 0
 
-    // Show brief success message
-    console.log('')
-    console.log(`✓ Signature added (${currentSignatures}/${threshold} required)`)
-    console.log('')
-
-    // Offer next action based on signature status
-    if (currentSignatures >= threshold) {
-      // Transaction is ready to execute
-      console.log('✓ Transaction is ready to execute!')
+    if (isNonInteractiveMode()) {
+      // JSON output mode
+      outputSuccess('Transaction signed successfully', {
+        safeTxHash: selectedSafeTxHash,
+        signer: activeWallet.address,
+        currentSignatures,
+        requiredSignatures: threshold,
+        readyToExecute: currentSignatures >= threshold,
+        status: updatedTx.status,
+      })
+    } else {
+      // Show brief success message
+      console.log('')
+      console.log(`✓ Signature added (${currentSignatures}/${threshold} required)`)
       console.log('')
 
-      const nextAction = (await p.select({
-        message: 'What would you like to do?',
-        options: [
-          { value: 'execute', label: 'Execute transaction on-chain', hint: 'Recommended' },
-          {
-            value: 'push',
-            label: 'Push to Safe Transaction Service',
-            hint: 'Share with other signers',
-          },
-          { value: 'skip', label: 'Skip for now' },
-        ],
-        initialValue: 'execute',
-      })) as string
-
-      if (!p.isCancel(nextAction)) {
+      // Offer next action based on signature status
+      if (currentSignatures >= threshold) {
+        // Transaction is ready to execute
+        console.log('✓ Transaction is ready to execute!')
         console.log('')
-        if (nextAction === 'execute') {
-          const { executeTransaction } = await import('./execute.js')
-          await executeTransaction(selectedSafeTxHash)
-        } else if (nextAction === 'push') {
+
+        const nextAction = (await p.select({
+          message: 'What would you like to do?',
+          options: [
+            { value: 'execute', label: 'Execute transaction on-chain', hint: 'Recommended' },
+            {
+              value: 'push',
+              label: 'Push to Safe Transaction Service',
+              hint: 'Share with other signers',
+            },
+            { value: 'skip', label: 'Skip for now' },
+          ],
+          initialValue: 'execute',
+        })) as string
+
+        if (!p.isCancel(nextAction)) {
+          console.log('')
+          if (nextAction === 'execute') {
+            const { executeTransaction } = await import('./execute.js')
+            await executeTransaction(selectedSafeTxHash)
+          } else if (nextAction === 'push') {
+            const { pushTransaction } = await import('./push.js')
+            await pushTransaction(selectedSafeTxHash)
+          } else {
+            // Show full success screen with next steps
+            await renderScreen(TransactionSignSuccessScreen, {
+              safeTxHash: selectedSafeTxHash,
+              currentSignatures,
+              requiredSignatures: threshold,
+            })
+          }
+        } else {
+          p.outro('Done!')
+        }
+      } else {
+        // Need more signatures
+        console.log(`Still need ${threshold - currentSignatures} more signature(s)`)
+        console.log('')
+
+        const shouldPush = await p.confirm({
+          message: 'Would you like to push this transaction to Safe Transaction Service?',
+          initialValue: true,
+        })
+
+        if (!p.isCancel(shouldPush) && shouldPush) {
+          console.log('')
           const { pushTransaction } = await import('./push.js')
           await pushTransaction(selectedSafeTxHash)
         } else {
@@ -247,30 +290,6 @@ export async function signTransaction(safeTxHash?: string) {
             requiredSignatures: threshold,
           })
         }
-      } else {
-        p.outro('Done!')
-      }
-    } else {
-      // Need more signatures
-      console.log(`Still need ${threshold - currentSignatures} more signature(s)`)
-      console.log('')
-
-      const shouldPush = await p.confirm({
-        message: 'Would you like to push this transaction to Safe Transaction Service?',
-        initialValue: true,
-      })
-
-      if (!p.isCancel(shouldPush) && shouldPush) {
-        console.log('')
-        const { pushTransaction } = await import('./push.js')
-        await pushTransaction(selectedSafeTxHash)
-      } else {
-        // Show full success screen with next steps
-        await renderScreen(TransactionSignSuccessScreen, {
-          safeTxHash: selectedSafeTxHash,
-          currentSignatures,
-          requiredSignatures: threshold,
-        })
       }
     }
   } catch (error) {
