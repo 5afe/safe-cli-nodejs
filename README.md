@@ -1,4 +1,4 @@
-# 🔐 Safe CLI [![npm version](https://img.shields.io/npm/v/@safe-global/safe-cli.svg)](https://www.npmjs.com/package/@safe-global/safe-cli)
+# 🔐 Safe CLI [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![npm version](https://img.shields.io/npm/v/@safe-global/safe-cli.svg)](https://www.npmjs.com/package/@safe-global/safe-cli)
 
 > A modern, interactive command-line tool for managing Safe Smart Accounts
 
