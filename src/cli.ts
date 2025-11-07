@@ -155,9 +155,11 @@ wallet
 wallet
   .command('create')
   .description('Create a new wallet with a generated private key')
-  .action(async () => {
+  .option('--name <name>', 'Name for the wallet')
+  .option('--skip-backup-warning', 'Skip backup confirmation (use with caution)')
+  .action(async (options: { name?: string; skipBackupWarning?: boolean }) => {
     try {
-      await createWallet()
+      await createWallet(options)
     } catch (error) {
       handleError(error)
     }
