@@ -9,12 +9,19 @@ import {
   ensureActiveWallet,
   ensureChainConfigured,
   handleCommandError,
-  promptPassword,
+  isNonInteractiveMode,
+  outputSuccess,
+  outputError,
 } from '../../utils/command-helpers.js'
 import { selectTransaction } from '../../utils/safe-helpers.js'
+import { getPassword } from '../../utils/password-handler.js'
+import { getGlobalOptions } from '../../types/global-options.js'
+import { ExitCode } from '../../constants/exit-codes.js'
 
 export async function executeTransaction(safeTxHash?: string) {
-  p.intro('Execute Safe Transaction')
+  if (!isNonInteractiveMode()) {
+    p.intro('Execute Safe Transaction')
+  }
 
   try {
     const ctx = createCommandContext()
@@ -26,6 +33,9 @@ export async function executeTransaction(safeTxHash?: string) {
     let selectedSafeTxHash = safeTxHash
 
     if (!selectedSafeTxHash) {
+      if (isNonInteractiveMode()) {
+        outputError('Transaction hash is required in non-interactive mode', ExitCode.INVALID_ARGS)
+      }
       const hash = await selectTransaction(
         ctx.transactionStore,
         ctx.safeStorage,
@@ -39,29 +49,21 @@ export async function executeTransaction(safeTxHash?: string) {
 
     const transaction = ctx.transactionStore.getTransaction(selectedSafeTxHash)
     if (!transaction) {
-      p.log.error(`Transaction ${selectedSafeTxHash} not found`)
-      p.outro('Failed')
-      return
+      outputError(`Transaction ${selectedSafeTxHash} not found`, ExitCode.ERROR)
     }
 
     if (transaction.status === TransactionStatus.EXECUTED) {
-      p.log.error('Transaction already executed')
-      p.outro('Failed')
-      return
+      outputError('Transaction already executed', ExitCode.ERROR)
     }
 
     if (transaction.status === 'rejected') {
-      p.log.error('Transaction has been rejected')
-      p.outro('Failed')
-      return
+      outputError('Transaction has been rejected', ExitCode.ERROR)
     }
 
     // Get Safe info
     const safe = ctx.safeStorage.getSafe(transaction.chainId, transaction.safeAddress)
     if (!safe) {
-      p.log.error('Safe not found')
-      p.outro('Failed')
-      return
+      outputError('Safe not found', ExitCode.SAFE_NOT_FOUND)
     }
 
     // Get chain
@@ -69,8 +71,8 @@ export async function executeTransaction(safeTxHash?: string) {
     if (!chain) return
 
     // Fetch live owners and threshold from blockchain
-    const spinner = p.spinner()
-    spinner.start('Fetching Safe information from blockchain...')
+    const spinner = !isNonInteractiveMode() ? p.spinner() : null
+    spinner?.start('Fetching Safe information from blockchain...')
 
     let owners: Address[]
     let threshold: number
@@ -80,65 +82,71 @@ export async function executeTransaction(safeTxHash?: string) {
         txService.getOwners(transaction.safeAddress),
         txService.getThreshold(transaction.safeAddress),
       ])
-      spinner.stop('Safe information fetched')
+      spinner?.stop('Safe information fetched')
     } catch (error) {
-      spinner.stop('Failed to fetch Safe information')
-      p.log.error(
-        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain'
+      spinner?.stop('Failed to fetch Safe information')
+      outputError(
+        error instanceof Error ? error.message : 'Failed to fetch Safe data from blockchain',
+        ExitCode.NETWORK_ERROR
       )
-      p.outro('Failed')
-      return
     }
 
     // Check if wallet is an owner
     if (!owners.some((owner) => owner.toLowerCase() === activeWallet.address.toLowerCase())) {
-      p.log.error('Active wallet is not an owner of this Safe')
-      p.outro('Failed')
-      return
+      outputError('Active wallet is not an owner of this Safe', ExitCode.ERROR)
     }
 
     // Check if we have enough signatures
     const sigCount = transaction.signatures?.length || 0
     if (sigCount < threshold) {
-      p.log.error(`Not enough signatures. Have ${sigCount}, need ${threshold}`)
-      p.outro('Failed')
-      return
+      outputError(`Not enough signatures. Have ${sigCount}, need ${threshold}`, ExitCode.ERROR)
     }
 
-    // Display transaction details
-    console.log('\nTransaction Details:')
-    console.log(`  To: ${transaction.metadata.to}`)
-    console.log(`  Value: ${transaction.metadata.value} wei`)
-    console.log(`  Data: ${transaction.metadata.data}`)
-    console.log(`  Operation: ${transaction.metadata.operation === 0 ? 'Call' : 'DelegateCall'}`)
-    console.log(`  Signatures: ${sigCount}/${threshold}`)
+    if (!isNonInteractiveMode()) {
+      // Display transaction details
+      console.log('\nTransaction Details:')
+      console.log(`  To: ${transaction.metadata.to}`)
+      console.log(`  Value: ${transaction.metadata.value} wei`)
+      console.log(`  Data: ${transaction.metadata.data}`)
+      console.log(`  Operation: ${transaction.metadata.operation === 0 ? 'Call' : 'DelegateCall'}`)
+      console.log(`  Signatures: ${sigCount}/${threshold}`)
 
-    const confirm = await p.confirm({
-      message: 'Execute this transaction on-chain?',
-      initialValue: false,
-    })
+      const confirm = await p.confirm({
+        message: 'Execute this transaction on-chain?',
+        initialValue: false,
+      })
 
-    if (!confirm || p.isCancel(confirm)) {
-      p.cancel('Operation cancelled')
-      return
+      if (!confirm || p.isCancel(confirm)) {
+        p.cancel('Operation cancelled')
+        return
+      }
     }
 
-    // Request password
-    const password = await promptPassword(false, 'Enter wallet password')
-    if (!password) return
+    // Request password using centralized handler
+    const globalOptions = getGlobalOptions()
+    const password = await getPassword(
+      {
+        password: globalOptions.password,
+        passwordFile: globalOptions.passwordFile,
+        passwordEnv: 'SAFE_WALLET_PASSWORD',
+      },
+      'Enter wallet password'
+    )
+
+    if (!password) {
+      outputError('Password is required', ExitCode.AUTH_FAILURE)
+    }
 
     // Get private key
-    const spinner2 = p.spinner()
-    spinner2.start('Executing transaction')
+    const spinner2 = !isNonInteractiveMode() ? p.spinner() : null
+    spinner2?.start('Executing transaction')
 
     let privateKey: string
     try {
       privateKey = ctx.walletStorage.getPrivateKey(activeWallet.id, password)
     } catch {
-      spinner2.stop('Failed')
-      p.log.error('Invalid password')
-      p.outro('Failed')
-      return
+      spinner2?.stop('Failed')
+      outputError('Invalid password', ExitCode.AUTH_FAILURE)
     }
 
     // Execute transaction
@@ -156,14 +164,24 @@ export async function executeTransaction(safeTxHash?: string) {
     // Update transaction status
     ctx.transactionStore.updateStatus(selectedSafeTxHash, TransactionStatus.EXECUTED, txHash)
 
-    spinner2.stop('Transaction executed')
+    spinner2?.stop('Transaction executed')
 
     const explorerUrl = chain.explorer ? `${chain.explorer}/tx/${txHash}` : undefined
 
-    await renderScreen(TransactionExecuteSuccessScreen, {
-      txHash,
-      explorerUrl,
-    })
+    if (isNonInteractiveMode()) {
+      outputSuccess('Transaction executed successfully', {
+        safeTxHash: selectedSafeTxHash,
+        txHash,
+        explorerUrl,
+        chainId: transaction.chainId,
+        chainName: chain.name,
+      })
+    } else {
+      await renderScreen(TransactionExecuteSuccessScreen, {
+        txHash,
+        explorerUrl,
+      })
+    }
   } catch (error) {
     handleCommandError(error)
   }
