@@ -124,7 +124,7 @@ export async function showTransactionStatus(safeTxHash?: string) {
         txHash: tx.txHash,
         explorerUrl,
         createdAt: tx.createdAt,
-        updatedAt: tx.updatedAt,
+        executedAt: tx.executedAt,
       })
     } else {
       await renderScreen(TransactionStatusScreen, {
