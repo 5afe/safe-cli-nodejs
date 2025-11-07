@@ -211,13 +211,26 @@ const account = program.command('account').description('Manage Safe accounts')
 account
   .command('create')
   .description('Create a new Safe account')
-  .action(async () => {
-    try {
-      await createSafe()
-    } catch (error) {
-      handleError(error)
+  .option('--chain-id <chainId>', 'Chain ID to create Safe on')
+  .option('--owners <addresses>', 'Comma-separated owner addresses or JSON array')
+  .option('--threshold <number>', 'Signature threshold')
+  .option('--name <name>', 'Name for the Safe')
+  .option('--no-deploy', 'Skip deployment prompt')
+  .action(
+    async (options?: {
+      chainId?: string
+      owners?: string
+      threshold?: string
+      name?: string
+      noDeploy?: boolean
+    }) => {
+      try {
+        await createSafe(options)
+      } catch (error) {
+        handleError(error)
+      }
     }
-  })
+  )
 
 account
   .command('deploy [account]')
