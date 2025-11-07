@@ -31,11 +31,26 @@ export class ConfigStore {
 
   // Chain management
   getChain(chainId: string): ChainConfig | undefined {
-    return this.store.get(`chains.${chainId}`)
+    // First try to get custom/override chain from store
+    const customChain = this.store.get(`chains.${chainId}`) as ChainConfig | undefined
+    if (customChain && customChain.chainId) {
+      return customChain
+    }
+
+    // Fallback to default chain if available
+    return DEFAULT_CHAINS[chainId]
   }
 
   getAllChains(): Record<string, ChainConfig> {
-    return this.store.get('chains', {})
+    // Get custom chains from store
+    const customChains = this.store.get('chains', {})
+
+    // Merge DEFAULT_CHAINS with custom chains
+    // Custom chains override defaults if same chainId exists
+    return {
+      ...DEFAULT_CHAINS,
+      ...customChains,
+    }
   }
 
   setChain(chainId: string, config: ChainConfig): void {
@@ -43,13 +58,26 @@ export class ConfigStore {
   }
 
   deleteChain(chainId: string): void {
-    const chains = this.getAllChains()
-    delete chains[chainId]
-    this.store.set('chains', chains)
+    // Only delete if it's a custom chain or override in the store
+    const customChains = this.store.get('chains', {})
+    if (customChains[chainId]) {
+      delete customChains[chainId]
+      this.store.set('chains', customChains)
+    }
+    // If chain only exists in DEFAULT_CHAINS, do nothing (can't delete defaults)
   }
 
   chainExists(chainId: string): boolean {
     return this.getChain(chainId) !== undefined
+  }
+
+  /**
+   * Check if a chain is a custom chain (not from defaults)
+   * @returns true if chain is custom/override, false if it's a default chain
+   */
+  isCustomChain(chainId: string): boolean {
+    const customChains = this.store.get('chains', {})
+    return customChains[chainId] !== undefined
   }
 
   /**
