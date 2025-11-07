@@ -131,9 +131,11 @@ const wallet = program.command('wallet').description('Manage wallets and signers
 wallet
   .command('import')
   .description('Import a wallet using a private key')
-  .action(async () => {
+  .option('--private-key <key>', 'Private key to import (use with caution)')
+  .option('--name <name>', 'Name for the wallet')
+  .action(async (options: { privateKey?: string; name?: string }) => {
     try {
-      await importWallet()
+      await importWallet(options)
     } catch (error) {
       handleError(error)
     }
