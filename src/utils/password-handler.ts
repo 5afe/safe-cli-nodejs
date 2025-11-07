@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import * as p from '@clack/prompts'
+import { isNonInteractiveMode } from './command-helpers.js'
 
 export interface PasswordInput {
   /** Password provided via CLI flag (least secure) */
@@ -63,6 +64,11 @@ export async function getPassword(
   }
 
   // Priority 4: Interactive prompt (fallback)
+  // Don't prompt in non-interactive mode - return null to trigger error
+  if (isNonInteractiveMode()) {
+    return null
+  }
+
   const password = await p.password({
     message: promptMessage,
   })
