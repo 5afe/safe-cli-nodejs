@@ -2,49 +2,86 @@ import * as p from '@clack/prompts'
 import { type Address } from 'viem'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { shortenAddress } from '../../utils/ethereum.js'
-import { logError } from '../../ui/messages.js'
 import { renderScreen } from '../../ui/render.js'
 import { WalletUseSuccessScreen } from '../../ui/screens/index.js'
+import { isNonInteractiveMode, outputSuccess, outputError } from '../../utils/command-helpers.js'
+import { ExitCode } from '../../constants/exit-codes.js'
 
-export async function useWallet() {
-  p.intro('Switch Wallet')
+export interface WalletUseOptions {
+  address?: string
+  name?: string
+}
+
+export async function useWallet(options: WalletUseOptions = {}) {
+  if (!isNonInteractiveMode()) {
+    p.intro('Switch Wallet')
+  }
 
   const walletStorage = getWalletStorage()
   const wallets = walletStorage.getAllWallets()
 
   if (wallets.length === 0) {
-    logError('No wallets found')
-    p.cancel('Use "safe wallet import" to import a wallet first')
-    return
+    outputError(
+      'No wallets found. Use "safe wallet import" to import a wallet first',
+      ExitCode.WALLET_ERROR
+    )
   }
 
-  const currentActive = walletStorage.getActiveWallet()
+  let walletId: string | undefined
 
-  const walletId = await p.select({
-    message: 'Select wallet to use:',
-    options: wallets.map((wallet) => ({
-      value: wallet.id,
-      label: `${wallet.name} (${shortenAddress(wallet.address)})${
-        currentActive?.id === wallet.id ? ' [current]' : ''
-      }`,
-    })),
-  })
+  // If address or name provided, find the wallet
+  if (options.address || options.name) {
+    const wallet = wallets.find((w) => {
+      if (options.address) return w.address.toLowerCase() === options.address.toLowerCase()
+      if (options.name) return w.name === options.name
+      return false
+    })
 
-  if (p.isCancel(walletId)) {
-    p.cancel('Operation cancelled')
-    return
+    if (!wallet) {
+      const criteria = options.address ? `address: ${options.address}` : `name: ${options.name}`
+      outputError(`Wallet not found with ${criteria}`, ExitCode.WALLET_ERROR)
+    }
+
+    walletId = wallet.id
+  } else {
+    // Interactive mode - prompt user to select
+    const currentActive = walletStorage.getActiveWallet()
+
+    const selected = await p.select({
+      message: 'Select wallet to use:',
+      options: wallets.map((wallet) => ({
+        value: wallet.id,
+        label: `${wallet.name} (${shortenAddress(wallet.address)})${
+          currentActive?.id === wallet.id ? ' [current]' : ''
+        }`,
+      })),
+    })
+
+    if (p.isCancel(selected)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    walletId = selected as string
   }
 
   try {
-    walletStorage.setActiveWallet(walletId as string)
-    const wallet = walletStorage.getWallet(walletId as string)!
+    walletStorage.setActiveWallet(walletId)
+    const wallet = walletStorage.getWallet(walletId)!
 
-    await renderScreen(WalletUseSuccessScreen, {
-      name: wallet.name,
-      address: wallet.address as Address,
-    })
+    if (isNonInteractiveMode()) {
+      outputSuccess('Wallet switched successfully', {
+        name: wallet.name,
+        address: wallet.address,
+      })
+    } else {
+      await renderScreen(WalletUseSuccessScreen, {
+        name: wallet.name,
+        address: wallet.address as Address,
+      })
+    }
   } catch (error) {
-    logError(error instanceof Error ? error.message : 'Unknown error')
-    process.exit(1)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    outputError(message, ExitCode.ERROR)
   }
 }

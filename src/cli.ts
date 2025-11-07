@@ -131,9 +131,11 @@ const wallet = program.command('wallet').description('Manage wallets and signers
 wallet
   .command('import')
   .description('Import a wallet using a private key')
-  .action(async () => {
+  .option('--private-key <key>', 'Private key to import (use with caution)')
+  .option('--name <name>', 'Name for the wallet')
+  .action(async (options: { privateKey?: string; name?: string }) => {
     try {
-      await importWallet()
+      await importWallet(options)
     } catch (error) {
       handleError(error)
     }
@@ -153,9 +155,11 @@ wallet
 wallet
   .command('create')
   .description('Create a new wallet with a generated private key')
-  .action(async () => {
+  .option('--name <name>', 'Name for the wallet')
+  .option('--skip-backup-warning', 'Skip backup confirmation (use with caution)')
+  .action(async (options: { name?: string; skipBackupWarning?: boolean }) => {
     try {
-      await createWallet()
+      await createWallet(options)
     } catch (error) {
       handleError(error)
     }
@@ -176,9 +180,11 @@ wallet
   .command('use')
   .alias('switch')
   .description('Switch active wallet')
-  .action(async () => {
+  .option('--address <address>', 'Wallet address to use')
+  .option('--name <name>', 'Wallet name to use')
+  .action(async (options: { address?: string; name?: string }) => {
     try {
-      await useWallet()
+      await useWallet(options)
     } catch (error) {
       handleError(error)
     }
@@ -188,9 +194,12 @@ wallet
   .command('remove')
   .alias('delete')
   .description('Remove a wallet')
-  .action(async () => {
+  .option('--address <address>', 'Wallet address to remove')
+  .option('--name <name>', 'Wallet name to remove')
+  .option('--force', 'Skip confirmation prompt')
+  .action(async (options: { address?: string; name?: string; force?: boolean }) => {
     try {
-      await removeWallet()
+      await removeWallet(options)
     } catch (error) {
       handleError(error)
     }
