@@ -140,18 +140,22 @@ export async function removeChain() {
   p.intro('Remove Chain')
 
   const configStore = getConfigStore()
-  const chains = configStore.getAllChains()
-  const chainEntries = Object.entries(chains)
+  const allChains = configStore.getAllChains()
 
-  if (chainEntries.length === 0) {
-    logError('No chains configured')
+  // Only show custom chains (not default chains)
+  const customChainEntries = Object.entries(allChains).filter(([id]) =>
+    configStore.isCustomChain(id)
+  )
+
+  if (customChainEntries.length === 0) {
+    logError('No custom chains to remove. Default chains cannot be deleted.')
     p.cancel('Operation cancelled')
     return
   }
 
   const chainId = await p.select({
-    message: 'Select chain to remove:',
-    options: chainEntries.map(([id, config]) => ({
+    message: 'Select custom chain to remove:',
+    options: customChainEntries.map(([id, config]) => ({
       value: id,
       label: `${config.name} (${id})`,
     })),
@@ -163,7 +167,7 @@ export async function removeChain() {
   }
 
   const confirm = await p.confirm({
-    message: `Are you sure you want to remove ${chains[chainId as string].name}?`,
+    message: `Are you sure you want to remove ${allChains[chainId as string].name}?`,
   })
 
   if (p.isCancel(confirm) || !confirm) {
@@ -172,7 +176,7 @@ export async function removeChain() {
   }
 
   try {
-    const chainName = chains[chainId as string].name
+    const chainName = allChains[chainId as string].name
     configStore.deleteChain(chainId as string)
 
     await renderScreen(ChainRemoveSuccessScreen, {

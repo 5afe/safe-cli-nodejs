@@ -42,12 +42,19 @@ describe('Config Integration Tests', () => {
       expect(chain?.name).toBe('Ethereum Updated')
     })
 
-    it('should remove chain by ID', () => {
-      configStore.setChain(TEST_CHAIN.chainId, TEST_CHAIN)
-      configStore.deleteChain(TEST_CHAIN.chainId)
+    it('should remove custom chain by ID but keep default chains', () => {
+      // Add a custom chain
+      const customChain = { ...TEST_CHAIN, chainId: '999999' }
+      configStore.setChain(customChain.chainId, customChain)
+      expect(configStore.getChain(customChain.chainId)).toBeDefined()
 
-      const chain = configStore.getChain(TEST_CHAIN.chainId)
-      expect(chain).toBeUndefined()
+      // Delete the custom chain
+      configStore.deleteChain(customChain.chainId)
+      expect(configStore.getChain(customChain.chainId)).toBeUndefined()
+
+      // Trying to delete default chain should not remove it
+      configStore.deleteChain('1') // Ethereum
+      expect(configStore.getChain('1')).toBeDefined() // Should still exist as default
     })
 
     it('should get all chains', () => {

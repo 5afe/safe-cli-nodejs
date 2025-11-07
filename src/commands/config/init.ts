@@ -5,36 +5,36 @@ import { renderScreen } from '../../ui/render.js'
 import { ConfigInitSuccessScreen } from '../../ui/screens/index.js'
 
 export async function initConfig() {
-  p.intro(' Initialize Safe CLI ')
+  p.intro(' Configure Safe CLI ')
 
   const configStore = getConfigStore()
 
   p.log.info('Welcome to Safe CLI!')
-  p.log.info('This wizard will help you set up your configuration.')
+  p.log.info('Safe CLI works out-of-the-box with 18 default networks.')
+  p.log.info('This wizard helps you customize settings and add API keys.')
   console.log('')
 
-  // Check if chains already exist
-  const existingChains = configStore.getAllChains()
-  const hasExistingChains = Object.keys(existingChains).length > 0
+  // Check if custom chains already exist in store
+  const customChains = configStore.getConfig().chains || {}
+  const hasCustomChains = Object.keys(customChains).length > 0
 
-  // Ask about default chains
-  const useDefaults = await p.confirm({
-    message: hasExistingChains
-      ? 'Would you like to reset to default chain configurations? (This will overwrite your current chains)'
-      : 'Would you like to use the default chain configurations?',
-    initialValue: true,
-  })
+  if (hasCustomChains) {
+    p.log.info(`You have ${Object.keys(customChains).length} custom chain(s) configured.`)
+    console.log('')
 
-  if (p.isCancel(useDefaults)) {
-    p.cancel('Operation cancelled')
-    return
-  }
+    const manageChains = await p.confirm({
+      message: 'Would you like to reset all custom chains to defaults?',
+      initialValue: false,
+    })
 
-  if (useDefaults) {
-    // Show warning if overwriting existing chains
-    if (hasExistingChains) {
+    if (p.isCancel(manageChains)) {
+      p.cancel('Operation cancelled')
+      return
+    }
+
+    if (manageChains) {
       console.log('')
-      p.log.warning('This will replace all existing chain configurations with defaults')
+      p.log.warning('This will remove all custom chain configurations')
       console.log('')
 
       const confirm = await p.confirm({
@@ -46,32 +46,13 @@ export async function initConfig() {
         p.cancel('Operation cancelled')
         return
       }
-    }
 
-    // Load default chains
-    const spinner = p.spinner()
-    spinner.start('Loading default chains...')
-
-    for (const [chainId, chain] of Object.entries(DEFAULT_CHAINS)) {
-      configStore.setChain(chainId, chain)
-    }
-
-    spinner.stop('Default chains loaded')
-    p.log.step(`Loaded ${Object.keys(DEFAULT_CHAINS).length} default chains`)
-  } else {
-    const shouldClear = await p.confirm({
-      message: 'Remove all existing chain configurations?',
-    })
-
-    if (p.isCancel(shouldClear)) {
-      p.cancel('Operation cancelled')
-      return
-    }
-
-    if (shouldClear) {
+      // Clear custom chains (defaults will still be available)
       configStore.reset()
-      p.log.step('All configurations cleared')
+      p.log.step('Custom chains cleared. Default chains are always available.')
     }
+  } else {
+    p.log.step(`${Object.keys(DEFAULT_CHAINS).length} default chains are already available`)
   }
 
   // Ask about Safe API key

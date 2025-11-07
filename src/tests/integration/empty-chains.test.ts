@@ -7,14 +7,14 @@ import { formatSafeAddress } from '../../utils/eip3770.js'
 import type { Address } from 'viem'
 
 /**
- * Integration tests to verify commands don't crash when chains aren't configured
+ * Integration tests to verify commands work with default chains
  *
- * This tests the critical scenario where:
+ * This tests the scenario where:
  * 1. A user has Safes in storage
- * 2. Chains are removed or not configured
- * 3. Commands should gracefully handle missing chain configs
+ * 2. Default chains are always available
+ * 3. Commands gracefully use defaults without requiring config init
  */
-describe('Commands with empty chains configuration', () => {
+describe('Commands with default chains configuration', () => {
   let testStorage: ReturnType<typeof createTestStorage>
   let configStore: ConfigStore
   let safeStorage: SafeAccountStorage
@@ -31,15 +31,16 @@ describe('Commands with empty chains configuration', () => {
     testStorage.cleanup()
   })
 
-  describe('formatSafeAddress with empty chains', () => {
-    it('should use fallback format when chains are empty', () => {
+  describe('formatSafeAddress with default chains', () => {
+    it('should use EIP-3770 format with default chains', () => {
       const address: Address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
       const chainId = '1'
-      const emptyChains = {}
+      const chains = configStore.getAllChains()
 
-      const result = formatSafeAddress(address, chainId, emptyChains)
+      const result = formatSafeAddress(address, chainId, chains)
 
-      expect(result).toBe(`chain:1:${address}`)
+      // Should use EIP-3770 format (eth:0x...) since chain '1' exists in defaults
+      expect(result).toBe(`eth:${address}`)
     })
 
     it('should use fallback format when chain is not found', () => {
@@ -92,7 +93,7 @@ describe('Commands with empty chains configuration', () => {
       expect(allSafes[0].address).toBe(safeAddress)
     })
 
-    it('should format Safe addresses with fallback when chains are empty', () => {
+    it('should format Safe addresses with EIP-3770 format using defaults', () => {
       const safeAddress: Address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
       const chainId = '1'
 
@@ -103,21 +104,16 @@ describe('Commands with empty chains configuration', () => {
         deployed: true,
       })
 
-      // Remove all chains
+      // Get chains - should always include defaults
       const chains = configStore.getAllChains()
-      Object.keys(chains).forEach((id) => {
-        configStore.deleteChain(id)
-      })
+      expect(Object.keys(chains).length).toBeGreaterThan(0)
 
-      const emptyChains = configStore.getAllChains()
-      expect(Object.keys(emptyChains)).toHaveLength(0)
-
-      // Should format with fallback
-      const formatted = formatSafeAddress(safeAddress, chainId, emptyChains)
-      expect(formatted).toBe(`chain:1:${safeAddress}`)
+      // Should format with EIP-3770 (using default chain shortName)
+      const formatted = formatSafeAddress(safeAddress, chainId, chains)
+      expect(formatted).toBe(`eth:${safeAddress}`)
     })
 
-    it('should list all Safes even when their chains are missing', () => {
+    it('should list all Safes with proper EIP-3770 formatting', () => {
       // Add multiple Safes with different chains
       const safe1: Address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
       const safe2: Address = '0x1234567890123456789012345678901234567890'
@@ -136,28 +132,22 @@ describe('Commands with empty chains configuration', () => {
         deployed: false,
       })
 
-      // Remove all chains
-      const chains = configStore.getAllChains()
-      Object.keys(chains).forEach((id) => {
-        configStore.deleteChain(id)
-      })
-
       // Should still list all Safes
       const allSafes = safeStorage.getAllSafes()
       expect(allSafes).toHaveLength(2)
 
-      // Should be able to format both addresses with fallback
-      const emptyChains = configStore.getAllChains()
-      const formatted1 = formatSafeAddress(safe1, '1', emptyChains)
-      const formatted2 = formatSafeAddress(safe2, '137', emptyChains)
+      // Should be able to format both addresses with EIP-3770 using default chains
+      const chains = configStore.getAllChains()
+      const formatted1 = formatSafeAddress(safe1, '1', chains)
+      const formatted2 = formatSafeAddress(safe2, '137', chains)
 
-      expect(formatted1).toBe(`chain:1:${safe1}`)
-      expect(formatted2).toBe(`chain:137:${safe2}`)
+      expect(formatted1).toBe(`eth:${safe1}`) // Chain 1 = Ethereum
+      expect(formatted2).toBe(`matic:${safe2}`) // Chain 137 = Polygon
     })
   })
 
-  describe('Transaction operations with no chains configured', () => {
-    it('should list transactions when chains are missing', () => {
+  describe('Transaction operations with default chains', () => {
+    it('should list transactions with proper EIP-3770 formatting', () => {
       const safeAddress: Address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
       const chainId = '1'
 
@@ -182,65 +172,44 @@ describe('Commands with empty chains configuration', () => {
         '0x9876543210987654321098765432109876543210' as Address
       )
 
-      // Remove all chains
-      const chains = configStore.getAllChains()
-      Object.keys(chains).forEach((id) => {
-        configStore.deleteChain(id)
-      })
-
       // Should still list transactions
       const allTransactions = transactionStore.getAllTransactions()
       expect(allTransactions).toHaveLength(1)
       expect(allTransactions[0].chainId).toBe(chainId)
 
-      // Should format Safe address with fallback
-      const emptyChains = configStore.getAllChains()
-      const formatted = formatSafeAddress(safeAddress, chainId, emptyChains)
-      expect(formatted).toBe(`chain:1:${safeAddress}`)
+      // Should format Safe address with EIP-3770 using default chains
+      const chains = configStore.getAllChains()
+      const formatted = formatSafeAddress(safeAddress, chainId, chains)
+      expect(formatted).toBe(`eth:${safeAddress}`)
     })
   })
 
   describe('Edge cases', () => {
-    it('should handle getAllChains returning empty object', () => {
+    it('should always have default chains available', () => {
+      // Even without explicit configuration, default chains should be available
       const chains = configStore.getAllChains()
-      Object.keys(chains).forEach((id) => {
-        configStore.deleteChain(id)
-      })
-
-      const emptyChains = configStore.getAllChains()
-      expect(emptyChains).toEqual({})
-      expect(Object.keys(emptyChains)).toHaveLength(0)
+      expect(Object.keys(chains).length).toBeGreaterThan(0)
+      expect(chains['1']).toBeDefined() // Ethereum mainnet
+      expect(chains['1'].shortName).toBe('eth')
 
       // Should not throw when formatting addresses
       const address: Address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
       expect(() => {
-        formatSafeAddress(address, '1', emptyChains)
+        formatSafeAddress(address, '1', chains)
       }).not.toThrow()
     })
 
-    it('should handle partially configured chains', () => {
-      // Remove all chains except one
+    it('should handle unknown chains with fallback format', () => {
       const chains = configStore.getAllChains()
-      const chainIds = Object.keys(chains)
 
-      // Keep only the first chain
-      for (let i = 1; i < chainIds.length; i++) {
-        configStore.deleteChain(chainIds[i])
-      }
-
-      const remainingChains = configStore.getAllChains()
-      expect(Object.keys(remainingChains)).toHaveLength(1)
-
-      // Should use fallback for missing chain
+      // Should use fallback for unknown chain
       const address: Address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
-      const formatted = formatSafeAddress(address, '999999', remainingChains)
+      const formatted = formatSafeAddress(address, '999999', chains)
       expect(formatted).toBe(`chain:999999:${address}`)
 
-      // Should use proper format for existing chain
-      const existingChainId = Object.keys(remainingChains)[0]
-      const formatted2 = formatSafeAddress(address, existingChainId, remainingChains)
-      expect(formatted2).toContain(':')
-      expect(formatted2).toContain(address)
+      // Should use EIP-3770 format for known chain
+      const formatted2 = formatSafeAddress(address, '1', chains)
+      expect(formatted2).toBe(`eth:${address}`)
     })
   })
 })

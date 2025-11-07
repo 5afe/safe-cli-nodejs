@@ -18,11 +18,6 @@ export async function openSafe(addressArg?: string) {
   const safeStorage = getSafeStorage()
   const chains = configStore.getAllChains()
 
-  if (Object.keys(chains).length === 0) {
-    logError('No chains configured. Please run "safe config init" first.')
-    return
-  }
-
   let chainId: string
   let safeAddress: Address
 

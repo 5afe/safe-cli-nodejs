@@ -28,10 +28,30 @@ import { pushTransaction } from './commands/tx/push.js'
 import { pullTransactions } from './commands/tx/pull.js'
 import { syncTransactions } from './commands/tx/sync.js'
 import { handleError } from './utils/errors.js'
+import { setGlobalOptions, type GlobalOptions } from './types/global-options.js'
 
 const program = new Command()
 
-program.name('safe').description('Modern CLI for Safe Smart Account management').version('0.1.0')
+program
+  .name('safe')
+  .description('Modern CLI for Safe Smart Account management')
+  .version('0.1.0')
+  .option('--json', 'Output in JSON format (machine-readable)')
+  .option('--quiet', 'Suppress interactive UI elements')
+  .option('--password <password>', 'Wallet password (use with caution, visible in process list)')
+  .option('--password-file <path>', 'Path to file containing wallet password')
+  .option('--no-color', 'Disable colored output')
+  .hook('preAction', (thisCommand) => {
+    // Extract global options and store them
+    const opts = thisCommand.optsWithGlobals() as GlobalOptions
+    setGlobalOptions({
+      json: opts.json,
+      quiet: opts.quiet,
+      password: opts.password,
+      passwordFile: opts.passwordFile,
+      noColor: opts.noColor,
+    })
+  })
 
 // Config commands
 const config = program.command('config').description('Manage CLI configuration')
