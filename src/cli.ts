@@ -180,9 +180,11 @@ wallet
   .command('use')
   .alias('switch')
   .description('Switch active wallet')
-  .action(async () => {
+  .option('--address <address>', 'Wallet address to use')
+  .option('--name <name>', 'Wallet name to use')
+  .action(async (options: { address?: string; name?: string }) => {
     try {
-      await useWallet()
+      await useWallet(options)
     } catch (error) {
       handleError(error)
     }
@@ -192,9 +194,12 @@ wallet
   .command('remove')
   .alias('delete')
   .description('Remove a wallet')
-  .action(async () => {
+  .option('--address <address>', 'Wallet address to remove')
+  .option('--name <name>', 'Wallet name to remove')
+  .option('--force', 'Skip confirmation prompt')
+  .action(async (options: { address?: string; name?: string; force?: boolean }) => {
     try {
-      await removeWallet()
+      await removeWallet(options)
     } catch (error) {
       handleError(error)
     }
