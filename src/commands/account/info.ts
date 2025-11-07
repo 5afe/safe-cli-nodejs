@@ -2,10 +2,12 @@ import * as p from '@clack/prompts'
 import { type Address } from 'viem'
 import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
-import { logError } from '../../ui/messages.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 import { renderScreen } from '../../ui/render.js'
 import { AccountInfoScreen } from '../../ui/screens/index.js'
+import { SafeService } from '../../services/safe-service.js'
+import { isNonInteractiveMode, outputSuccess, outputError } from '../../utils/command-helpers.js'
+import { ExitCode } from '../../constants/exit-codes.js'
 
 /**
  * Displays detailed information about a Safe account.
@@ -38,17 +40,16 @@ export async function showSafeInfo(account?: string) {
       chainId = parsed.chainId
       address = parsed.address
     } catch (error) {
-      logError(error instanceof Error ? error.message : 'Invalid account')
-      p.cancel('Operation cancelled')
-      return
+      outputError(error instanceof Error ? error.message : 'Invalid account', ExitCode.INVALID_ARGS)
     }
   } else {
     // Show interactive selection
     const safes = safeStorage.getAllSafes()
     if (safes.length === 0) {
-      logError('No Safes found')
-      p.cancel('Use "safe account create" or "safe account open" to add a Safe')
-      return
+      outputError(
+        'No Safes found. Use "safe account create" or "safe account open" to add a Safe',
+        ExitCode.SAFE_NOT_FOUND
+      )
     }
 
     const selected = await p.select({
@@ -77,14 +78,44 @@ export async function showSafeInfo(account?: string) {
   // Verify chain exists
   const chain = configStore.getChain(chainId)
   if (!chain) {
-    logError(`Chain not found: ${chainId}`)
-    p.cancel(
-      'Operation cancelled. Use "safe config chains" to add this chain or "safe config init" to load default chains'
-    )
-    return
+    outputError(`Chain not found: ${chainId}`, ExitCode.CONFIG_ERROR)
   }
 
-  // Render the AccountInfoScreen with the Safe address
-  // Note: Safe doesn't need to be in storage - we can query any Safe on-chain
-  await renderScreen(AccountInfoScreen, { chainId, address })
+  // In JSON mode, fetch data and output directly
+  if (isNonInteractiveMode()) {
+    const safe = safeStorage.getSafe(chainId, address)
+    const safeService = new SafeService(chain)
+
+    try {
+      const safeInfo = await safeService.getSafeInfo(address)
+      const eip3770 = formatSafeAddress(address, chainId, chains)
+
+      outputSuccess('Safe information retrieved', {
+        name: safe?.name,
+        address,
+        eip3770,
+        chainId,
+        chainName: chain.name,
+        deployed: safeInfo.isDeployed,
+        version: safeInfo.version,
+        nonce: safeInfo.nonce.toString(),
+        balance: safeInfo.balance?.toString(),
+        owners: safeInfo.owners,
+        threshold: safeInfo.threshold,
+        modules: safeInfo.modules,
+        guard: safeInfo.guard,
+        fallbackHandler: safeInfo.fallbackHandler,
+        masterCopy: safeInfo.masterCopy,
+      })
+    } catch (error) {
+      outputError(
+        error instanceof Error ? error.message : 'Failed to fetch Safe info',
+        ExitCode.NETWORK_ERROR
+      )
+    }
+  } else {
+    // Render the AccountInfoScreen with the Safe address
+    // Note: Safe doesn't need to be in storage - we can query any Safe on-chain
+    await renderScreen(AccountInfoScreen, { chainId, address })
+  }
 }

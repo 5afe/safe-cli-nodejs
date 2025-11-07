@@ -4,13 +4,22 @@ import { getConfigStore } from '../../storage/config-store.js'
 import { getSafeStorage } from '../../storage/safe-store.js'
 import { getWalletStorage } from '../../storage/wallet-store.js'
 import { SafeService } from '../../services/safe-service.js'
-import { logError } from '../../ui/messages.js'
 import { parseSafeAddress, formatSafeAddress } from '../../utils/eip3770.js'
 import { renderScreen } from '../../ui/render.js'
 import { AccountDeploySuccessScreen } from '../../ui/screens/index.js'
+import { isNonInteractiveMode, outputSuccess, outputError } from '../../utils/command-helpers.js'
+import { ExitCode } from '../../constants/exit-codes.js'
+import { getPassword } from '../../utils/password-handler.js'
+import { getGlobalOptions } from '../../types/global-options.js'
 
-export async function deploySafe(account?: string) {
-  p.intro('Deploy Safe')
+export interface DeploySafeOptions {
+  skipConfirmation?: boolean
+}
+
+export async function deploySafe(account?: string, options: DeploySafeOptions = {}) {
+  if (!isNonInteractiveMode()) {
+    p.intro('Deploy Safe')
+  }
 
   const configStore = getConfigStore()
   const safeStorage = getSafeStorage()
@@ -28,17 +37,16 @@ export async function deploySafe(account?: string) {
       chainId = parsed.chainId
       address = parsed.address
     } catch (error) {
-      logError(error instanceof Error ? error.message : 'Invalid account')
-      p.cancel('Operation cancelled')
-      return
+      outputError(error instanceof Error ? error.message : 'Invalid account', ExitCode.INVALID_ARGS)
     }
   } else {
     // Show interactive selection
     const undeployedSafes = safeStorage.getAllSafes().filter((s) => !s.deployed)
     if (undeployedSafes.length === 0) {
-      logError('No undeployed Safes found')
-      p.cancel('Use "safe account create" to create a Safe first')
-      return
+      outputError(
+        'No undeployed Safes found. Use "safe account create" to create a Safe first',
+        ExitCode.SAFE_NOT_FOUND
+      )
     }
 
     const selected = await p.select({
@@ -66,14 +74,11 @@ export async function deploySafe(account?: string) {
 
   const safe = safeStorage.getSafe(chainId, address)
   if (!safe) {
-    logError(`Safe not found: ${address} on chain ${chainId}`)
-    p.cancel('Operation cancelled')
-    return
+    outputError(`Safe not found: ${address} on chain ${chainId}`, ExitCode.SAFE_NOT_FOUND)
   }
 
   if (!safe.predictedConfig) {
-    logError('Safe does not have deployment configuration')
-    return
+    outputError('Safe does not have deployment configuration', ExitCode.ERROR)
   }
 
   // Verify on-chain deployment status
@@ -89,8 +94,7 @@ export async function deploySafe(account?: string) {
       if (!safe.deployed) {
         safeStorage.updateSafe(chainId, address, { deployed: true })
       }
-      logError('Safe is already deployed on-chain')
-      return
+      outputError('Safe is already deployed on-chain', ExitCode.ERROR)
     }
 
     // If local storage says deployed but on-chain says not deployed, fix the storage
@@ -105,50 +109,58 @@ export async function deploySafe(account?: string) {
   // Get active wallet
   const activeWallet = walletStorage.getActiveWallet()
   if (!activeWallet) {
-    logError('No active wallet found. Please import a wallet first.')
-    p.cancel('Use "safe wallet import" to import a wallet')
-    return
+    outputError('No active wallet found. Please import a wallet first.', ExitCode.WALLET_ERROR)
   }
 
   const eip3770 = formatSafeAddress(safe.address as Address, safe.chainId, chains)
 
-  console.log('')
-  console.log('Safe to Deploy:')
-  console.log(`  Name:     ${safe.name}`)
-  console.log(`  Address:  ${eip3770}`)
-  console.log(`  Chain:    ${chain.name}`)
-  console.log(
-    `  Owners:   ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`
-  )
-  console.log('')
-  console.log(`Deploying with wallet: ${activeWallet.name} (${activeWallet.address})`)
-  console.log('')
+  if (!isNonInteractiveMode()) {
+    console.log('')
+    console.log('Safe to Deploy:')
+    console.log(`  Name:     ${safe.name}`)
+    console.log(`  Address:  ${eip3770}`)
+    console.log(`  Chain:    ${chain.name}`)
+    console.log(
+      `  Owners:   ${safe.predictedConfig.threshold} / ${safe.predictedConfig.owners.length}`
+    )
+    console.log('')
+    console.log(`Deploying with wallet: ${activeWallet.name} (${activeWallet.address})`)
+    console.log('')
+  }
 
-  const confirm = await p.confirm({
-    message: 'Proceed with deployment?',
-  })
+  // Confirmation (skip if --skip-confirmation or non-interactive mode)
+  if (!options.skipConfirmation && !isNonInteractiveMode()) {
+    const confirm = await p.confirm({
+      message: 'Proceed with deployment?',
+    })
 
-  if (p.isCancel(confirm) || !confirm) {
-    p.cancel('Operation cancelled')
-    return
+    if (p.isCancel(confirm) || !confirm) {
+      p.cancel('Operation cancelled')
+      return
+    }
   }
 
   // Get password for wallet
-  const password = await p.password({
-    message: 'Enter wallet password:',
-  })
+  const globalOptions = getGlobalOptions()
+  const password = await getPassword(
+    {
+      password: globalOptions.password,
+      passwordFile: globalOptions.passwordFile,
+      passwordEnv: 'SAFE_WALLET_PASSWORD',
+    },
+    'Enter wallet password:'
+  )
 
-  if (p.isCancel(password)) {
-    p.cancel('Operation cancelled')
-    return
+  if (!password) {
+    outputError('Password is required', ExitCode.AUTH_FAILURE)
   }
 
-  const spinner = p.spinner()
-  spinner.start('Deploying Safe...')
+  const spinner = !isNonInteractiveMode() ? p.spinner() : null
+  spinner?.start('Deploying Safe...')
 
   try {
     // Get private key
-    const privateKey = walletStorage.getPrivateKey(activeWallet.id, password as string)
+    const privateKey = walletStorage.getPrivateKey(activeWallet.id, password)
 
     const safeService = new SafeService(chain, privateKey)
 
@@ -158,7 +170,7 @@ export async function deploySafe(account?: string) {
       saltNonce: safe.predictedConfig.saltNonce,
     })
 
-    spinner.stop('Safe deployed!')
+    spinner?.stop('Safe deployed!')
 
     // Update storage
     safeStorage.updateSafe(chainId, address, {
@@ -167,16 +179,28 @@ export async function deploySafe(account?: string) {
       predictedConfig: undefined,
     })
 
-    // Display success screen with deployment details
-    await renderScreen(AccountDeploySuccessScreen, {
-      address: deployedAddress,
-      chainId: chain.chainId,
-      chainName: chain.name,
-      explorerUrl: chain.explorer ? `${chain.explorer}/address/${deployedAddress}` : undefined,
-    })
+    if (isNonInteractiveMode()) {
+      const explorerUrl = chain.explorer
+        ? `${chain.explorer}/address/${deployedAddress}`
+        : undefined
+      outputSuccess('Safe deployed successfully', {
+        address: deployedAddress,
+        chainId: chain.chainId,
+        chainName: chain.name,
+        explorerUrl,
+      })
+    } else {
+      // Display success screen with deployment details
+      await renderScreen(AccountDeploySuccessScreen, {
+        address: deployedAddress,
+        chainId: chain.chainId,
+        chainName: chain.name,
+        explorerUrl: chain.explorer ? `${chain.explorer}/address/${deployedAddress}` : undefined,
+      })
+    }
   } catch (error) {
-    spinner.stop('Failed to deploy Safe')
-    logError(error instanceof Error ? error.message : 'Unknown error')
-    process.exit(1)
+    spinner?.stop('Failed to deploy Safe')
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    outputError(message, ExitCode.ERROR)
   }
 }
