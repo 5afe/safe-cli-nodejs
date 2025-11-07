@@ -222,9 +222,10 @@ account
 account
   .command('deploy [account]')
   .description('Deploy a Safe to the blockchain (EIP-3770 format: shortName:address)')
-  .action(async (account?: string) => {
+  .option('--skip-confirmation', 'Skip deployment confirmation prompt')
+  .action(async (account?: string, options?: { skipConfirmation?: boolean }) => {
     try {
-      await deploySafe(account)
+      await deploySafe(account, options)
     } catch (error) {
       handleError(error)
     }
