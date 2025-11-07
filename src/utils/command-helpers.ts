@@ -5,6 +5,8 @@ import type { ConfigStore } from '../storage/config-store.js'
 import type { ChainConfig } from '../types/config.js'
 import { getValidationService } from '../services/validation-service.js'
 import { SafeCLIError } from './errors.js'
+import { isJsonMode, isQuietMode } from '../types/global-options.js'
+import { ExitCode } from '../constants/exit-codes.js'
 
 /**
  * Ensures an active wallet exists, exits with error if not found.
@@ -94,4 +96,73 @@ export async function promptPassword(
   }
 
   return password as string
+}
+
+/**
+ * Output data in the appropriate format (JSON or text)
+ * @param data Data to output
+ * @param textFormatter Function to format data as text (optional, defaults to JSON.stringify)
+ */
+export function output(data: unknown, textFormatter?: (data: unknown) => string): void {
+  if (isJsonMode()) {
+    console.log(JSON.stringify(data, null, 2))
+  } else if (textFormatter) {
+    console.log(textFormatter(data))
+  } else {
+    console.log(JSON.stringify(data, null, 2))
+  }
+}
+
+/**
+ * Output a success message
+ * In JSON mode, outputs structured data. In text mode, uses p.outro
+ * @param message Success message
+ * @param data Optional data to include in JSON output
+ */
+export function outputSuccess(message: string, data?: Record<string, unknown>): void {
+  if (isJsonMode()) {
+    output({
+      success: true,
+      message,
+      ...data,
+    })
+  } else if (!isQuietMode()) {
+    p.outro(message)
+  }
+}
+
+/**
+ * Output an error message and exit
+ * In JSON mode, outputs structured error. In text mode, uses p.log.error
+ * @param message Error message
+ * @param exitCode Exit code to use (default: ERROR)
+ * @param data Optional additional error data
+ */
+export function outputError(
+  message: string,
+  exitCode: ExitCode = ExitCode.ERROR,
+  data?: Record<string, unknown>
+): never {
+  if (isJsonMode()) {
+    output({
+      success: false,
+      error: message,
+      exitCode,
+      ...data,
+    })
+  } else {
+    p.log.error(message)
+    if (!isQuietMode()) {
+      p.outro('Failed')
+    }
+  }
+  process.exit(exitCode)
+}
+
+/**
+ * Check if we're in non-interactive mode
+ * @returns true if in JSON or quiet mode
+ */
+export function isNonInteractiveMode(): boolean {
+  return isJsonMode() || isQuietMode()
 }
