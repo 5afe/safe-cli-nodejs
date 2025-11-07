@@ -40,6 +40,9 @@ export async function deploySafe(account?: string, options: DeploySafeOptions = 
       outputError(error instanceof Error ? error.message : 'Invalid account', ExitCode.INVALID_ARGS)
     }
   } else {
+    if (isNonInteractiveMode()) {
+      outputError('Account address is required in non-interactive mode', ExitCode.INVALID_ARGS)
+    }
     // Show interactive selection
     const undeployedSafes = safeStorage.getAllSafes().filter((s) => !s.deployed)
     if (undeployedSafes.length === 0) {

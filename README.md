@@ -228,6 +228,205 @@ safe tx execute <txHash>
 
 ---
 
+## 🤖 Non-Interactive Usage & Automation
+
+Safe CLI supports non-interactive mode for automation, CI/CD pipelines, and scripting workflows.
+
+### Enabling Non-Interactive Mode
+
+Use the `--json` or `--quiet` global flags:
+
+```bash
+# JSON output mode (machine-readable)
+safe --json [command]
+
+# Quiet mode (suppresses prompts, minimal output)
+safe --quiet [command]
+```
+
+### Password Handling for Automation
+
+Commands requiring wallet signatures need passwords. Use these methods (in priority order):
+
+**1. Environment Variable** (Recommended for CI/CD)
+```bash
+export SAFE_WALLET_PASSWORD="your-secure-password"
+safe --json tx sign 0xabc...
+```
+
+**2. Password File** (Secure for scripts)
+```bash
+echo "your-secure-password" > ~/.safe-password
+chmod 600 ~/.safe-password
+safe --password-file ~/.safe-password tx sign 0xabc...
+```
+
+**3. CLI Flag** (⚠️ Insecure - visible in process list)
+```bash
+safe --password "your-password" tx sign 0xabc...
+# Warning: Only use for testing!
+```
+
+### Required Arguments
+
+In non-interactive mode, commands require all arguments as flags:
+
+#### Creating a Safe
+```bash
+safe --json account create \
+  --chain-id 1 \
+  --owners "0x123...,0x456..." \
+  --threshold 2 \
+  --name "my-safe" \
+  --no-deploy
+```
+
+#### Deploying a Safe
+```bash
+export SAFE_WALLET_PASSWORD="password"
+safe --json account deploy eth:0x742d35Cc...
+```
+
+#### Signing a Transaction
+```bash
+export SAFE_WALLET_PASSWORD="password"
+safe --json tx sign 0xabc123...
+```
+
+#### Executing a Transaction
+```bash
+export SAFE_WALLET_PASSWORD="password"
+safe --json tx execute 0xabc123...
+```
+
+#### Getting Safe Info
+```bash
+safe --json account info eth:0x742d35Cc...
+```
+
+#### Listing Transactions
+```bash
+safe --json tx list eth:0x742d35Cc...
+```
+
+### JSON Output Format
+
+All commands in `--json` mode return consistent JSON:
+
+**Success:**
+```json
+{
+  "success": true,
+  "message": "Operation completed",
+  "data": {
+    "safeTxHash": "0x...",
+    "address": "0x...",
+    ...
+  }
+}
+```
+
+**Error:**
+```json
+{
+  "success": false,
+  "error": "Error message",
+  "exitCode": 4
+}
+```
+
+**Exit Codes:**
+- `0` - Success
+- `1` - General error
+- `2` - Network error
+- `3` - Authentication failure
+- `4` - Invalid arguments
+- `5` - Configuration error
+- `6` - Safe not found
+- `7` - Wallet error
+
+### Complete CI/CD Example
+
+```bash
+#!/bin/bash
+set -e  # Exit on error
+
+# Set up environment
+export SAFE_WALLET_PASSWORD="${SAFE_PASSWORD}"  # From CI secrets
+export SAFE_OUTPUT_FORMAT="json"
+
+# Create a Safe
+RESULT=$(safe --json account create \
+  --chain-id 11155111 \
+  --owners "0x123...,0x456..." \
+  --threshold 2 \
+  --name "CI-Safe-$(date +%s)" \
+  --no-deploy)
+
+# Extract Safe address from JSON
+SAFE_ADDRESS=$(echo $RESULT | jq -r '.data.address')
+echo "Created Safe: $SAFE_ADDRESS"
+
+# Deploy it
+safe --json account deploy sepolia:$SAFE_ADDRESS
+
+# Get Safe info and verify deployment
+safe --json account info sepolia:$SAFE_ADDRESS | jq '.data.deployed'
+```
+
+### GitHub Actions Example
+
+```yaml
+name: Deploy Safe
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Safe CLI
+        run: npm install -g @safe-global/safe-cli
+
+      - name: Deploy Safe
+        env:
+          SAFE_WALLET_PASSWORD: ${{ secrets.SAFE_PASSWORD }}
+        run: |
+          safe --json account deploy sepolia:0x742d35Cc...
+```
+
+### Best Practices
+
+1. **Never commit passwords** - Use environment variables or CI secrets
+2. **Validate JSON output** - Check `success` field and handle errors
+3. **Use exit codes** - Script can check `$?` for command success
+4. **Parse with jq** - Extract specific fields from JSON output
+5. **Test locally first** - Use `--json` flag to test automation scripts
+6. **Use password files with proper permissions** - `chmod 600` for security
+
+### Automation-Friendly Commands
+
+| Command | Non-Interactive Support | Password Required |
+|---------|------------------------|-------------------|
+| `account create` | ✅ All args required | ❌ |
+| `account deploy` | ✅ Address required | ✅ |
+| `account info` | ✅ Address required | ❌ |
+| `account list` | ✅ No args needed | ❌ |
+| `account add-owner` | ✅ Address/owner required | ❌ (creates tx) |
+| `tx sign` | ✅ Hash required | ✅ |
+| `tx execute` | ✅ Hash required | ✅ |
+| `tx list` | ✅ Optional address | ❌ |
+| `tx status` | ✅ Hash required | ❌ |
+| `tx export` | ✅ Hash required | ❌ |
+| `tx import` | ✅ JSON required | ❌ |
+| `wallet create` | ✅ All args required | ❌ |
+| `wallet import` | ✅ All args required | ❌ |
+| `wallet list` | ✅ No args needed | ❌ |
+
+---
+
 ## ⚙️ Configuration
 
 ### Storage Location

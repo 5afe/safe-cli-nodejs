@@ -49,6 +49,9 @@ export async function createSafe(options: SafeCreateOptions = {}) {
     // Use provided chain ID
     chainId = options.chainId
   } else {
+    if (isNonInteractiveMode()) {
+      outputError('Chain ID is required in non-interactive mode', ExitCode.INVALID_ARGS)
+    }
     // Interactive chain selection
     const chains = Object.values(configStore.getAllChains())
     const selected = await p.select({
@@ -97,6 +100,9 @@ export async function createSafe(options: SafeCreateOptions = {}) {
       )
     }
   } else {
+    if (isNonInteractiveMode()) {
+      outputError('Owners are required in non-interactive mode', ExitCode.INVALID_ARGS)
+    }
     // Interactive owner configuration
     const includeActiveWallet = await p.confirm({
       message: 'Include active wallet as an owner?',
@@ -187,6 +193,9 @@ export async function createSafe(options: SafeCreateOptions = {}) {
       outputError(`Threshold must be between 1 and ${owners.length}`, ExitCode.INVALID_ARGS)
     }
   } else {
+    if (isNonInteractiveMode()) {
+      outputError('Threshold is required in non-interactive mode', ExitCode.INVALID_ARGS)
+    }
     // Interactive threshold input
     const threshold = await p.text({
       message: `Signature threshold (1-${owners.length}):`,
@@ -213,6 +222,9 @@ export async function createSafe(options: SafeCreateOptions = {}) {
     }
     safeName = options.name
   } else {
+    if (isNonInteractiveMode()) {
+      outputError('Name is required in non-interactive mode', ExitCode.INVALID_ARGS)
+    }
     // Interactive name input
     const name = await p.text({
       message: 'Give this Safe a name:',
