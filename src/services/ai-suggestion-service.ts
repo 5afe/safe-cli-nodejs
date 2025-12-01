@@ -38,7 +38,7 @@ export class AISuggestionService {
   private ollamaModel: string | null = null
 
   /**
-   * Detects the best available ollama model (prefers 3B-8B models for speed/quality balance).
+   * Detects the best available ollama model (prefers 2-5GB models for speed/quality balance).
    */
   private async detectOllamaModel(): Promise<string | null> {
     // Return cached result (empty string means no models available)
@@ -98,8 +98,8 @@ export class AISuggestionService {
     this.addressMappings = []
     this.placeholderIndex = 0
 
-    // Match Ethereum addresses (0x followed by 40 hex characters) or shorter hex strings starting with 0x
-    const addressRegex = /0x[a-fA-F0-9]+/g
+    // Match Ethereum addresses (0x followed by exactly 40 hex characters)
+    const addressRegex = /0x[a-fA-F0-9]{40}/g
 
     return input.replace(addressRegex, (match) => {
       // Check if we already have a mapping for this address
@@ -120,8 +120,9 @@ export class AISuggestionService {
   unmaskAddresses(response: string): string {
     let result = response
     for (const mapping of this.addressMappings) {
-      // Replace all occurrences of the placeholder (case-insensitive)
-      const regex = new RegExp(mapping.placeholder, 'gi')
+      // Replace all occurrences of the placeholder (case-insensitive, escaped for safety)
+      const escaped = mapping.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const regex = new RegExp(escaped, 'gi')
       result = result.replace(regex, mapping.original)
     }
     return result
