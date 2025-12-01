@@ -90,8 +90,8 @@ export class AISuggestionService {
     this.addressMappings = []
     this.placeholderIndex = 0
 
-    // Match Ethereum addresses (0x followed by exactly 40 hex characters)
-    const addressRegex = /0x[a-fA-F0-9]{40}/g
+    // Match any hex strings starting with 0x (addresses, hashes, tx data, etc.)
+    const addressRegex = /0x[a-fA-F0-9]+/g
 
     return input.replace(addressRegex, (match) => {
       // Check if we already have a mapping for this address

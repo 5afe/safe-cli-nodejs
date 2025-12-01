@@ -29,10 +29,10 @@ describe('AISuggestionService', () => {
       expect(result).toBe('from 0xAAAA to 0xBBBB via 0xAAAA')
     })
 
-    it('should not mask short hex values (only 40-char addresses)', () => {
+    it('should mask short hex values starting with 0x', () => {
       const input = 'value 0x123 and 0xabc'
       const result = service.maskAddresses(input)
-      expect(result).toBe('value 0x123 and 0xabc')
+      expect(result).toBe('value 0xAAAA and 0xBBBB')
     })
 
     it('should return input unchanged if no addresses', () => {
