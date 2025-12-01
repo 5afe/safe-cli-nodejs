@@ -21,7 +21,7 @@ export class AISuggestionService {
     {
       name: 'claude',
       command: 'claude',
-      args: (prompt: string) => ['--print', '--model', 'haiku', prompt],
+      args: (prompt: string) => ['--print', '--model', 'haiku', '-o', 'raw=true', prompt],
     },
     {
       name: 'copilot',
@@ -82,14 +82,6 @@ export class AISuggestionService {
 
   private addressMappings: AddressMapping[] = []
   private placeholderIndex = 0
-
-  /**
-   * Strips ANSI escape codes from a string.
-   */
-  private stripAnsi(str: string): string {
-    // eslint-disable-next-line no-control-regex
-    return str.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
-  }
 
   /**
    * Masks all 0x addresses in the input with placeholders like 0xAAAA, 0xBBBB, etc.
@@ -243,12 +235,10 @@ Keep it to 2-3 lines total.`
         }
 
         // Use 30s timeout (cloud APIs may have cold start latency)
-        let response = await this.runCommand(tool.command, toolArgs, 30000)
+        const response = await this.runCommand(tool.command, toolArgs, 30000)
 
         if (response) {
-          // Strip ANSI escape codes (e.g., from ollama's spinner)
-          response = this.stripAnsi(response).trim()
-          const unmaskedResponse = this.unmaskAddresses(response)
+          const unmaskedResponse = this.unmaskAddresses(response.trim())
           return unmaskedResponse
         }
       } catch {
