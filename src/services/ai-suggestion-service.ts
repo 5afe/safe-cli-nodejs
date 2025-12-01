@@ -19,6 +19,11 @@ interface AddressMapping {
 export class AISuggestionService {
   private aiTools: AITool[] = [
     {
+      name: 'ollama',
+      command: 'ollama',
+      args: (prompt: string) => ['run', '__AUTO_DETECT__', '--quiet', prompt],
+    },
+    {
       name: 'claude',
       command: 'claude',
       args: (prompt: string) => ['--print', '--model', 'haiku', '-o', 'raw=true', prompt],
@@ -27,11 +32,6 @@ export class AISuggestionService {
       name: 'copilot',
       command: 'copilot',
       args: (prompt: string) => ['--prompt', prompt, '--model', 'claude-haiku-4.5'],
-    },
-    {
-      name: 'ollama',
-      command: 'ollama',
-      args: (prompt: string) => ['run', '__AUTO_DETECT__', '--quiet', prompt],
     },
   ]
 
