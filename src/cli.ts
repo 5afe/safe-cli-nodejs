@@ -29,6 +29,9 @@ import { pullTransactions } from './commands/tx/pull.js'
 import { syncTransactions } from './commands/tx/sync.js'
 import { handleError } from './utils/errors.js'
 import { setGlobalOptions, type GlobalOptions } from './types/global-options.js'
+import { getAISuggestionService } from './services/ai-suggestion-service.js'
+import { renderScreen } from './ui/render.js'
+import { AISuggestionScreen } from './ui/screens/index.js'
 
 const program = new Command()
 
@@ -53,8 +56,75 @@ program
     })
   })
 
+/**
+ * Recursively extracts all commands from a Commander program/command.
+ * Returns commands in format like "config init", "wallet list", etc.
+ */
+function getAvailableCommands(cmd: Command, prefix: string = ''): string[] {
+  const commands: string[] = []
+
+  for (const subCmd of cmd.commands) {
+    const cmdName = subCmd.name()
+    const fullName = prefix ? `${prefix} ${cmdName}` : cmdName
+    const usage = subCmd.usage()
+
+    // Add the command with its usage (arguments)
+    if (usage) {
+      commands.push(`${fullName} ${usage}`)
+    } else {
+      commands.push(fullName)
+    }
+
+    // Recursively get subcommands
+    commands.push(...getAvailableCommands(subCmd, fullName))
+  }
+
+  return commands
+}
+
+/**
+ * Adds an unknown command handler with AI suggestions to a command.
+ * @param cmd The command to add the handler to
+ * @param cmdPath The path to this command (e.g., "tx" or "config chains")
+ */
+function addUnknownCommandHandler(cmd: Command, cmdPath: string = ''): void {
+  cmd.on('command:*', async (operands: string[]) => {
+    const unknownCommand = operands[0]
+    const args = operands.slice(1)
+    const fullUnknown = cmdPath ? `${cmdPath} ${unknownCommand}` : unknownCommand
+
+    // Show error immediately (use write for instant flush)
+    process.stderr.write(`error: unknown command '${fullUnknown}'\n\n`)
+    process.stderr.write('Asking AI for suggestions...\n\n')
+
+    // Try to get AI suggestion
+    const aiService = getAISuggestionService()
+    let suggestion: string | null = null
+
+    try {
+      const availableCommands = getAvailableCommands(program)
+      suggestion = await aiService.getSuggestion(fullUnknown, args, availableCommands)
+    } catch {
+      // AI suggestion failed, will show null
+    }
+
+    // Render the suggestion
+    if (suggestion) {
+      await renderScreen(AISuggestionScreen, { suggestion })
+    } else {
+      console.error(`No AI tools available. Run 'safe --help' to see available commands.`)
+    }
+
+    process.exit(1)
+  })
+}
+
+// Handle unknown commands at root level
+addUnknownCommandHandler(program)
+
 // Config commands
 const config = program.command('config').description('Manage CLI configuration')
+addUnknownCommandHandler(config, 'config')
 
 config
   .command('init')
@@ -80,6 +150,7 @@ config
 
 // Config chains commands
 const chains = config.command('chains').description('Manage chain configurations')
+addUnknownCommandHandler(chains, 'config chains')
 
 chains
   .command('list')
@@ -127,6 +198,7 @@ chains
 
 // Wallet commands
 const wallet = program.command('wallet').description('Manage wallets and signers')
+addUnknownCommandHandler(wallet, 'wallet')
 
 wallet
   .command('import')
@@ -207,6 +279,7 @@ wallet
 
 // Account commands
 const account = program.command('account').description('Manage Safe accounts')
+addUnknownCommandHandler(account, 'account')
 
 account
   .command('create')
@@ -316,6 +389,7 @@ account
 
 // Transaction commands
 const tx = program.command('tx').description('Manage Safe transactions')
+addUnknownCommandHandler(tx, 'tx')
 
 tx.command('create')
   .description('Create a new transaction')

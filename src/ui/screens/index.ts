@@ -108,4 +108,7 @@ export type { TransactionImportBuilderSuccessScreenProps } from './TransactionIm
 export { TransactionImportSuccessScreen } from './TransactionImportSuccessScreen.js'
 export type { TransactionImportSuccessScreenProps } from './TransactionImportSuccessScreen.js'
 
+export { AISuggestionScreen } from './AISuggestionScreen.js'
+export type { AISuggestionScreenProps } from './AISuggestionScreen.js'
+
 // TODO: Phase 4 - Add remaining screen components as commands are migrated
