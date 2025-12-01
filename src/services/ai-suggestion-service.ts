@@ -41,6 +41,7 @@ export class AISuggestionService {
    * Detects the best available ollama model (prefers 3B-8B models for speed/quality balance).
    */
   private async detectOllamaModel(): Promise<string | null> {
+    // Return cached result (empty string means no models available)
     if (this.ollamaModel !== null) {
       return this.ollamaModel || null
     }

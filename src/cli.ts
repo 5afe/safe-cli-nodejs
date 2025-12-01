@@ -89,30 +89,34 @@ function getAvailableCommands(cmd: Command, prefix: string = ''): string[] {
  */
 function addUnknownCommandHandler(cmd: Command, cmdPath: string = ''): void {
   cmd.on('command:*', async (operands: string[]) => {
-    const unknownCommand = operands[0]
-    const args = operands.slice(1)
-    const fullUnknown = cmdPath ? `${cmdPath} ${unknownCommand}` : unknownCommand
-
-    // Show error immediately (use write for instant flush)
-    process.stderr.write(`error: unknown command '${fullUnknown}'\n\n`)
-    process.stderr.write('Asking AI for suggestions...\n\n')
-
-    // Try to get AI suggestion
-    const aiService = getAISuggestionService()
-    let suggestion: string | null = null
-
     try {
-      const availableCommands = getAvailableCommands(program)
-      suggestion = await aiService.getSuggestion(fullUnknown, args, availableCommands)
-    } catch {
-      // AI suggestion failed, will show null
-    }
+      const unknownCommand = operands[0]
+      const args = operands.slice(1)
+      const fullUnknown = cmdPath ? `${cmdPath} ${unknownCommand}` : unknownCommand
 
-    // Render the suggestion
-    if (suggestion) {
-      await renderScreen(AISuggestionScreen, { suggestion })
-    } else {
-      console.error(`No AI tools available. Run 'safe --help' to see available commands.`)
+      // Show error immediately (use write for instant flush)
+      process.stderr.write(`error: unknown command '${fullUnknown}'\n\n`)
+      process.stderr.write('Asking AI for suggestions...\n\n')
+
+      // Try to get AI suggestion
+      const aiService = getAISuggestionService()
+      let suggestion: string | null = null
+
+      try {
+        const availableCommands = getAvailableCommands(program)
+        suggestion = await aiService.getSuggestion(fullUnknown, args, availableCommands)
+      } catch {
+        // AI suggestion failed, will show null
+      }
+
+      // Render the suggestion
+      if (suggestion) {
+        await renderScreen(AISuggestionScreen, { suggestion })
+      } else {
+        console.error(`No AI tools available. Run 'safe --help' to see available commands.`)
+      }
+    } catch (error) {
+      console.error(`Unexpected error: ${error instanceof Error ? error.message : error}`)
     }
 
     process.exit(1)
